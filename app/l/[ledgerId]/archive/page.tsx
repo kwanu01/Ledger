@@ -44,7 +44,7 @@ export default async function Archive({ params }: { params: Promise<{ ledgerId: 
   const last = ledger.settlements[ledger.settlements.length - 1];
 
   return (
-    <main>
+    <>
       <LedgerShell
         ledgerId={ledgerId}
         teamName={ledger.teamName}
@@ -55,94 +55,97 @@ export default async function Archive({ params }: { params: Promise<{ ledgerId: 
         signedIn={Boolean(pass.userId)}
       />
 
-      <section className={closed ? 'stamped' : undefined}>
-        {closed && (
-          <span
-            className="mark lg"
-            aria-hidden="true"
-            style={{ right: 24, top: 2, transform: 'rotate(-13deg)' }}
-          >
-            <span className="big">{T('settledStamp')}</span>
-            <span className="small">{last.date}</span>
-          </span>
-        )}
+      <main>
 
-        <div className="caption">{T('archiveTitle')}</div>
-        <h2 style={{ fontSize: 'clamp(23px,4vw,31px)', marginTop: 10 }}>{ledger.name}</h2>
+        <section className={closed ? 'stamped' : undefined}>
+          {closed && (
+            <span
+              className="mark lg"
+              aria-hidden="true"
+              style={{ right: 24, top: 2, transform: 'rotate(-13deg)' }}
+            >
+              <span className="big">{T('settledStamp')}</span>
+              <span className="small">{last.date}</span>
+            </span>
+          )}
 
-        <table className="facts roomy" style={{ marginTop: 22 }}>
-          <tbody>
-            <tr>
-              <td className="k">{T('period')}</td>
-              <td className="v">{T('days', { n: days })}</td>
-            </tr>
-            <tr>
-              <td className="k">{T('recent')}</td>
-              <td className="v">{T('countN', { n: s.expenseCount })}</td>
-            </tr>
-            <tr>
-              <td className="k">{T('settleCount')}</td>
-              <td className="v">{T('timesN', { n: ledger.settlements.length })}</td>
-            </tr>
-            <tr className="sum">
-              <td className="k">{T('spentAll')}</td>
-              <td className="v">{cash(s.totalSpent)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+          <div className="caption">{T('archiveTitle')}</div>
+          <h2 style={{ fontSize: 'clamp(23px,4vw,31px)', marginTop: 10 }}>{ledger.name}</h2>
 
-      {sorted.length > 0 && (
-        <section>
-          <div className="caption">{T('whatOn')}</div>
-          <table className="facts" style={{ marginTop: 14, width: '100%', maxWidth: 560 }}>
+          <table className="facts roomy" style={{ marginTop: 22 }}>
             <tbody>
-              {sorted.map(([k, v]) => (
-                <tr key={k}>
-                  <td className="k">{k}</td>
-                  <td style={{ width: '46%', paddingLeft: 16 }}>
-                    <span
-                      style={{
-                        display: 'block',
-                        borderTop: '4px solid var(--ink)',
-                        width: `${((v / peak) * 100).toFixed(1)}%`,
-                      }}
-                    />
-                  </td>
-                  <td className="v">{cash(v)}</td>
-                  <td className="v faint" style={{ width: 56 }}>
-                    {s.totalSpent ? ((v / s.totalSpent) * 100).toFixed(0) : 0}%
-                  </td>
-                </tr>
-              ))}
+              <tr>
+                <td className="k">{T('period')}</td>
+                <td className="v">{T('days', { n: days })}</td>
+              </tr>
+              <tr>
+                <td className="k">{T('recent')}</td>
+                <td className="v">{T('countN', { n: s.expenseCount })}</td>
+              </tr>
+              <tr>
+                <td className="k">{T('settleCount')}</td>
+                <td className="v">{T('timesN', { n: ledger.settlements.length })}</td>
+              </tr>
+              <tr className="sum">
+                <td className="k">{T('spentAll')}</td>
+                <td className="v">{cash(s.totalSpent)}</td>
+              </tr>
             </tbody>
           </table>
         </section>
-      )}
 
-      <section>
-        <div className="caption">{T('settleHistory')}</div>
-        <table className="facts roomy wide" style={{ marginTop: 14 }}>
-          <tbody>
-            {ledger.settlements.map((x) => (
-              <tr key={x.id}>
-                <td className="k">{x.label}</td>
-                <td className="k faint">{x.date}</td>
-                <td className="v">{cash(x.snapshot.totalAmount)}</td>
-              </tr>
-            ))}
-            {s.unsettledAmount !== 0 && (
-              <tr>
-                <td className="k faint">{T('notSettled')}</td>
-                <td />
-                <td className="v faint">{cash(s.unsettledAmount)}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
+        {sorted.length > 0 && (
+          <section>
+            <div className="caption">{T('whatOn')}</div>
+            <table className="facts" style={{ marginTop: 14, width: '100%', maxWidth: 560 }}>
+              <tbody>
+                {sorted.map(([k, v]) => (
+                  <tr key={k}>
+                    <td className="k">{k}</td>
+                    <td style={{ width: '46%', paddingLeft: 16 }}>
+                      <span
+                        style={{
+                          display: 'block',
+                          borderTop: '4px solid var(--ink)',
+                          width: `${((v / peak) * 100).toFixed(1)}%`,
+                        }}
+                      />
+                    </td>
+                    <td className="v">{cash(v)}</td>
+                    <td className="v faint" style={{ width: 56 }}>
+                      {s.totalSpent ? ((v / s.totalSpent) * 100).toFixed(0) : 0}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
 
-      <AdSlot />
-    </main>
+        <section>
+          <div className="caption">{T('settleHistory')}</div>
+          <table className="facts roomy wide" style={{ marginTop: 14 }}>
+            <tbody>
+              {ledger.settlements.map((x) => (
+                <tr key={x.id}>
+                  <td className="k">{x.label}</td>
+                  <td className="k faint">{x.date}</td>
+                  <td className="v">{cash(x.snapshot.totalAmount)}</td>
+                </tr>
+              ))}
+              {s.unsettledAmount !== 0 && (
+                <tr>
+                  <td className="k faint">{T('notSettled')}</td>
+                  <td />
+                  <td className="v faint">{cash(s.unsettledAmount)}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+
+        <AdSlot />
+      </main>
+    </>
   );
 }

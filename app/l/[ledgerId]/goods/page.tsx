@@ -68,7 +68,7 @@ export default async function Goods({ params }: { params: Promise<{ ledgerId: st
   }));
 
   return (
-    <main>
+    <>
       <LedgerShell
         ledgerId={ledgerId}
         teamName={ledger.teamName}
@@ -79,16 +79,19 @@ export default async function Goods({ params }: { params: Promise<{ ledgerId: st
         signedIn={Boolean(pass.userId)}
       />
 
-      {items.length === 0 ? (
-        <section>
-          <div className="empty faint">{T('none')}</div>
-        </section>
-      ) : (
-        <GoodsGrid ledgerId={ledgerId} items={items} currency={currency} lang={lang} />
-      )}
+      <main>
 
-      <AdSlot />
-    </main>
+        {items.length === 0 ? (
+          <section>
+            <div className="empty faint">{T('none')}</div>
+          </section>
+        ) : (
+          <GoodsGrid ledgerId={ledgerId} items={items} currency={currency} lang={lang} />
+        )}
+
+        <AdSlot />
+      </main>
+    </>
   );
 }
 

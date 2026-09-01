@@ -15,7 +15,7 @@ export default async function Settle({ params }: { params: Promise<{ ledgerId: s
   const openSeqs = [...new Set(open.map((t) => t.seq))];
 
   return (
-    <main>
+    <>
       <LedgerShell
         ledgerId={ledgerId}
         teamName={ledger.teamName}
@@ -25,7 +25,10 @@ export default async function Settle({ params }: { params: Promise<{ ledgerId: s
         lang={lang}
         signedIn={Boolean(pass.userId)}
       />
-      <SettlePanel ledger={ledger} meId={pass.memberId} lang={lang} openSeqs={openSeqs} />
-    </main>
+
+      <main>
+        <SettlePanel ledger={ledger} meId={pass.memberId} lang={lang} openSeqs={openSeqs} />
+      </main>
+    </>
   );
 }

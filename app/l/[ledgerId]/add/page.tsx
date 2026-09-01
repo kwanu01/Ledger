@@ -26,7 +26,7 @@ export default async function AddExpense({ params }: { params: Promise<{ ledgerI
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <main>
+    <>
       <LedgerShell
         ledgerId={ledgerId}
         teamName={ledger.teamName}
@@ -36,15 +36,18 @@ export default async function AddExpense({ params }: { params: Promise<{ ledgerI
         lang={lang}
         signedIn={Boolean(pass.userId)}
       />
-      <ExpenseForm
-        ledgerId={ledgerId}
-        members={ledger.members}
-        roster={currentRoster(ledger)}
-        currency={ledger.currency ?? 'KRW'}
-        meId={pass.memberId}
-        today={today}
-        lang={lang}
-      />
-    </main>
+
+      <main>
+        <ExpenseForm
+          ledgerId={ledgerId}
+          members={ledger.members}
+          roster={currentRoster(ledger)}
+          currency={ledger.currency ?? 'KRW'}
+          meId={pass.memberId}
+          today={today}
+          lang={lang}
+        />
+      </main>
+    </>
   );
 }

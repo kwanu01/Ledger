@@ -612,6 +612,11 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 /* ── 기타 ────────────────────────────────────────────────────────── */
 .drop{border:1px dashed var(--ink-3);padding:40px 24px;text-align:center}
+/* 넓은 화면에서는 표로 알려 주고, 좁은 화면에서는 한 줄만 남긴다. */
+.drop-table{margin:22px auto 0;text-align:left;max-width:400px}
+.drop-say{display:none;margin:16px 0 0;font-size:13.5px;color:var(--ink-2)}
+/* 사진 없이 손으로 적으러 가는 길. 사진 받는 판의 짝이다. */
+.drop-out{margin:18px 0 0}
 /* 끌어다 놓는 중에는 받을 자리라는 것이 보여야 한다. */
 .drop.over{border-style:solid;border-color:var(--link);background:var(--hl)}
 
@@ -1320,6 +1325,14 @@ footer a:hover{color:var(--ink)}
   .act{padding:10px 18px}
   nav .tab{padding:5px 0 8px}
 
+  /* 사진 받는 자리 — 폰에서는 표를 접고 한 줄만 남긴다.
+     '직접 적기'도 같은 축에 세운다. 사진을 고르는 것과 손으로 적는 것은
+     나란한 두 갈래지, 본문과 그 아래 딸린 말이 아니다. */
+  .drop{padding:30px 16px}
+  .drop-table{display:none}
+  .drop-say{display:block}
+  .drop-out{text-align:center}
+
   /* ────────────────────────────────────────────────────────────────
      지출 기입 (§21.5)
 
@@ -1371,8 +1384,16 @@ footer a:hover{color:var(--ink)}
     자간부터 줄인다. 라벨의 넓은 자간은 여백이 있을 때 격식으로 읽히지만,
     자리가 없을 때는 그냥 흩어진 글자다.
   */
+  /* 한 줄이 짧아진 만큼 줄 사이를 조금 벌린다. 한글은 글자마다 속이 차 있어서
+     줄이 붙으면 다음 줄로 눈이 못 넘어간다. 크기는 반대로 조금 줄인다 —
+     한 줄에 든 낱말 수가 너무 적으면 문장이 아니라 낱말 목록으로 읽힌다. */
+  body{font-size:15px;line-height:1.72}
   .caption{letter-spacing:.08em}
   .masthead .team{letter-spacing:.08em}
+  /* 안내 문장은 본문보다 한 단 작고, 한 단 더 벌어져 있다. 읽지 않고
+     지나가도 되는 글이라 눈에 걸리지 않아야 하고, 읽기로 하면 편해야 한다. */
+  .aside{font-size:13px;line-height:1.78;padding-left:11px}
+  .lede,.muted,.faint{line-height:1.7}
   h1,h2,h3{word-break:keep-all;overflow-wrap:anywhere;text-wrap:balance}
   p,li,td,.aside,.muted,.faint{word-break:keep-all;overflow-wrap:anywhere}
 

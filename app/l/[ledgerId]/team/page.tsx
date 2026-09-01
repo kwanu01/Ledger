@@ -21,7 +21,7 @@ export default async function Team({ params }: { params: Promise<{ ledgerId: str
   const origin = await siteOrigin();
 
   return (
-    <main>
+    <>
       <LedgerShell
         ledgerId={ledgerId}
         teamName={ledger.teamName}
@@ -31,15 +31,18 @@ export default async function Team({ params }: { params: Promise<{ ledgerId: str
         lang={lang}
         signedIn={Boolean(pass.userId)}
       />
-      <TeamPanel
-        ledgerId={ledgerId}
-        teamName={ledger.teamName}
-        members={members}
-        invites={invites}
-        origin={origin}
-        lang={lang}
-        owner={owner}
-      />
-    </main>
+
+      <main>
+        <TeamPanel
+          ledgerId={ledgerId}
+          teamName={ledger.teamName}
+          members={members}
+          invites={invites}
+          origin={origin}
+          lang={lang}
+          owner={owner}
+        />
+      </main>
+    </>
   );
 }

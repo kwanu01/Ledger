@@ -50,7 +50,7 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
     .forEach((e, i) => slips.set(e.id, String(i + 1).padStart(3, '0')));
 
   return (
-    <main>
+    <>
       <LedgerShell
         ledgerId={ledgerId}
         teamName={ledger.teamName}
@@ -61,111 +61,114 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
         signedIn={Boolean(pass.userId)}
       />
 
-      <section>
-        <div className="summary">
-          <div>
-            <div className="label">{T('spentAll')}</div>
-            <div className="figure">{won(s.totalSpent)}</div>
-            <div className="under">{T('entries', { n: s.expenseCount })}</div>
-          </div>
-          <div>
-            <div className="label">{T('notSettled')}</div>
-            <div className="figure">{won(s.unsettledAmount)}</div>
-            <div className="under">{T('countN', { n: unsettledCount })}</div>
-          </div>
-          <div>
-            <div className="label">{T('myShare')}</div>
-            {/* 0일 때도 숫자를 그대로 둔다. 장부에서 맞아떨어진 칸은 0으로 적지 다른 말을 쓰지 않는다. */}
-            <div className={`figure${net < 0 ? ' debit' : ''}`}>
-              {net === 0 ? won(0) : `${net > 0 ? '+' : '−'}${won(Math.abs(net))}`}
+      <main>
+
+        <section>
+          <div className="summary">
+            <div>
+              <div className="label">{T('spentAll')}</div>
+              <div className="figure">{won(s.totalSpent)}</div>
+              <div className="under">{T('entries', { n: s.expenseCount })}</div>
             </div>
-            <div className="under">
-              {net === 0 ? T('evenNothing') : net > 0 ? T('willReceive') : T('willSend')}
+            <div>
+              <div className="label">{T('notSettled')}</div>
+              <div className="figure">{won(s.unsettledAmount)}</div>
+              <div className="under">{T('countN', { n: unsettledCount })}</div>
+            </div>
+            <div>
+              <div className="label">{T('myShare')}</div>
+              {/* 0일 때도 숫자를 그대로 둔다. 장부에서 맞아떨어진 칸은 0으로 적지 다른 말을 쓰지 않는다. */}
+              <div className={`figure${net < 0 ? ' debit' : ''}`}>
+                {net === 0 ? won(0) : `${net > 0 ? '+' : '−'}${won(Math.abs(net))}`}
+              </div>
+              <div className="under">
+                {net === 0 ? T('evenNothing') : net > 0 ? T('willReceive') : T('willSend')}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* 두 줄을 나란히 두면 합이 왜 갈라지는지 스스로 보인다. 설명 문장은 두지 않는다. */}
-        <table className="facts" style={{ marginTop: 20 }}>
-          <tbody>
-            <tr>
-              <td className="k">{T('sharedCost')}</td>
-              <td className="v">{won(s.sharedTotal)}</td>
-            </tr>
-            <tr>
-              <td className="k">{T('personalCost')}</td>
-              <td className="v">{won(s.personalTotal)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <section>
-        <div className="caption">{T('moneyMoving')}</div>
-        <Moving
-          ledgerId={ledgerId}
-          toMe={toMe.map((t) => ({
-            transferId: t.transfer_id,
-            who: nameOf(members, t.from_member_id),
-            amount: t.amount,
-            sent: Boolean(t.sent_at),
-            bank: '',
-            accountNo: '',
-          }))}
-          fromMe={fromMe.map((t) => ({
-            transferId: t.transfer_id,
-            who: nameOf(members, t.to_member_id),
-            amount: t.amount,
-            sent: Boolean(t.sent_at),
-            bank: acct.get(t.to_member_id)?.bank ?? '',
-            accountNo: acct.get(t.to_member_id)?.accountNo ?? '',
-          }))}
-          currency={currency}
-          lang={lang}
-        />
-      </section>
-
-      <section>
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-          <div className="caption">{T('recent')}</div>
-          {ledger.expenses.length > 0 && (
-            <Link href={`/l/${ledgerId}/book`} className="plain">
-              {T('seeWholeBook')}
-            </Link>
-          )}
-        </div>
-
-        {ledger.expenses.length === 0 ? (
-          <div className="empty">
-            {/* 단추는 차례표에 늘 있다. 여기서 한 번 더 내밀지 않는다. */}
-            <p className="empty-say">{T('bookEmpty')}</p>
-            <p className="empty-how">{T('bookEmptyHow')}</p>
-          </div>
-        ) : (
-        <div className="scroll">
-          {/* 장부 화면의 표와 같은 이름을 준다. 좁은 화면에서 칸을 접는
-              규칙이 이 이름에 걸려 있다 — 이름이 없어서 여섯 칸이 그대로
-              밀려 들어와 이름이 한 글자씩 세로로 쪼개졌다. */}
-          <table className="book entries">
+          {/* 두 줄을 나란히 두면 합이 왜 갈라지는지 스스로 보인다. 설명 문장은 두지 않는다. */}
+          <table className="facts" style={{ marginTop: 20 }}>
             <tbody>
-              {recent.map((e) => (
-                <tr key={e.id} className="entry">
-                  <td className="slip">{slips.get(e.id)}</td>
-                  <td className="day">{e.date.slice(5).replace('-', '.')}</td>
-                  <td className="item">
-                    {e.title}
-                    {e.adjustment && <span className="tag">{adjustmentLabel(e, lang)}</span>}
-                  </td>
-                  <td className="muted whom">{nameOf(members, e.payerId)}</td>
-                  <td className="r money">{entry(e.amount)}</td>
-                  <td className="muted bears">{allocationLabel(e, members, lang)}</td>
-                </tr>
-              ))}
+              <tr>
+                <td className="k">{T('sharedCost')}</td>
+                <td className="v">{won(s.sharedTotal)}</td>
+              </tr>
+              <tr>
+                <td className="k">{T('personalCost')}</td>
+                <td className="v">{won(s.personalTotal)}</td>
+              </tr>
             </tbody>
           </table>
-        </div>
-        )}
-      </section>
-    </main>
+        </section>
+
+        <section>
+          <div className="caption">{T('moneyMoving')}</div>
+          <Moving
+            ledgerId={ledgerId}
+            toMe={toMe.map((t) => ({
+              transferId: t.transfer_id,
+              who: nameOf(members, t.from_member_id),
+              amount: t.amount,
+              sent: Boolean(t.sent_at),
+              bank: '',
+              accountNo: '',
+            }))}
+            fromMe={fromMe.map((t) => ({
+              transferId: t.transfer_id,
+              who: nameOf(members, t.to_member_id),
+              amount: t.amount,
+              sent: Boolean(t.sent_at),
+              bank: acct.get(t.to_member_id)?.bank ?? '',
+              accountNo: acct.get(t.to_member_id)?.accountNo ?? '',
+            }))}
+            currency={currency}
+            lang={lang}
+          />
+        </section>
+
+        <section>
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
+            <div className="caption">{T('recent')}</div>
+            {ledger.expenses.length > 0 && (
+              <Link href={`/l/${ledgerId}/book`} className="plain">
+                {T('seeWholeBook')}
+              </Link>
+            )}
+          </div>
+
+          {ledger.expenses.length === 0 ? (
+            <div className="empty">
+              {/* 단추는 차례표에 늘 있다. 여기서 한 번 더 내밀지 않는다. */}
+              <p className="empty-say">{T('bookEmpty')}</p>
+              <p className="empty-how">{T('bookEmptyHow')}</p>
+            </div>
+          ) : (
+          <div className="scroll">
+            {/* 장부 화면의 표와 같은 이름을 준다. 좁은 화면에서 칸을 접는
+                규칙이 이 이름에 걸려 있다 — 이름이 없어서 여섯 칸이 그대로
+                밀려 들어와 이름이 한 글자씩 세로로 쪼개졌다. */}
+            <table className="book entries">
+              <tbody>
+                {recent.map((e) => (
+                  <tr key={e.id} className="entry">
+                    <td className="slip">{slips.get(e.id)}</td>
+                    <td className="day">{e.date.slice(5).replace('-', '.')}</td>
+                    <td className="item">
+                      {e.title}
+                      {e.adjustment && <span className="tag">{adjustmentLabel(e, lang)}</span>}
+                    </td>
+                    <td className="muted whom">{nameOf(members, e.payerId)}</td>
+                    <td className="r money">{entry(e.amount)}</td>
+                    <td className="muted bears">{allocationLabel(e, members, lang)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          )}
+        </section>
+      </main>
+    </>
   );
 }

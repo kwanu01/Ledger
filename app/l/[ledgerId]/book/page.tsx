@@ -11,7 +11,7 @@ export default async function Book({ params }: { params: Promise<{ ledgerId: str
   const ledger = await loadLedger(ledgerId);
 
   return (
-    <main>
+    <>
       <LedgerShell
         ledgerId={ledgerId}
         teamName={ledger.teamName}
@@ -21,7 +21,10 @@ export default async function Book({ params }: { params: Promise<{ ledgerId: str
         lang={lang}
         signedIn={Boolean(pass.userId)}
       />
-      <BookTable ledger={ledger} lang={lang} />
-    </main>
+
+      <main>
+        <BookTable ledger={ledger} lang={lang} />
+      </main>
+    </>
   );
 }

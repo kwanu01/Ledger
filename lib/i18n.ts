@@ -78,6 +78,7 @@ export type Key =
   | 'wholeTeam' | 'someOnly' | 'onePersonTakes' | 'whoTakes'
   | 'productLink' | 'noteField' | 'writeToBook' | 'giveUp' | 'perPerson'
   | 'photoReads' | 'photoReadsV' | 'photoKinds' | 'photoKindsV' | 'photoHow' | 'photoHowV'
+  | 'photoShort' | 'photoSentTo2'
   | 'photoSentTo' | 'chargedIn' | 'paidIn' | 'foreignNote' | 'uploaded'
   // 팀
   | 'membersN' | 'me' | 'gone' | 'markGone' | 'bringBack'
@@ -182,7 +183,9 @@ const ko: Record<Key, string> = {
   photoReads: '읽어오는 정보', photoReadsV: '항목 이름 · 금액 · 통화 · 날짜 · 판매처',
   photoKinds: '올릴 수 있는 사진', photoKindsV: '종이 영수증, 결제 완료 화면, 주문 내역, 계좌 이체 내역',
   photoHow: '올리는 방법', photoHowV: '버튼으로 고르기 · 여기로 끌어다 놓기 · 복사한 화면을 Ctrl+V',
-  photoSentTo: '사진은 Claude가 읽습니다. 읽은 값은 다음 화면에서 확인한 뒤 저장됩니다.',
+  photoShort: '영수증, 결제 화면, 주문 내역 다 됩니다.',
+  photoSentTo: '사진은 Claude가 읽습니다.',
+  photoSentTo2: '읽은 값은 다음 화면에서 확인한 뒤 저장됩니다.',
   chargedIn: '{code} 청구액', paidIn: '결제 금액 ({code})',
   foreignNote: '{from}로 결제했지만 장부에는 {to} 청구액이 적힙니다.',
   uploaded: '올린 사진',
@@ -319,7 +322,9 @@ const en: Record<Key, string> = {
   photoReads: 'What it reads', photoReadsV: 'item name · amount · currency · date · vendor',
   photoKinds: 'What works', photoKindsV: 'paper receipts, payment confirmations, order pages, transfer records',
   photoHow: 'How to add one', photoHowV: 'the button · drag it here · paste a screenshot with Ctrl+V',
-  photoSentTo: 'Claude reads the photo. You check what it read on the next screen before saving.',
+  photoShort: 'A receipt, a payment screen or an order page will do.',
+  photoSentTo: 'Claude reads the photo.',
+  photoSentTo2: 'You check what it read on the next screen before saving.',
   chargedIn: 'Charged in {code}', paidIn: 'Paid ({code})',
   foreignNote: 'Paid in {from}, but the ledger records the {to} charge.',
   uploaded: 'uploaded photo',
@@ -454,7 +459,9 @@ const ja: Record<Key, string> = {
   photoReads: '読み取るもの', photoReadsV: '項目名 · 金額 · 通貨 · 日付 · 販売元',
   photoKinds: '使える写真', photoKindsV: '紙のレシート、決済完了画面、注文履歴、振込明細',
   photoHow: '取り込み方', photoHowV: 'ボタンで選ぶ · ここにドラッグ · コピーした画面を Ctrl+V',
-  photoSentTo: '写真は Claude が読みます。読み取った値は次の画面で確認してから保存します。',
+  photoShort: 'レシート、決済画面、注文履歴。どれでも大丈夫です。',
+  photoSentTo: '写真は Claude が読みます。',
+  photoSentTo2: '読み取った値は次の画面で確認してから保存します。',
   chargedIn: '{code} 請求額', paidIn: '決済金額 ({code})',
   foreignNote: '{from}で決済しましたが、帳簿には{to}の請求額が記録されます。',
   uploaded: 'アップロードした写真',
@@ -589,7 +596,9 @@ const zh: Record<Key, string> = {
   photoReads: '读取内容', photoReadsV: '项目名称 · 金额 · 币种 · 日期 · 商家',
   photoKinds: '可用照片', photoKindsV: '纸质小票、支付完成页、订单记录、转账记录',
   photoHow: '添加方式', photoHowV: '点按钮选择 · 拖到此处 · 复制截图后 Ctrl+V',
-  photoSentTo: '照片由 Claude 读取。读取结果在下一屏确认后保存。',
+  photoShort: '小票、支付页面或订单记录都可以。',
+  photoSentTo: '照片由 Claude 读取。',
+  photoSentTo2: '读取结果在下一屏确认后保存。',
   chargedIn: '{code} 扣款金额', paidIn: '支付金额 ({code})',
   foreignNote: '以{from}支付，但账本记录的是{to}扣款金额。',
   uploaded: '上传的照片',
@@ -729,7 +738,9 @@ const es: Record<Key, string> = {
   photoReads: 'Qué lee', photoReadsV: 'concepto · importe · moneda · fecha · comercio',
   photoKinds: 'Qué sirve', photoKindsV: 'tickets en papel, confirmaciones de pago, pedidos, transferencias',
   photoHow: 'Cómo añadirla', photoHowV: 'con el botón · arrastrándola aquí · pegando una captura con Ctrl+V',
-  photoSentTo: 'Claude lee la foto. Compruebas lo leído en la pantalla siguiente antes de guardar.',
+  photoShort: 'Vale un recibo, una pantalla de pago o un pedido.',
+  photoSentTo: 'Claude lee la foto.',
+  photoSentTo2: 'Compruebas lo leído en la pantalla siguiente antes de guardar.',
   chargedIn: 'Cargo en {code}', paidIn: 'Importe pagado ({code})',
   foreignNote: 'Pagado en {from}, pero el libro registra el cargo en {to}.',
   uploaded: 'foto subida',
@@ -866,7 +877,9 @@ const vi: Record<Key, string> = {
   photoReads: 'Đọc những gì', photoReadsV: 'tên khoản · số tiền · tiền tệ · ngày · nơi bán',
   photoKinds: 'Ảnh dùng được', photoKindsV: 'hoá đơn giấy, màn hình thanh toán, lịch sử đặt hàng, biên lai chuyển khoản',
   photoHow: 'Cách thêm ảnh', photoHowV: 'bấm nút chọn · kéo thả vào đây · dán ảnh chụp bằng Ctrl+V',
-  photoSentTo: 'Claude đọc ảnh. Bạn kiểm tra kết quả ở màn hình sau rồi lưu.',
+  photoShort: 'Hóa đơn, màn hình thanh toán hay đơn hàng đều được.',
+  photoSentTo: 'Claude đọc ảnh.',
+  photoSentTo2: 'Bạn kiểm tra kết quả ở màn hình sau rồi lưu.',
   chargedIn: 'Số tiền tính bằng {code}', paidIn: 'Số tiền đã trả ({code})',
   foreignNote: 'Trả bằng {from}, nhưng sổ ghi số tiền tính bằng {to}.',
   uploaded: 'ảnh đã tải lên',

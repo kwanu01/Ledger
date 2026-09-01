@@ -291,8 +291,21 @@ export default function ExpenseForm({
             />
           </label>
 
-          {/* 무엇을 찍어야 하는지, 사진이 어디로 가는지는 미리 알려 준다. */}
-          <table className="facts" style={{ margin: '22px auto 0', textAlign: 'left', maxWidth: 400 }}>
+          {/*
+            무엇을 찍어야 하는지, 사진이 어디로 가는지는 미리 알려 준다.
+            다만 **화면 폭에 따라 얼마나 알려 줄지가 다르다.**
+
+            넓은 화면에서는 세 줄짜리 표가 친절하다. 자리가 있으니까.
+            폰에서는 같은 표가 벽이 된다 — 라벨 칸이 좁아 '읽어오/는 정보'로
+            접히고, 단추 하나 누르러 온 사람이 여섯 줄을 먼저 읽어야 한다.
+            끌어다 놓기도 Ctrl+V도 폰에는 없는 방법이라 더 그렇다.
+
+            그래서 폰에는 한 줄만 남긴다. 무엇을 찍으면 되는지 하나.
+            나머지는 눌러 보면 알게 되는 것들이다.
+          */}
+          <p className="drop-say">{T('photoShort')}</p>
+
+          <table className="facts drop-table">
             <tbody>
               <tr>
                 <td className="k">{T('photoReads')}</td>
@@ -310,11 +323,21 @@ export default function ExpenseForm({
           </table>
         </div>
 
+        {/*
+          사진이 어디로 가는지는 줄이지 않는다. 줄일 것과 줄이면 안 되는 것은 다르다.
+          대신 **한 문장에 한 줄**을 준다. 두 문장이 한 덩어리로 흐르면 어디서
+          끊어 읽어야 하는지가 글자 크기와 화면 폭에 따라 매번 달라진다.
+          문장이 줄을 하나씩 갖고 있으면 그 자리가 고정된다.
+        */}
         <p className="aside" style={{ marginTop: 16, maxWidth: 520 }}>
           {T('photoSentTo')}
+          <br />
+          {T('photoSentTo2')}
         </p>
 
-        <p style={{ marginTop: 18 }}>
+        {/* 사진 없이 가는 길. 사진 받는 판과 같은 축에 세운다 — 둘은
+            나란한 두 갈래지 본문과 그 아래 딸린 말이 아니다. */}
+        <p className="drop-out">
           <button className="plain" onClick={() => setStep('form')}>
             {T('writeManually')}
           </button>
