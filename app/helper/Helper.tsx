@@ -164,51 +164,148 @@ function heldPose(dx: number, dy: number, speed: number, wobbly: boolean): strin
  * 오른쪽 아래 구석이 기본이지만, 좁은 화면에서는 거기에 이미 글이 있다.
  * 종이 한 장이 글씨 위에 얹혀 있으면 읽는 사람만 성가시다.
  *
- * 그래서 자리를 몇 군데 놓고 실제로 그 자리에 무엇이 있는지 물어본다.
- * 브라우저는 어느 점 위에 어떤 요소가 있는지 알려 준다(elementFromPoint).
- * 글자나 누를 것이 걸리는 자리는 건너뛰고, 아무것도 없는 첫 자리에 선다.
- * 다 걸리면 원래대로 오른쪽 아래에 선다 — 어디든 서야 하기 때문이다.
+ * 처음에는 몇 군데를 골라 놓고 그 점 위에 무엇이 있는지 물어봤다(elementFromPoint).
+ * 그 방법은 두 군데서 틀렸다.
+ *
+ *   하나, **점 몇 개로는 겹침을 못 잡는다.** 네 점이 다 비어 있어도 그 사이로
+ *   글줄이 지나간다. 화면 맨 아래 줄(Ledger 2026 · 개인정보 처리방침 · 문의)이
+ *   정확히 그렇게 가려졌다.
+ *
+ *   둘, **글의 사각형이 아니라 칸의 사각형을 봤다.** "바로 나누기 … 가입 없이"는
+ *   한 줄을 다 차지하는 것처럼 보이지만, 실제 글씨는 양 끝에만 있고 가운데는 비어
+ *   있다. 칸으로 보면 설 자리가 한 군데도 없다는 결론이 나온다.
+ *
+ * 그래서 지금은 **글자가 실제로 그려진 사각형**을 모은다. 텍스트 노드마다 Range를
+ * 잡아 getClientRects()를 부르면 글줄 하나하나의 상자가 나온다. 그림·입력칸처럼
+ * 글이 아닌 것은 요소의 상자를 그대로 쓴다.
+ *
+ * 그 위에서 자리를 훑고, **겹친 넓이가 가장 작은 자리**에 선다. 완전히 빈 자리가
+ * 없는 화면도 있기 때문에 "빈 자리가 있으면 거기, 없으면 제일 덜 가리는 자리"로
+ * 둔다. 같은 값이면 원래 자리인 오른쪽 아래를 고르도록 거리에 약간의 벌점을 준다.
  */
-function freeSpot(W: number, H: number, topRoom: number): { x: number; y: number } {
-  const roomX = Math.max(6, window.innerWidth - W - 6);
-  const roomY = Math.max(topRoom, window.innerHeight - H - 6);
-  const fallback = { x: roomX - 20, y: roomY - 16 };
 
-  // 몸이 실제로 그려지는 자리. 발밑이 아니라 그림이 있는 칸을 본다.
-  const busy = (x: number, y: number) => {
-    const pts: [number, number][] = [
-      [x + W / 2, y + H / 2],
-      [x + 16, y + H - 12],
-      [x + W - 16, y + H - 12],
-      [x + W / 2, y + 18],
-    ];
-    for (const [px, py] of pts) {
-      const el = document.elementFromPoint(px, py);
-      if (!el) continue;
-      // 이 자리를 가리는 것이 무엇인지. 바탕(html·body·wrap)이면 빈자리다.
-      const solid = el.closest(
-        'a,button,input,select,textarea,label,table,h1,h2,h3,p,li,img,figure,pre',
-      );
-      if (solid && solid.textContent?.trim()) return true;
-      if (solid && ['IMG', 'INPUT', 'SELECT', 'TEXTAREA'].includes(solid.tagName)) return true;
-    }
-    return false;
+/** .helper .stage 의 margin-top. 그림은 뿌리 상자의 이 아래부터 그려진다. */
+const ART_TOP = 26;
+const ART_H = 156;
+
+/**
+ * 뿌리 상자와 실제로 그려지는 상자는 다르다.
+ *
+ * 좁은 화면에서 수증이는 `transform:scale(.72)` 로 작아지고, 그 기준점이
+ * 오른쪽 아래(100% 100%)다. 그래서 left/top 으로 세워 둔 자리와 눈에 보이는
+ * 자리가 가로 44px, 세로 53px 어긋난다. 겹침을 left/top 으로 재면 딱 그만큼
+ * 틀린 자리를 재게 되고, 화면 맨 아래 줄이 가려진 것이 바로 그 차이였다.
+ *
+ * 배율과 기준점을 코드에 적어 두면 CSS를 고칠 때 또 어긋난다. 그래서 지금
+ * 서 있는 요소에 직접 물어본다.
+ */
+type Metrics = { dx: number; dy: number; s: number; vw: number; vh: number };
+
+function measure(el: HTMLElement): Metrics {
+  const box = el.getBoundingClientRect();
+  const left = parseFloat(el.style.left || '0');
+  const top = parseFloat(el.style.top || '0');
+  const s = box.width / W || 1;
+  return { dx: box.left - left, dy: box.top - top, s, vw: box.width, vh: box.height };
+}
+
+/** 화면에 실제로 그려진 것들의 사각형. 글은 글줄 단위로, 나머지는 요소 단위로. */
+function contentBoxes(): { l: number; t: number; r: number; b: number }[] {
+  const out: { l: number; t: number; r: number; b: number }[] = [];
+  const VW = window.innerWidth;
+  const VH = window.innerHeight;
+
+  const push = (r: DOMRect) => {
+    if (r.width < 2 || r.height < 2) return;
+    if (r.bottom < 0 || r.top > VH || r.right < 0 || r.left > VW) return;
+    out.push({ l: r.left, t: r.top, r: r.right, b: r.bottom });
   };
 
-  const candidates: { x: number; y: number }[] = [
-    fallback,                                   // 오른쪽 아래
-    { x: 6 + 14, y: roomY - 16 },               // 왼쪽 아래
-    { x: roomX - 20, y: Math.round(roomY / 2) },// 오른쪽 가운데
-    { x: 6 + 14, y: Math.round(roomY / 2) },    // 왼쪽 가운데
-    { x: roomX - 20, y: topRoom + 8 },          // 오른쪽 위
-  ];
-
-  for (const c of candidates) {
-    const x = clamp(c.x, 6, roomX);
-    const y = clamp(c.y, topRoom, roomY);
-    if (!busy(x, y)) return { x, y };
+  // 글줄
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    if (!n.nodeValue?.trim()) continue;
+    const parent = n.parentElement;
+    if (!parent || parent.closest('.helper')) continue;
+    const range = document.createRange();
+    range.selectNodeContents(n);
+    const rects = range.getClientRects();
+    for (let i = 0; i < rects.length; i++) push(rects[i]);
+    range.detach?.();
   }
-  return fallback;
+
+  // 글이 아닌 것 — 그림, 입력칸, 빈 단추
+  document
+    .querySelectorAll('img,svg,canvas,input,select,textarea,button,video')
+    .forEach((el) => {
+      if (el.closest('.helper')) return;
+      push(el.getBoundingClientRect());
+    });
+
+  return out;
+}
+
+/** 이 자리에 서면 무엇을 얼마나 가리는가(넓이, px²). 0이면 아무것도 안 가린다. */
+function overlapAt(
+  boxes: { l: number; t: number; r: number; b: number }[],
+  m: Metrics,
+  x: number,
+  y: number,
+): number {
+  // 뿌리 상자가 아니라 **그림이 실제로 그려지는 칸**으로 잰다. 좌우로 조금은
+  // 종이의 여백이라 글이 살짝 스쳐도 가려 보이지 않는다.
+  // 스치는 것도 겹친 것으로 센다. 글자 끝에서 1px 떨어져 서면 수치로는
+  // 안 가린 것이지만 눈으로는 붙어 있다. 사방으로 조금 부풀려서 잰다.
+  const graze = 7;
+  const pad = 5 * m.s;
+  const l = x + m.dx + pad - graze;
+  const r = x + m.dx + m.vw - pad + graze;
+  const t = y + m.dy + ART_TOP * m.s - graze;
+  const b = t + ART_H * m.s + graze * 2;
+
+  let sum = 0;
+  for (const q of boxes) {
+    const w = Math.min(r, q.r) - Math.max(l, q.l);
+    const h = Math.min(b, q.b) - Math.max(t, q.t);
+    if (w > 0 && h > 0) sum += w * h;
+  }
+  return sum;
+}
+
+function freeSpot(
+  boxes: { l: number; t: number; r: number; b: number }[],
+  m: Metrics,
+  topRoom: number,
+): { x: number; y: number } {
+  // 그림이 화면 밖으로 나가지 않는 마지막 자리. 재는 것도 세우는 것도
+  // 눈에 보이는 상자를 기준으로 한다.
+  const roomX = Math.max(6, window.innerWidth - 6 - m.dx - m.vw);
+  const roomY = Math.max(topRoom, window.innerHeight - 6 - m.dy - m.vh);
+
+  let best = { x: roomX - 20, y: roomY };
+  let bestScore = Infinity;
+
+  const stepX = Math.max(16, Math.round((roomX - 6) / 12));
+  const stepY = 18;
+
+  for (let y = roomY; y >= topRoom; y -= stepY) {
+    for (let x = roomX; x >= 6; x -= stepX) {
+      // 오른쪽 아래에서 멀어질수록 조금씩 손해. 같은 값이면 원래 자리에 선다.
+      const bias = roomX - x + (roomY - y);
+      const over = overlapAt(boxes, m, x, y);
+      // 조금이라도 가리는 자리는 **비어 있는 자리보다 언제나 나쁘다.** 덜 가리는
+      // 자리와 안 가리는 먼 자리를 같은 자로 재면, 글자를 조금 덮은 채로 가까이
+      // 서는 쪽이 이긴다. 그게 지금까지 맨 아래 줄을 가리던 이유다.
+      // 가리는 자리끼리만 넓이로 비교한다. 화면이 꽉 차 아무 데도 빈 자리가
+      // 없을 때를 위한 순위다.
+      const score = over > 0 ? 1_000_000 + over * 4 + bias : bias;
+      if (score < bestScore) {
+        bestScore = score;
+        best = { x, y };
+      }
+    }
+  }
+  return best;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -288,10 +385,16 @@ export default function Helper({ lang }: { lang: Locale }) {
     } catch {
       /* 저장을 막아 두었으면 그냥 보인다 */
     }
-    const roomX = Math.max(6, window.innerWidth - W - 6);
-    const roomY = Math.max(TOP_ROOM, window.innerHeight - H - 6);
+    // 좁은 화면에서는 그림이 작게 그려진다. 자리를 재는 것도 세우는 것도
+    // 눈에 보이는 상자를 기준으로 해야 발끝이 화면 밖으로 안 나간다.
+    const m: Metrics = root.current
+      ? measure(root.current)
+      : { dx: 0, dy: 0, s: 1, vw: W, vh: H };
+    const roomX = Math.max(6, window.innerWidth - 6 - m.dx - m.vw);
+    const roomY = Math.max(TOP_ROOM, window.innerHeight - 6 - m.dy - m.vh);
     // 기억해 둔 자리가 없으면 빈 자리를 찾아 선다.
-    const first = freeSpot(W, H, TOP_ROOM);
+    const boxes = contentBoxes();
+    const first = freeSpot(boxes, m, TOP_ROOM);
     let x = first.x;
     let y = first.y;
     try {
@@ -305,8 +408,14 @@ export default function Helper({ lang }: { lang: Locale }) {
           v.right >= 0 && v.right <= window.innerWidth - W &&
           v.bottom >= 0 && v.bottom <= window.innerHeight - H;
         if (fits) {
-          x = window.innerWidth - W - v.right;
-          y = window.innerHeight - H - v.bottom;
+          const rx = window.innerWidth - W - v.right;
+          const ry = window.innerHeight - H - v.bottom;
+          // 지난번에 세워 둔 자리라도 이 화면에서는 글을 가릴 수 있다.
+          // 화면마다 글이 놓인 자리가 다르기 때문이다. 가리면 기억을 버린다.
+          if (overlapAt(boxes, m, rx, ry) <= overlapAt(boxes, m, x, y)) {
+            x = rx;
+            y = ry;
+          }
         }
       }
     } catch {
