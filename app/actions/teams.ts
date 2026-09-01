@@ -27,13 +27,30 @@ export type Result<T = undefined> =
   | { ok: false; message: string };
 
 
-/** 로그인한 사용자의 프로필 행을 보장한다. 처음 들어올 때 한 번 만들어진다. */
+/**
+ * 로그인한 사용자의 프로필 행을 보장한다.
+ *
+ * `members.user_id` 는 `profiles.id` 를 가리킨다. 그래서 계정에 이름표를 다는
+ * 모든 자리는 그 전에 이 줄이 있어야 한다. 없으면 외래키가 거절한다.
+ *
+ * 예전에는 팀 목록 화면에서만 이 함수를 불렀다. 장부를 만든 사람은 언제나
+ * 그 화면을 지나가므로 문제가 드러나지 않았지만, **초대 링크로 온 사람은
+ * 그 화면을 지나가지 않는다.** 로그인하고 곧바로 이름을 적는 화면으로 가서
+ * 팀에 들어가려 하면, 프로필이 없어 거기서 막혔다. 초대받은 사람만 못 들어오는
+ * 상태가 그래서 생겼다.
+ *
+ * 이제 계정에 무언가를 붙이기 직전마다 부른다. 여러 번 불러도 한 줄이다.
+ */
 export async function ensureProfile(): Promise<{ id: string; displayName: string }> {
   const user = await requireUser();
   const { data } = await db.from('profiles').select('id, display_name').eq('id', user.id).maybeSingle();
   if (data) return { id: data.id, displayName: data.display_name };
 
-  await db.from('profiles').insert({ id: user.id, display_name: user.displayName });
+  // 두 화면이 동시에 부를 수 있다. 이미 있으면 조용히 지나간다.
+  const { error } = await db
+    .from('profiles')
+    .upsert({ id: user.id, display_name: user.displayName }, { onConflict: 'id', ignoreDuplicates: true });
+  if (error) throw new Error(error.message);
   return { id: user.id, displayName: user.displayName };
 }
 
@@ -372,6 +389,10 @@ export async function joinTeam(args: {
     const user = await currentUser();
     if (!user) return { ok: false, message: '로그인한 뒤에 들어올 수 있습니다.' };
 
+    // 이름표를 계정에 붙이기 전에 그 계정의 프로필 줄부터 있어야 한다.
+    // 초대 링크로 온 사람은 팀 목록 화면을 지나오지 않으므로 여기가 처음이다.
+    await ensureProfile();
+
     // 이미 이 팀의 멤버라면 새로 만들지 않는다. 링크를 두 번 눌러도 사람이 둘이 되면 안 된다.
     const { data: mine } = await db
       .from('members')
@@ -457,6 +478,9 @@ export async function claimMembership(): Promise<void> {
     .eq('id', pass.memberId)
     .maybeSingle();
   if (!data || data.user_id) return;
+
+  // 여기서도 계정에 줄을 붙인다. 프로필이 먼저다.
+  await ensureProfile();
 
   // 한 사람이 한 팀에 두 줄로 있으면 안 된다. 이미 계정으로 묶인 줄이 있으면 두지 않는다.
   const { data: mine } = await db
