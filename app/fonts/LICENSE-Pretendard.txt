@@ -1,0 +1,10 @@
+Pretendard
+Copyright (c) 2021 Kil Hyung-jin, with Reserved Font Name Pretendard.
+https://github.com/orioncactus/pretendard
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+http://scripts.sil.org/OFL
+
+여기 있는 파일은 Pretendard의 subset 빌드 세 무게(Regular 400, SemiBold 600,
+Bold 700)다. 글꼴을 직접 심는 이유는, 시스템 글꼴에 기대면 컴퓨터마다 화면이
+달라지기 때문이다. 장부는 어디서 열어도 같은 모양이어야 한다.

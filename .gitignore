@@ -1,0 +1,7 @@
+node_modules
+.next
+.env
+.env.local
+prototype/engine.js
+*.tsbuildinfo
+*.zip

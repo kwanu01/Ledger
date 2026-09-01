@@ -1,0 +1,2344 @@
+<title>Ledger 팀 장부</title>
+<style>
+/* 로고용 필기체. Mrs Saint Delafield를 로고 글자(Ledger)만 남기고 잘라 심었다.
+   19세기 상업 장부의 손글씨를 되살린 서체다. 외부에서 아무것도 내려받지 않는다.
+   Mrs Saint Delafield (c) Alejandro Paul — SIL Open Font License 1.1 */
+@font-face{
+  font-family:"Mrs Saint Delafield";
+  font-style:normal; font-weight:400; font-display:swap;
+  src:url(data:font/woff2;base64,d09GMgABAAAAAAREAA4AAAAAB5QAAAPwAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbIBwqBmAATBEICoVQhHoBNgIkAxgLDgAEIAWDegcgGzkGUVRP0hA/EjI3PTVLXMq2sNW0S7aei2hB8Ur8Ew9P46j3ZyEmMW0yT6rsV4pbgKIYitpdKPAM/572yiEzMtHBhKRC2gm5c3oGsuX4d19GJqyEz/819Y743ic/8RPpXDVFW1nV8xQY2GgN9HFgZa0Dtek2pHhCXLjc1TI7/AoEKgFJCEVCoFwnH7yl4koEmCuEnAGBcn1C8Smr2VzuMmqAGxF1PMmxSBHpUWJw1f0wPpjyl8TwYeuhI4UIyFWJKmD+LUe9SUmD8Dk9Ri8+EgrQSCBcSKFpQLlSSbKFJEXljC0E+GW+nTfk9XmpSAGLnNVccDGoRBl+EssAgEJAgSQJMSnR3AwKcjVLjwI0h+/lYrgG1pLh0Tuh65AJ5yATmGCRR89CJ9HdYY8hEzdUzkw9CH+CsVQx496GsyyYGGYQjuPReMKKTqkMPSRI0b60ZTyRk4TzwZa9zUFYRlUGVxOy0gR6Xl7AstJgEwImZhtwjGG9znJ0L6lEEBasq+S1JgJfy3kWuNKWj7DKJZPl0a5n6W3JsiEiZqVpOUBwDg+9jb56kV7jsqvS5aknj157luFMLLPwxPqJVETX9ueS4g5vbLMNQfWbEW3o3aTJSGuzcQiL23wu5dj10UQ3v9PaBRFZV81ULYL8tBMrfpb614ZDIgcynKiBa2bvKRQ26mYPJ/kzAXJ5RU+V/TomwCZRYNE0f5M2aBXqagNOLvgMF4TPHvcwM3cnkU+RD3dG2od+5PGp9mAPx/Bjm5PNBrveVi/wtXTf+ySnRrEvyhGyFhfEhsYQVmZAt905D1+KzkVToyLzps+JcvcqXtVq6VfUVxVVkL40w6Ww7ML/vFxPsIp7NZ01PTfpLGzhNduvto7xsQ2D7T1HyshDBx35/E3VURllSJEkvsbLqTzFXig2ukY4RK5b5quH93J00+YVu/tFAzuXtuaFzKeojPdIGxm3zvu3Jf/4UvV5wbyZF3G/dc5md7lKdi6wlZW/HcuKXSqh6uMncyOvAYHg8m7j+3M1md9KFXyFlz+SWwHg1Qjl8f/Tv+VFKwoYlEog+E2sojYCMjVFMJhizykYBKIxv4lkNMJypdeW8Ur4mpJgQ9ipEicJRGEZ3gNB6PMIJNW+gwJ7IewtpIEi7YFcS7Gp0IACWjqDKHJSMkawUD3CwOLFipUIlkeFpNBFg0DRgtXq0ku1RDSAHyMYyeloGeQO3le0HlpqYSJZu0LOSAZWj2RAovQhEWDFtDSMYNW6qJFg/qpQDGANusgp6UIklYYk5GAyBJXeOCTVOzGEOqAgy0gHB+1N/2QhDLlMkR+mAhYn2qQWF06QZjIoKj1HwIjybVMAAAAA) format("woff2");
+}
+/* ==========================================================================
+   Ledger — 시각 시스템 v2
+   Master Context §20 · 아날로그 회계 장부의 물성 × 웹의 가장 정직한 형태
+
+   v2에서 바꾼 것
+   · 가운뎃점 구분자를 전부 없앴다. 한 칸에는 한 덩어리만 넣고,
+     나머지는 표의 열과 줄바꿈이 맡는다.
+   · 세로 괘선을 넣었다. 회계 장부를 장부로 보이게 하는 건 가로줄이 아니라
+     금액 칸을 감싸는 세로줄이다.
+   · 전표 번호와 이중 마감선을 넣었다. 둘 다 장식이 아니라 참조와 구획의 수단이다.
+   · 종이 결을 아주 옅게 깔았다. 보이라고 넣은 게 아니라 화면이 순백으로
+     비어 보이지 않게 하려고 넣었다.
+   ========================================================================== */
+
+:root{
+  --paper:#ffffff;
+  --ink:#000000;
+  --ink-2:#595959;
+  --ink-3:#8c8c8c;
+  --rule:#b4b4b4;       /* 괘선 */
+  --rule-2:#dedede;     /* 보조 괘선 */
+  --rule-hard:#000000;
+  --link:#0000ee;       /* 브라우저 기본 파랑 */
+  --link-v:#551a8b;
+  --debit:#cc0000;      /* 상태 색 — 보낼 돈, 환불 */
+  --stamp:#cf3a2c;      /* 고무도장 잉크. 숫자가 아니라 종이 위에 얹힌 물건의 색이다 */
+  --hl:#f4f4f4;
+  --field:#ffffff;
+  --script:"Mrs Saint Delafield","Snell Roundhand","Apple Chancery",cursive;
+  --ink-blot:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' seed='7'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.3 0 0 0 -0.02'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23b)'/%3E%3C/svg%3E");
+  --sans:-apple-system,BlinkMacSystemFont,"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Segoe UI","Malgun Gothic",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"D2Coding","Nanum Gothic Coding",monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#000000; --ink:#ffffff; --ink-2:#a6a6a6; --ink-3:#767676;
+    --rule:#4d4d4d; --rule-2:#2b2b2b; --rule-hard:#ffffff;
+    --link:#7da2ff; --link-v:#c2a3ff; --debit:#ff6f6f; --stamp:#e8574a;
+    --hl:#141414; --field:#0a0a0a;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#000000; --ink:#ffffff; --ink-2:#a6a6a6; --ink-3:#767676;
+  --rule:#4d4d4d; --rule-2:#2b2b2b; --rule-hard:#ffffff;
+  --link:#7da2ff; --link-v:#c2a3ff; --debit:#ff6f6f; --stamp:#e8574a;
+  --hl:#141414; --field:#0a0a0a;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:15.5px; line-height:1.62;
+  -webkit-font-smoothing:antialiased; margin:0; padding:0 20px 120px;
+}
+.wrap{max-width:900px;margin:0 auto}
+
+a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+a:visited{color:var(--link-v)}
+a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
+  outline:2px solid var(--link);outline-offset:2px}
+h1,h2,h3{font-weight:600;margin:0;text-wrap:balance}
+p{margin:0}
+hr{border:0;border-top:1px solid var(--rule);margin:0}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.muted{color:var(--ink-2)}
+.faint{color:var(--ink-3)}
+.debit{color:var(--debit)}
+
+/* ── 로고 ────────────────────────────────────────────────────────── */
+/* 옛 장부와 지폐에 쓰이던 동판 인쇄 스크립트. 글자 하나뿐이고 선은 없다. */
+.logo{
+  display:inline-block;text-decoration:none;color:var(--ink);cursor:pointer;
+  font-family:var(--script);font-weight:400;font-size:52px;line-height:.86;
+  letter-spacing:0;background:none;border:0;padding:2px 4px 8px}
+.logo:visited{color:var(--ink)}
+.logo:hover{opacity:.55}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:34px 0 0}
+.prefs{display:inline-flex;gap:8px;margin-left:14px}
+.prefs select{font-size:12.5px;padding:3px 5px;color:var(--ink-2)}
+/* 장부의 통화는 고를 수 있는 것이 아니라 그 장부의 사실이다 */
+.fixed-cur{font-size:12.5px;color:var(--ink-3);letter-spacing:.06em;padding:3px 2px}
+
+/* ── 첫 화면 ─────────────────────────────────────────────────────── */
+/* 갈림길을 장부의 두 줄처럼 놓는다. 위아래는 굵은 선, 사이는 가는 선. */
+.gate{max-width:520px;padding:64px 0 0}
+.choices{margin-top:52px}
+.choice{
+  display:flex;align-items:baseline;justify-content:space-between;gap:20px;
+  width:100%;text-align:left;cursor:pointer;background:none;color:var(--ink);
+  border:0;border-bottom:1px solid var(--rule);font:inherit;font-size:19px;padding:22px 6px}
+.choice:last-child{border-bottom:0}
+.choice:hover{background:var(--ink);color:var(--paper)}
+.choice .sub{font-size:13px;color:var(--ink-2);white-space:nowrap}
+.choice:hover .sub{color:var(--paper);opacity:.75}
+.back{margin-top:34px}
+.calc-in{display:flex;flex-wrap:wrap;gap:18px 24px;align-items:flex-end}
+.calc-in label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--ink-2);font-weight:600}
+.calc-in input{width:180px;font-size:19px;text-align:right}
+.calc-in input.short{width:76px}
+.result{margin-top:40px}
+.result .label{font-size:13px;color:var(--ink-2)}
+.result .each{
+  font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-size:clamp(32px,7vw,46px);font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-top:6px}
+.result .note{font-size:13.5px;color:var(--ink-2);margin-top:8px}
+
+/* ── 머리말 ──────────────────────────────────────────────────────── */
+header{padding:30px 0 0}
+.masthead{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px}
+.masthead .team{font-size:14px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.masthead .book{font-size:14px;color:var(--ink-2)}
+.masthead .who{margin-left:auto;font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+.rule-double{border-top:1px solid var(--rule-hard);border-bottom:1px solid var(--rule-hard);height:3px;margin-top:12px}
+nav{display:flex;flex-wrap:wrap;align-items:center;gap:0 22px;padding:12px 0 0;font-size:15px}
+nav button.tab{
+  appearance:none;background:none;border:0;padding:3px 0 6px;margin:0;cursor:pointer;
+  font:inherit;color:var(--link);text-decoration:underline;text-underline-offset:3px}
+nav button.tab[aria-current="page"]{
+  color:var(--ink);text-decoration:none;font-weight:700;box-shadow:inset 0 -3px 0 var(--rule-hard)}
+nav .spacer{margin-left:auto}
+
+section{padding:34px 0;border-bottom:1px solid var(--rule-2)}
+section:last-of-type{border-bottom:0}
+.caption{font-size:13px;font-weight:700;letter-spacing:.02em}
+.caption + .lede{font-size:13.5px;color:var(--ink-2);margin-top:3px}
+
+/* ── 요지 세 칸 (장부 표지) ──────────────────────────────────────── */
+/* KPI 카드가 아니다. 카드도 라운드도 그림자도 없고, 세로 괘선으로만 나눈다. */
+.summary{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border-top:1px solid var(--rule-hard);border-bottom:1px solid var(--rule-hard);
+  margin-top:6px}
+.summary > div{padding:18px 20px;border-left:1px solid var(--rule)}
+.summary > div:first-child{border-left:0;padding-left:0}
+.summary .label{font-size:13px;color:var(--ink-2)}
+.summary .figure{
+  font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-size:clamp(21px,3.6vw,29px);font-weight:600;letter-spacing:-.02em;
+  line-height:1.15;margin-top:8px;white-space:nowrap}
+.summary .under{font-size:12.5px;color:var(--ink-3);margin-top:6px}
+@media (max-width:640px){
+  .summary{grid-template-columns:1fr}
+  .summary > div{border-left:0;border-top:1px solid var(--rule);padding:14px 0}
+  .summary > div:first-child{border-top:0;padding-top:0}
+}
+
+/* ── 라벨/값 표 ──────────────────────────────────────────────────── */
+.facts{border-collapse:collapse}
+.facts td{padding:5px 0;vertical-align:baseline;font-size:14px}
+.facts td.k{color:var(--ink-2);padding-right:28px;white-space:nowrap}
+.facts td.v{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.facts tr.sum td{border-top:1px solid var(--rule-hard);font-weight:700;padding-top:8px}
+
+/* ── 장부 표 ─────────────────────────────────────────────────────── */
+/* 세로 괘선이 금액 칸을 감싼다. 장부를 장부로 보이게 하는 건 이 선이다. */
+table.book{width:100%;border-collapse:collapse;font-size:14.5px}
+table.book th{
+  text-align:left;font-weight:700;font-size:12.5px;color:var(--ink-2);
+  padding:0 10px 7px;border-bottom:1px solid var(--rule-hard);white-space:nowrap}
+table.book td{padding:8px 10px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+table.book th:first-child,table.book td:first-child{padding-left:0}
+table.book th:last-child,table.book td:last-child{padding-right:0}
+table.book .r{text-align:right}
+table.book .money{
+  font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;
+  border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+table.book th.money{border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+table.book .slip{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);width:40px}
+table.book .day{font-family:var(--mono);color:var(--ink-2);white-space:nowrap}
+table.book tr.done td{color:var(--ink-2)}
+table.book tbody tr.entry:hover{background:var(--hl)}
+th button.sortbtn{
+  appearance:none;background:none;border:0;padding:0;margin:0;cursor:pointer;
+  font:inherit;color:inherit;letter-spacing:inherit}
+th button.sortbtn:hover{text-decoration:underline;text-underline-offset:3px}
+th[aria-sort] button.sortbtn{color:var(--ink)}
+/* 정산 마감. 회계에서 마감은 이중선이다. */
+tr.closing td{
+  border-top:3px double var(--rule-hard);border-bottom:3px double var(--rule-hard);
+  padding:11px 0;font-size:13.5px;background:var(--hl)}
+.stamp{
+  display:inline-block;border:1px solid var(--ink-2);color:var(--ink-2);
+  font-size:11px;letter-spacing:.08em;padding:1px 6px;white-space:nowrap}
+
+/* ── 완료 도장 ───────────────────────────────────────────────────── */
+/* 고무도장은 반듯하게 찍히지 않는다. 살짝 비뚤고, 잉크가 고르게 묻지 않는다.
+   그 두 가지만 흉내 낸다. 종이 질감이나 색은 쓰지 않는다. */
+.stamped{position:relative}
+.mark{
+  position:absolute;pointer-events:none;user-select:none;
+  border:3px double var(--stamp);color:var(--stamp);background:none;
+  font-family:var(--sans);font-weight:800;line-height:1.2;text-align:center;
+  padding:8px 16px 7px;opacity:.82;
+  /* 잉크가 덜 묻은 자리 */
+  -webkit-mask-image:var(--ink-blot);mask-image:var(--ink-blot);
+  -webkit-mask-size:170px 170px;mask-size:170px 170px;mask-mode:alpha}
+.mark .big{display:block;font-size:16px;letter-spacing:.2em;white-space:nowrap}
+.mark .small{display:block;font-size:10.5px;letter-spacing:.1em;margin-top:3px;opacity:.85}
+.mark.lg{padding:12px 26px 11px}
+.mark.lg .big{font-size:26px;letter-spacing:.24em}
+.mark.sm{padding:4px 10px 3px;border-width:2px}
+.mark.sm .big{font-size:11px;letter-spacing:.16em}
+@media print{ .mark{opacity:.9} }
+
+/* 줄마다 손으로 찍는 작은 도장. 테두리 없이 글자만이라 마감선의 큰 도장과 결이 다르다.
+   각도를 줄마다 어긋나게 해서 한 번에 인쇄한 것처럼 보이지 않게 한다. */
+.done-mark{
+  display:inline-block;color:var(--stamp);opacity:.82;white-space:nowrap;
+  font-family:var(--sans);font-weight:800;font-size:11px;letter-spacing:.15em;
+  -webkit-mask-image:var(--ink-blot);mask-image:var(--ink-blot);
+  -webkit-mask-size:120px 120px;mask-size:120px 120px;mask-mode:alpha}
+@media print{ .done-mark{opacity:.9} }
+td.opened{padding:0 !important;background:var(--hl)}
+
+button.plain{
+  appearance:none;background:none;border:0;padding:0;font:inherit;cursor:pointer;
+  color:var(--link);text-decoration:underline;text-underline-offset:2px}
+button.subject{
+  appearance:none;background:none;border:0;padding:0;font:inherit;text-align:left;cursor:pointer;
+  color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
+button.subject:hover{text-decoration-color:var(--ink)}
+
+/* ── 조작부 ──────────────────────────────────────────────────────── */
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;font-size:14px}
+button.act{
+  appearance:none;font:inherit;font-size:14.5px;cursor:pointer;border-radius:0;
+  background:var(--field);color:var(--ink);border:1px solid var(--rule-hard);padding:8px 18px}
+button.act:hover{background:var(--hl)}
+button.act.primary{background:var(--rule-hard);color:var(--paper)}
+button.act.primary:hover{opacity:.86}
+button.act.small{padding:5px 12px;font-size:13.5px}
+select,input[type=text],input[type=date],textarea{
+  font:inherit;font-size:14.5px;background:var(--field);color:var(--ink);
+  border:1px solid var(--rule);border-radius:0;padding:7px 9px}
+input[type=text]{width:100%}
+label.field{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink-2);font-weight:600}
+label.field > .lab{display:flex;align-items:center;gap:7px}
+label.field > input,label.field > select{font-weight:400;color:var(--ink)}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}
+fieldset{border:0;border-top:1px solid var(--rule);margin:0;padding:18px 0 0}
+legend{font-size:13px;color:var(--ink-2);font-weight:700;padding:0}
+.pick{display:flex;align-items:baseline;gap:8px;font-size:14.5px;padding:4px 0}
+.pick-sub{display:flex;flex-wrap:wrap;gap:8px 20px;padding:6px 0 2px 26px}
+.tag{font-size:11.5px;color:var(--ink-2);border:1px solid var(--rule);padding:1px 6px;white-space:nowrap}
+
+/* ── 정산 · 검산 ─────────────────────────────────────────────────── */
+button.remit{
+  display:grid;grid-template-columns:1fr auto;gap:5px 16px;align-items:baseline;
+  width:100%;text-align:left;font:inherit;cursor:pointer;background:none;
+  border:0;border-bottom:1px solid var(--rule-2);padding:14px 2px}
+button.remit:hover{background:var(--hl)}
+button.remit .who{font-size:16px}
+button.remit .sum{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:16px}
+button.remit .ask{grid-column:1/-1;font-size:13px;color:var(--link);text-decoration:underline}
+.proof{border-bottom:1px solid var(--rule-2);background:var(--hl);padding:22px 16px 26px}
+.proof-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:30px}
+.tally{width:100%;border-collapse:collapse;
+  font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14.5px}
+.tally td{padding:4px 0}
+.tally td.v{text-align:right;white-space:nowrap;width:1%;padding-right:14px}
+.tally td.l{color:var(--ink-2);font-family:var(--sans);font-size:13px}
+.tally tr.close td{border-top:1px solid var(--rule-hard);padding-top:7px;font-weight:700}
+.tally tr.close td.l{color:var(--ink)}
+.tally tr.hit td.v{font-weight:700}
+.tally tr.hit td.l{color:var(--ink)}
+.converge{margin-top:20px;height:34px;position:relative}
+.converge .track{position:absolute;left:0;right:0;top:22px;border-top:1px dotted var(--rule)}
+.converge .bar{position:absolute;top:20px;height:0;border-top:3px solid var(--ink);left:0;
+  transition:width .9s cubic-bezier(.2,.7,.2,1)}
+.converge .mark{position:absolute;top:15px;height:15px;border-left:1px solid var(--ink-2)}
+.converge .cap{position:absolute;top:0;font-size:11.5px;color:var(--ink-3);
+  transform:translateX(-50%);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.converge .bar{transition:none}}
+
+/* ── 물건 ────────────────────────────────────────────────────────── */
+.goods{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:32px 26px}
+.good .plate{
+  border:1px solid var(--rule);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;
+  color:var(--ink-3);font-size:12.5px;background:var(--hl)}
+.good h3{font-size:15.5px;margin-top:12px;font-weight:600}
+.good .price{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:17px;margin-top:5px}
+.good .facts{margin-top:9px;width:100%}
+/* 이 규칙이 기본 .facts td.k 와 특정도가 같고 뒤에 오므로,
+   라벨 칸의 오른쪽 여백을 여기서 다시 지정하지 않으면 글자가 붙는다. */
+.good .facts td{padding:2px 0;font-size:13px}
+.good .facts td.k{padding-right:14px;vertical-align:baseline}
+.good .facts td:not(.k){white-space:normal;word-break:keep-all}
+.again{font-size:13px;color:var(--ink-2);border-left:2px solid var(--rule-hard);
+  padding-left:9px;margin-top:10px}
+
+/* ── 송금 창 ─────────────────────────────────────────────────────── */
+/* 브라우저가 이미 가진 dialog를 그대로 쓴다. Esc로 닫히고 초점도 갇힌다.
+   꾸미지 않는다. 테두리 하나와 여백뿐이다. */
+dialog{
+  border:1px solid var(--rule-hard);border-radius:0;padding:0;
+  background:var(--paper);color:var(--ink);
+  width:min(560px,calc(100% - 32px));max-height:86vh;overflow:auto}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.sheet{padding:26px 26px 30px}
+.sheet-top{display:flex;align-items:baseline;justify-content:space-between;gap:18px}
+
+/* ── 빈 상태 ─────────────────────────────────────────────────────── */
+.empty{border:1px dashed var(--rule);padding:40px 24px;text-align:center;color:var(--ink-2)}
+
+/* ── 기타 ────────────────────────────────────────────────────────── */
+.drop{border:1px dashed var(--ink-3);padding:40px 24px;text-align:center}
+.aside{font-size:13.5px;color:var(--ink-2);border-left:3px solid var(--rule-hard);padding-left:12px}
+.notice{font-size:14px;border-left:3px solid var(--rule-hard);padding:8px 0 8px 12px;background:var(--hl)}
+pre.msg{font-family:var(--mono);font-size:13.5px;line-height:1.75;white-space:pre-wrap;
+  border:1px solid var(--rule);padding:16px;margin:0;background:var(--field);overflow-x:auto}
+.ai-mark{font-size:11px;font-weight:400;color:var(--ink-2);border:1px solid var(--rule);padding:0 5px}
+.scroll{overflow-x:auto}
+footer{padding:30px 0;font-size:13px;color:var(--ink-3);border-top:1px solid var(--rule)}
+
+/* ── 광고 슬롯 ───────────────────────────────────────────────────── */
+/* 품목·아카이브 화면 아래에만 들어간다. 장부·정산 화면에는 넣지 않는다.
+   장부의 괘선과 섞이지 않게 위에 선 하나로 확실히 끊는다. */
+.adslot{
+  margin-top:44px;padding-top:18px;border-top:1px solid var(--rule);
+  min-height:0;overflow:hidden}
+
+/* ── 인쇄 ────────────────────────────────────────────────────────── */
+/* 장부는 종이로도 남는 물건이다. 아카이브를 그대로 뽑으면 진짜 장부가 된다. */
+@media print{
+  :root{
+    --paper:#fff; --ink:#000; --ink-2:#3a3a3a; --ink-3:#666;
+    --rule:#8c8c8c; --rule-2:#c8c8c8; --rule-hard:#000; --hl:#f4f4f4;
+  }
+  body{padding:0;font-size:10.5pt}
+  nav, .who, footer, button.act, input[type=checkbox], .empty{display:none !important}
+  .wrap{max-width:none}
+  section{break-inside:avoid;padding:16px 0}
+  table.book{font-size:9.5pt}
+  table.book td, table.book th{padding:5px 8px}
+  tr.entry{break-inside:avoid}
+  thead{display:table-header-group}
+  .summary{break-inside:avoid}
+  a{color:#000;text-decoration:none}
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:8pt;color:#555;word-break:break-all}
+  button.plain, button.subject{color:#000;text-decoration:none}
+  .proof{break-inside:avoid}
+}
+</style>
+
+<div class="wrap">
+  <header id="head"></header>
+  <main id="view"></main>
+  <dialog id="sheet"></dialog>
+
+</div>
+
+<script>"use strict";
+(() => {
+  var __defProp = Object.defineProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+
+  // lib/domain/settlement.ts
+  var settlement_exports = {};
+  __export(settlement_exports, {
+    adjustmentLabel: () => adjustmentLabel,
+    adjustmentsFor: () => adjustmentsFor,
+    allocationLabel: () => allocationLabel,
+    bearersOf: () => bearersOf,
+    breakdownOf: () => breakdownOf,
+    computeBalances: () => computeBalances,
+    computeSettlement: () => computeSettlement,
+    currentRoster: () => currentRoster,
+    effectiveAmount: () => effectiveAmount,
+    minimizeTransfers: () => minimizeTransfers,
+    nameOf: () => nameOf,
+    relevantMembers: () => relevantMembers,
+    settleSingle: () => settleSingle,
+    settledExpenseIds: () => settledExpenseIds,
+    splitEvenly: () => splitEvenly,
+    summarizeLedger: () => summarizeLedger,
+    unsettledExpenses: () => unsettledExpenses,
+    won: () => won
+  });
+
+  // lib/domain/money.ts
+  var money_exports = {};
+  __export(money_exports, {
+    CURRENCIES: () => CURRENCIES,
+    formatMoney: () => formatMoney,
+    formatNumber: () => formatNumber,
+    minorPerUnit: () => minorPerUnit,
+    parseMoney: () => parseMoney
+  });
+  var CURRENCIES = {
+    KRW: { decimals: 0, label: "\uC6D0" },
+    JPY: { decimals: 0, label: "\u5186" },
+    USD: { decimals: 2, label: "Dollar" },
+    EUR: { decimals: 2, label: "Euro" },
+    GBP: { decimals: 2, label: "Pound" }
+  };
+  var localeTag = (locale) => locale === "en" ? "en-US" : "ko-KR";
+  function formatMoney(minor, code = "KRW", locale = "ko") {
+    const { decimals } = CURRENCIES[code];
+    const sign = minor < 0 ? "-" : "";
+    const value = Math.abs(minor) / 10 ** decimals;
+    const opts = {
+      style: "currency",
+      currency: code,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    };
+    let text;
+    try {
+      text = new Intl.NumberFormat(localeTag(locale), { ...opts, currencyDisplay: "narrowSymbol" }).format(value);
+    } catch {
+      text = new Intl.NumberFormat(localeTag(locale), opts).format(value);
+    }
+    return sign + text;
+  }
+  function formatNumber(minor, code = "KRW", locale = "ko") {
+    const { decimals } = CURRENCIES[code];
+    const sign = minor < 0 ? "-" : "";
+    const value = Math.abs(minor) / 10 ** decimals;
+    return sign + new Intl.NumberFormat(localeTag(locale), {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(value);
+  }
+  function parseMoney(input, code = "KRW") {
+    const { decimals } = CURRENCIES[code];
+    const cleaned = String(input).replace(/[^0-9.]/g, "");
+    if (!cleaned) return 0;
+    const [whole, frac = ""] = cleaned.split(".");
+    const padded = (frac + "0".repeat(decimals)).slice(0, decimals);
+    return Number(whole || "0") * 10 ** decimals + Number(padded || "0");
+  }
+  function minorPerUnit(code = "KRW") {
+    return 10 ** CURRENCIES[code].decimals;
+  }
+
+  // lib/domain/settlement.ts
+  function splitEvenly(amount, memberIds) {
+    if (memberIds.length === 0) return [];
+    const base = Math.floor(amount / memberIds.length);
+    const remainder = amount - base * memberIds.length;
+    return memberIds.map((memberId, i) => ({
+      memberId,
+      amount: base + (i < remainder ? 1 : 0),
+      roundingAdjusted: i < remainder
+    }));
+  }
+  function bearersOf(expense) {
+    const roster = expense.teamMemberIds;
+    switch (expense.allocation.type) {
+      case "all":
+        return roster;
+      case "partial": {
+        const picked = expense.allocation.participantIds;
+        return roster.filter((id) => picked.includes(id));
+      }
+      case "personal":
+        return [expense.allocation.ownerId];
+    }
+  }
+  function breakdownOf(expense) {
+    return {
+      expense,
+      shares: splitEvenly(expense.amount, bearersOf(expense)),
+      countsTowardShared: expense.allocation.type !== "personal"
+    };
+  }
+  function adjustmentsFor(expenses2, targetId) {
+    return expenses2.filter((e) => e.adjustment?.targetExpenseId === targetId);
+  }
+  function effectiveAmount(expenses2, expense) {
+    return expense.amount + adjustmentsFor(expenses2, expense.id).reduce((a, e) => a + e.amount, 0);
+  }
+  function computeBalances(expenses2, members2) {
+    const paid = new Map(members2.map((m) => [m.id, 0]));
+    const owed = new Map(members2.map((m) => [m.id, 0]));
+    for (const expense of expenses2) {
+      paid.set(expense.payerId, (paid.get(expense.payerId) ?? 0) + expense.amount);
+      for (const share of breakdownOf(expense).shares) {
+        owed.set(share.memberId, (owed.get(share.memberId) ?? 0) + share.amount);
+      }
+    }
+    return members2.map((m) => {
+      const totalPaid = paid.get(m.id) ?? 0;
+      const totalOwed = owed.get(m.id) ?? 0;
+      return { memberId: m.id, totalPaid, totalOwed, netBalance: totalPaid - totalOwed };
+    });
+  }
+  function minimizeTransfers(balances) {
+    const creditors = balances.filter((b) => b.netBalance > 0).map((b) => ({ id: b.memberId, remaining: b.netBalance })).sort((a, b) => b.remaining - a.remaining);
+    const debtors = balances.filter((b) => b.netBalance < 0).map((b) => ({ id: b.memberId, remaining: -b.netBalance })).sort((a, b) => b.remaining - a.remaining);
+    const transfers = [];
+    let ci = 0;
+    let di = 0;
+    while (ci < creditors.length && di < debtors.length) {
+      const credit = creditors[ci];
+      const debt = debtors[di];
+      const amount = Math.min(credit.remaining, debt.remaining);
+      if (amount > 0) {
+        transfers.push({ fromMemberId: debt.id, toMemberId: credit.id, amount });
+        credit.remaining -= amount;
+        debt.remaining -= amount;
+      }
+      if (credit.remaining === 0) ci += 1;
+      if (debt.remaining === 0) di += 1;
+    }
+    return transfers;
+  }
+  function relevantMembers(expenses2, allMembers) {
+    const ids = /* @__PURE__ */ new Set();
+    for (const e of expenses2) {
+      ids.add(e.payerId);
+      for (const id of bearersOf(e)) ids.add(id);
+    }
+    return allMembers.filter((m) => ids.has(m.id));
+  }
+  function computeSettlement(expenses2, allMembers) {
+    const breakdowns = expenses2.map((e) => breakdownOf(e));
+    const balances = computeBalances(expenses2, relevantMembers(expenses2, allMembers));
+    const sum = (list) => list.reduce((acc, b) => acc + b.expense.amount, 0);
+    return {
+      expenseIds: expenses2.map((e) => e.id),
+      totalAmount: sum(breakdowns),
+      sharedAmount: sum(breakdowns.filter((b) => b.countsTowardShared)),
+      personalAmount: sum(breakdowns.filter((b) => !b.countsTowardShared)),
+      balances,
+      transfers: minimizeTransfers(balances),
+      breakdowns
+    };
+  }
+  function settledExpenseIds(ledger) {
+    const ids = /* @__PURE__ */ new Set();
+    for (const s of ledger.settlements) {
+      for (const id of s.snapshot.expenseIds) ids.add(id);
+    }
+    return ids;
+  }
+  function unsettledExpenses(ledger) {
+    const settled = settledExpenseIds(ledger);
+    return ledger.expenses.filter((e) => !settled.has(e.id));
+  }
+  function summarizeLedger(ledger) {
+    const settled = settledExpenseIds(ledger);
+    const open = ledger.expenses.filter((e) => !settled.has(e.id));
+    const total = (list) => list.reduce((acc, e) => acc + e.amount, 0);
+    const all = computeSettlement(ledger.expenses, ledger.members);
+    return {
+      totalSpent: total(ledger.expenses),
+      settledAmount: total(ledger.expenses.filter((e) => settled.has(e.id))),
+      unsettledAmount: total(open),
+      sharedTotal: all.sharedAmount,
+      personalTotal: all.personalAmount,
+      expenseCount: ledger.expenses.length,
+      pending: computeSettlement(open, ledger.members)
+    };
+  }
+  function currentRoster(ledger) {
+    return ledger.members.filter((m) => m.active !== false).map((m) => m.id);
+  }
+  function settleSingle(expense, members2) {
+    return computeSettlement([expense], members2);
+  }
+  function won(n) {
+    return formatMoney(n, "KRW", "ko");
+  }
+  function nameOf(members2, id) {
+    return members2.find((m) => m.id === id)?.name ?? id;
+  }
+  function allocationLabel(expense, members2) {
+    const a = expense.allocation;
+    switch (a.type) {
+      case "all":
+        return `\uACF5\uB3D9 ${expense.teamMemberIds.length}\uC778`;
+      case "partial":
+        return `\uC77C\uBD80 ${a.participantIds.length}\uC778`;
+      case "personal":
+        return `${nameOf(members2, a.ownerId)} \uAC1C\uC778`;
+    }
+  }
+  function adjustmentLabel(expense) {
+    if (!expense.adjustment) return "";
+    return expense.adjustment.kind === "refund" ? "\uD658\uBD88" : "\uBCF4\uC815";
+  }
+
+  // lib/domain/seed.ts
+  var members = [
+    { id: "kw", name: "\uAD00\uC6B0" },
+    { id: "ms", name: "\uBBFC\uC218" },
+    { id: "js", name: "\uC9C0\uC218" },
+    { id: "hw", name: "\uD604\uC6B0" },
+    { id: "ty", name: "\uD0DC\uC724" }
+    // 10월 1일 합류
+  ];
+  var ROSTER_4 = ["kw", "ms", "js", "hw"];
+  var ROSTER_5 = ["kw", "ms", "js", "hw", "ty"];
+  var LEDGER_ID = "ledger-ds02";
+  var drafts = [
+    // ── Settlement #01 대상 (팀원 4인) ─────────────────────────────────
+    {
+      id: "e01",
+      date: "2026-09-01",
+      title: "\uD3FC\uBCF4\uB4DC 5T 5\uC7A5",
+      amount: 32500,
+      payerId: "kw",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uC54C\uD30C\uBB38\uAD6C \uC815\uB989\uC810",
+      category: "\uC7AC\uB8CC\uBE44",
+      allocation: { type: "all" },
+      productLink: "https://example.com/foamboard-5t",
+      receiptImage: "receipt-e01.jpg"
+    },
+    {
+      id: "e02",
+      date: "2026-09-02",
+      title: "\uC544\uD06C\uB9B4 3T \uC7AC\uB2E8",
+      amount: 6e4,
+      payerId: "ms",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uC744\uC9C0\uB85C \uC544\uD06C\uB9B4\uC0C1\uAC00",
+      category: "\uC81C\uC791\uBE44",
+      allocation: { type: "all" },
+      receiptImage: "receipt-e02.jpg"
+    },
+    {
+      id: "e03",
+      date: "2026-09-03",
+      title: "\uBAA9\uACF5\uBCF8\uB4DC\uC640 \uC591\uBA74\uD14C\uC774\uD504",
+      amount: 8500,
+      payerId: "js",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uB2E4\uC774\uC18C",
+      category: "\uC7AC\uB8CC\uBE44",
+      allocation: { type: "all" }
+    },
+    {
+      id: "e04",
+      date: "2026-09-05",
+      title: "A0 \uCD9C\uB825 3\uC7A5",
+      amount: 54e3,
+      payerId: "kw",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uD64D\uB300 \uADF8\uB798\uD53D\uC2A4",
+      category: "\uCD9C\uB825\uBE44",
+      allocation: { type: "all" },
+      receiptImage: "receipt-e04.jpg"
+    },
+    {
+      // 일부 인원 부담 — 현우는 자재 운반에 함께하지 않았다
+      id: "e05",
+      date: "2026-09-06",
+      title: "\uD0DD\uC2DC (\uC790\uC7AC \uC6B4\uBC18)",
+      amount: 24e3,
+      payerId: "js",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uCE74\uCE74\uC624T",
+      category: "\uC774\uB3D9\uBE44",
+      allocation: { type: "partial", participantIds: ["kw", "ms", "js"] }
+    },
+    {
+      // 개인 귀속 · 결제자 = 귀속자 → 공동 정산 영향 0
+      id: "e06",
+      date: "2026-09-08",
+      title: "\uCEE4\uD305\uB9E4\uD2B8 A2",
+      amount: 21e3,
+      payerId: "hw",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uC54C\uD30C\uBB38\uAD6C",
+      category: "\uB3C4\uAD6C",
+      allocation: { type: "personal", ownerId: "hw" },
+      note: "\uD504\uB85C\uC81D\uD2B8 \uB05D\uB098\uACE0 \uD604\uC6B0\uAC00 \uAC00\uC838\uAC10"
+    },
+    {
+      id: "e07",
+      date: "2026-09-09",
+      title: "\uC2A4\uD504\uB808\uC774 \uB3C4\uB8CC 4\uCE94",
+      amount: 36800,
+      payerId: "ms",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uC0BC\uD654\uD398\uC778\uD2B8\uBAB0",
+      category: "\uC7AC\uB8CC\uBE44",
+      allocation: { type: "all" },
+      productLink: "https://example.com/spray-paint"
+    },
+    {
+      id: "e08",
+      date: "2026-09-11",
+      title: "\uC0AC\uD3EC\uC640 \uCEE4\uD130\uB0A0 \uC138\uD2B8",
+      amount: 12300,
+      payerId: "kw",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uB2E4\uC774\uC18C",
+      category: "\uC7AC\uB8CC\uBE44",
+      allocation: { type: "all" }
+    },
+    {
+      id: "e09",
+      date: "2026-09-13",
+      title: "3D \uD504\uB9B0\uD305 \uCD9C\uB825 \uB300\uD589",
+      amount: 88e3,
+      payerId: "ms",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uC4F0\uB9AC\uB514\uBAB0",
+      category: "\uC81C\uC791\uBE44",
+      allocation: { type: "all" },
+      receiptImage: "receipt-e09.jpg"
+    },
+    {
+      // 나머지 배분 케이스: 21,500 / 3 = 7,166.67
+      id: "e10",
+      date: "2026-09-15",
+      title: "\uD300 \uD68C\uC758 \uCE74\uD398",
+      amount: 21500,
+      payerId: "js",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uC2A4\uD0C0\uBC85\uC2A4 \uAD6D\uBBFC\uB300\uC810",
+      category: "\uAE30\uD0C0",
+      allocation: { type: "partial", participantIds: ["ms", "js", "hw"] }
+    },
+    {
+      id: "e11",
+      date: "2026-09-17",
+      title: "MDF \uC7AC\uB2E8",
+      amount: 45e3,
+      payerId: "kw",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uBC29\uC0B0\uC2DC\uC7A5 \uBAA9\uC7AC",
+      category: "\uC7AC\uB8CC\uBE44",
+      allocation: { type: "all" }
+    },
+    {
+      id: "e12",
+      date: "2026-09-18",
+      title: "\uC544\uD06C\uB9B4 \uBC30\uC1A1\uBE44",
+      amount: 4e3,
+      payerId: "ms",
+      teamMemberIds: ROSTER_4,
+      category: "\uC7AC\uB8CC\uBE44",
+      allocation: { type: "all" },
+      note: "\uC544\uD06C\uB9B4 \uC7AC\uB2E8 \uAC74 \uBC30\uC1A1\uBE44 \u2014 \uBD80\uAC00 \uAE08\uC561\uC740 \uBCC4\uB3C4 \uD56D\uBAA9 \uC5C6\uC774 \uADF8\uB300\uB85C \uAE30\uB85D"
+    },
+    // ── Settlement #01 (09-20) 이후 ────────────────────────────────────
+    {
+      id: "e13",
+      date: "2026-09-22",
+      title: "LED \uC2A4\uD2B8\uB9BD 5m 4\uB864",
+      amount: 27900,
+      payerId: "hw",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uB514\uBC14\uC774\uC2A4\uB9C8\uD2B8",
+      category: "\uC804\uC7A5",
+      allocation: { type: "all" },
+      productLink: "https://example.com/led-strip"
+    },
+    {
+      id: "e14",
+      date: "2026-09-24",
+      title: "\uC544\uB450\uC774\uB178 \uC6B0\uB178 + \uCF00\uC774\uBE14",
+      amount: 34500,
+      payerId: "hw",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uB514\uBC14\uC774\uC2A4\uB9C8\uD2B8",
+      category: "\uC804\uC7A5",
+      allocation: { type: "all" },
+      productLink: "https://example.com/arduino-uno"
+    },
+    {
+      // 반복 구매 — e07과 동일 제품 (AI Stage 2 감지 대상)
+      id: "e15",
+      date: "2026-09-27",
+      title: "\uC2A4\uD504\uB808\uC774 \uB3C4\uB8CC 4\uCE94 (\uC7AC\uAD6C\uB9E4)",
+      amount: 36800,
+      payerId: "js",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uC0BC\uD654\uD398\uC778\uD2B8\uBAB0",
+      category: "\uC7AC\uB8CC\uBE44",
+      allocation: { type: "all" },
+      productLink: "https://example.com/spray-paint"
+    },
+    {
+      id: "e16",
+      date: "2026-09-30",
+      title: "\uD0DD\uC2DC (\uC804\uC2DC\uC7A5 \uB2F5\uC0AC)",
+      amount: 18400,
+      payerId: "ms",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uCE74\uCE74\uC624T",
+      category: "\uC774\uB3D9\uBE44",
+      allocation: { type: "partial", participantIds: ["kw", "ms"] }
+    },
+    // ── 10월 1일: 태윤 합류. 이후 '전체 팀'은 5인을 뜻한다 ──────────────
+    {
+      id: "e17",
+      date: "2026-10-04",
+      title: "\uC804\uC2DC \uD310\uB12C A1 6\uC7A5",
+      amount: 96e3,
+      payerId: "kw",
+      teamMemberIds: ROSTER_5,
+      vendor: "\uD64D\uB300 \uADF8\uB798\uD53D\uC2A4",
+      category: "\uCD9C\uB825\uBE44",
+      allocation: { type: "all" },
+      receiptImage: "receipt-e17.jpg"
+    },
+    {
+      // 개인 귀속 · 결제자 ≠ 귀속자 → 지수가 관우에게 39,000을 갚아야 한다
+      id: "e18",
+      date: "2026-10-08",
+      title: "\uC804\uB3D9 \uB4DC\uB77C\uC774\uBC84 \uC138\uD2B8",
+      amount: 39e3,
+      payerId: "kw",
+      teamMemberIds: ROSTER_5,
+      vendor: "\uBCF4\uC26C \uACF5\uC2DD\uBAB0",
+      category: "\uB3C4\uAD6C",
+      allocation: { type: "personal", ownerId: "js" },
+      note: "\uAD00\uC6B0\uAC00 \uB300\uC2E0 \uACB0\uC81C, \uC9C0\uC218 \uAC1C\uC778 \uC18C\uC720",
+      productLink: "https://example.com/bosch-driver"
+    },
+    {
+      id: "e19",
+      date: "2026-10-12",
+      title: "\uCF00\uC774\uBE14\uD0C0\uC774\uC640 \uD53C\uC2A4",
+      amount: 9750,
+      payerId: "js",
+      teamMemberIds: ROSTER_5,
+      vendor: "\uCCA0\uBB3C\uC810",
+      category: "\uC7AC\uB8CC\uBE44",
+      allocation: { type: "all" }
+    },
+    {
+      id: "e20",
+      date: "2026-10-15",
+      title: "\uC124\uCE58 \uB2F9\uC77C \uC2DD\uC0AC 5\uC778",
+      amount: 52e3,
+      payerId: "ms",
+      teamMemberIds: ROSTER_5,
+      vendor: "\uC815\uB989 \uBC31\uBC18",
+      category: "\uAE30\uD0C0",
+      allocation: { type: "all" }
+    },
+    // ── 환불 / 보정 ───────────────────────────────────────────────────
+    {
+      /**
+       * 환불: 음수 금액 지출로 기록하고 원 지출에 연결한다.
+       * 부담 구조(명단·부담 방식)는 반드시 원본을 그대로 따른다.
+       * 그러지 않으면 4인이 나눠 낸 돈이 5인에게 환급되어 잔액이 남는다.
+       */
+      id: "e21",
+      date: "2026-10-18",
+      title: "LED \uC2A4\uD2B8\uB9BD 1\uB864 \uBC18\uD488",
+      amount: -8900,
+      payerId: "hw",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uB514\uBC14\uC774\uC2A4\uB9C8\uD2B8",
+      category: "\uC804\uC7A5",
+      allocation: { type: "all" },
+      adjustment: { kind: "refund", targetExpenseId: "e13", reason: "1\uB864 \uBD88\uB7C9 \uBC18\uD488" }
+    },
+    {
+      /**
+       * 보정: e10은 이미 Settlement #01에 확정되어 있다.
+       * 원본을 고치지 않고 차액만 새 지출로 남겨 다음 정산에 태운다.
+       * 21,500 → 실제 23,500. 차액 +2,000을 원본과 같은 3인이 나눈다.
+       */
+      id: "e22",
+      date: "2026-10-19",
+      title: "\uD300 \uD68C\uC758 \uCE74\uD398 \uAE08\uC561 \uBCF4\uC815",
+      amount: 2e3,
+      payerId: "js",
+      teamMemberIds: ROSTER_4,
+      vendor: "\uC2A4\uD0C0\uBC85\uC2A4 \uAD6D\uBBFC\uB300\uC810",
+      category: "\uAE30\uD0C0",
+      allocation: { type: "partial", participantIds: ["ms", "js", "hw"] },
+      adjustment: { kind: "correction", targetExpenseId: "e10", reason: "\uC601\uC218\uC99D \uC7AC\uD655\uC778 \u2014 21,500\uC774 \uC544\uB2C8\uB77C 23,500" }
+    }
+  ];
+  var expenses = drafts.map((d) => ({
+    ...d,
+    ledgerId: LEDGER_ID,
+    createdAt: `${d.date}T12:00:00+09:00`,
+    createdBy: d.payerId
+  }));
+  var FIRST_CYCLE = ["e01", "e02", "e03", "e04", "e05", "e06", "e07", "e08", "e09", "e10", "e11", "e12"];
+  function buildLedger() {
+    const firstCycle = expenses.filter((e) => FIRST_CYCLE.includes(e.id));
+    return {
+      id: LEDGER_ID,
+      teamName: "DESIGN STUDIO 02",
+      name: "2026-2\uD559\uAE30 \uB514\uC790\uC778 \uC2A4\uD29C\uB514\uC624",
+      currency: "KRW",
+      startedAt: "2026-09-01",
+      members,
+      expenses,
+      settlements: [
+        {
+          id: "st01",
+          ledgerId: LEDGER_ID,
+          seq: 1,
+          date: "2026-09-20",
+          label: "1\uCC28 \uC911\uAC04 \uC815\uC0B0",
+          isFinal: false,
+          snapshot: computeSettlement(firstCycle, members)
+        }
+      ]
+    };
+  }
+  var TF_ID = "ledger-comp";
+  var TF = [
+    { id: "kw2", name: "\uAD00\uC6B0" },
+    { id: "sy", name: "\uC11C\uC5F0" },
+    { id: "dy", name: "\uB3C4\uC724" }
+  ];
+  var TF_ROSTER = ["kw2", "sy", "dy"];
+  var tfDrafts = [
+    {
+      id: "c01",
+      date: "2026-10-02",
+      title: "\uACF5\uBAA8\uC804 \uCC38\uAC00\uBE44",
+      amount: 3e4,
+      payerId: "sy",
+      teamMemberIds: TF_ROSTER,
+      vendor: "\uACF5\uACF5\uB514\uC790\uC778\uC9C4\uD765\uC6D0",
+      category: "\uAE30\uD0C0",
+      allocation: { type: "all" }
+    },
+    {
+      id: "c02",
+      date: "2026-10-06",
+      title: "\uD328\uB110 \uCD9C\uB825 A1 3\uC7A5",
+      amount: 42e3,
+      payerId: "kw2",
+      teamMemberIds: TF_ROSTER,
+      vendor: "\uD64D\uB300 \uADF8\uB798\uD53D\uC2A4",
+      category: "\uCD9C\uB825\uBE44",
+      allocation: { type: "all" },
+      receiptImage: "receipt-c02.jpg"
+    },
+    {
+      id: "c03",
+      date: "2026-10-09",
+      title: "\uC790\uB8CC\uC870\uC0AC \uAD50\uD1B5\uBE44",
+      amount: 11400,
+      payerId: "dy",
+      teamMemberIds: TF_ROSTER,
+      vendor: "\uCE74\uCE74\uC624T",
+      category: "\uC774\uB3D9\uBE44",
+      allocation: { type: "partial", participantIds: ["sy", "dy"] }
+    },
+    {
+      id: "c04",
+      date: "2026-10-14",
+      title: "\uBAA9\uC5C5 \uC18C\uC7AC \uAD6C\uC785",
+      amount: 27800,
+      payerId: "sy",
+      teamMemberIds: TF_ROSTER,
+      vendor: "\uBC29\uC0B0\uC2DC\uC7A5",
+      category: "\uC7AC\uB8CC\uBE44",
+      allocation: { type: "all" },
+      productLink: "https://example.com/mockup-material"
+    },
+    {
+      id: "c05",
+      date: "2026-10-17",
+      title: "\uC81C\uBCF8 5\uBD80",
+      amount: 25e3,
+      payerId: "kw2",
+      teamMemberIds: TF_ROSTER,
+      vendor: "\uD559\uAD50 \uC55E \uBCF5\uC0AC\uC9D1",
+      category: "\uCD9C\uB825\uBE44",
+      allocation: { type: "all" }
+    }
+  ];
+  var tfExpenses = tfDrafts.map((d) => ({
+    ...d,
+    ledgerId: TF_ID,
+    createdAt: `${d.date}T12:00:00+09:00`,
+    createdBy: d.payerId
+  }));
+  function buildCompetitionLedger() {
+    return {
+      id: TF_ID,
+      teamName: "COMPETITION TF",
+      name: "2026 \uACF5\uACF5\uB514\uC790\uC778 \uACF5\uBAA8\uC804",
+      currency: "KRW",
+      startedAt: "2026-10-02",
+      members: TF,
+      expenses: tfExpenses,
+      settlements: []
+    };
+  }
+  function buildLedgers() {
+    return [buildLedger(), buildCompetitionLedger()];
+  }
+
+  // scripts/browser-entry.ts
+  globalThis.LedgerEngine = {
+    ...settlement_exports,
+    ...money_exports,
+    buildLedger,
+    buildLedgers,
+    members,
+    expenses,
+    currentRoster
+  };
+})();
+</script>
+<script>
+(function () {
+  const E = globalThis.LedgerEngine;
+  const { won, nameOf, breakdownOf, computeSettlement, summarizeLedger, unsettledExpenses,
+          allocationLabel, adjustmentLabel, adjustmentsFor, effectiveAmount, settledExpenseIds,
+          currentRoster } = E;
+
+  let locale = 'ko';        // ko | en
+  let currency = 'KRW';     // 장부의 통화. 금액은 이 통화의 최소 단위 정수로 저장된다.
+  let ledgers = E.buildLedgers();
+  let ledger = ledgers[0];
+  let me = 'kw';
+  /** 첫 화면은 언제나 가입 없이 쓰는 빠른 N빵이다 (§5.1). */
+  let view = 'quick';
+  let signedIn = false;
+  let loginOpen = false;
+  let quick = { open: false, total: 0, people: 4, detailed: false, payers: [], share: false };
+  let openRow = null;
+  let openProof = null;
+
+  let kakaoOpen = null;
+  let selection = new Set();
+  /** 장부 정렬. 전표 번호는 언제나 기입 순서를 따르므로 정렬해도 번호는 그대로다. */
+  let sort = { key: 'date', dir: 'asc' };
+  let shown = [];          // 지금 화면에 보이는 순서 (쉬프트 범위 선택의 기준)
+  let lastPicked = null;   // 마지막으로 체크한 줄
+  /** 정산을 누르면 탭을 옮기지 않고 송금 창을 연다. 카카오톡으로 넘어가는 자리다. */
+  let sheet = null;        // { ids, label, share }
+  let draft = null;
+  let flash = '';
+
+  const M = () => ledger.members;
+  const nm = (id) => nameOf(M(), id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const md = (d) => d.slice(5).replace('-', '.');
+  const ymd = (d) => d.replace(/-/g, '.');
+  const byDate = (list) => [...list].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
+  const el = (id) => document.getElementById(id);
+  /** 통화 기호까지 붙인 표기 */
+  const cash = (n) => E.formatMoney(n, currency, locale);
+  /** 표의 금액 칸에 쓰는 기호 없는 숫자 */
+  const money = (n) => E.formatNumber(n, currency, locale);
+
+  /** 전표 번호. 장부의 각 줄은 번호로 참조된다. */
+  function slipNumbers() {
+    const map = new Map();
+    byDate(ledger.expenses).forEach((e, i) => map.set(e.id, String(i + 1).padStart(3, '0')));
+    return map;
+  }
+
+  const VIEWS = [['home', '홈'], ['book', '장부'], ['goods', '품목'],
+                 ['settle', '정산 내역'], ['archive', '아카이브']];
+
+  /* ================================================================
+     언어
+
+     프로토타입이라 화면을 그린 뒤 글자만 바꿔 끼운다. 실제 앱에서는
+     문자열마다 키를 두고 번역 파일을 따로 관리해야 한다.
+  ================================================================ */
+  const EN = {
+    '바로 나누기': 'Split now', '가입 없이': 'no account', '팀 장부': 'Team ledger',
+    '로그인 필요': 'sign in required', '이메일': 'Email', '카카오': 'Kakao', '돌아가기': 'Back',
+    '로그인': 'Sign in', '회원가입': 'Sign up',
+    '총 금액': 'Total', '인원': 'People', '한 사람당': 'Each person',
+    '각자 낸 금액 입력': 'Enter what each paid', '누가 얼마씩 냈나': 'Who paid what',
+    '이름': 'Name', '낸 금액': 'Paid', '빼기': 'Remove', '사람 추가': 'Add person',
+    '보낼 돈': 'Transfers', '카카오톡으로 보내기': 'Send via KakaoTalk',
+    '카카오톡으로 다시 보내기': 'Send again via KakaoTalk',
+    '계산 보기': 'Show the math', '접기': 'Hide',
+    '낸 돈': 'Paid', '합계': 'Total', '낼 몫': 'Owed', '차액': 'Difference',
+    '홈': 'Home', '장부': 'Ledger', '품목': 'Items', '정산 내역': 'Settlements',
+    '아카이브': 'Archive', '＋ 지출 기입': '＋ Add expense', '보는 사람': 'Viewing as',
+    '전체 지출': 'Total spent', '아직 정산 안 함': 'Not settled yet', '내 몫': 'My balance',
+    '미정산': 'Unsettled', '받을 예정': 'to receive', '보낼 예정': 'to send',
+    '맞음': 'Even', '주고받을 것 없음': 'nothing to move',
+    '함께 나눌 돈': 'Shared', '개인이 가져갈 것': 'Kept by one person',
+    '주고받을 돈': 'Money to move', '없음': 'None', '확정 전': 'before confirming',
+    '정산 내역 보기': 'See settlements', '최근 기입': 'Recent entries',
+    '장부 전체 보기': 'See full ledger',
+    '번호': 'No.', '날짜': 'Date', '항목': 'Description', '결제': 'Paid by',
+    '금액': 'Amount', '부담': 'Split', '상태': 'Status', '완료': 'DONE',
+    '선택한 것만 정산': 'Settle selected', '선택 해제': 'Clear',
+    '누가 얼마씩 내나': 'Who owes what', '나머지 1원씩 배분': 'remainder spread by 1',
+    '판매처': 'Vendor', '분류': 'Category', '나눈 기준': 'Split basis',
+    '이후 변동': 'Later changes', '메모': 'Note',
+    '구매처 보기': 'Open store', '영수증 보기': 'View receipt',
+    '이 항목만 정산': 'Settle this one', '금액 고치기': 'Correct amount', '환불 기입': 'Record refund',
+    '영수증': 'receipt', '보정': 'correction', '환불': 'refund', '두 번 구매': 'bought twice',
+    '구매 링크': 'Buy again',
+    '대상 금액': 'Amount', '팀원': 'Member', '받을 돈': 'to receive',
+    '정산하기': 'Settle', '정산할 것이 없습니다': 'Nothing to settle',
+    '프로젝트 아카이브': 'Project archive', '기간': 'Days', '기입': 'Entries',
+    '정산': 'Settlements', '무엇에 썼나': 'Where it went', '정산 이력': 'Settlement history',
+    '지출 기입': 'Add expense', '읽는 중': 'Reading', '항목 이름': 'Item',
+    '결제한 사람': 'Paid by', '누가 나눠 내나': 'Who splits it', '일부만': 'Some of us',
+    '한 사람이 가져감': 'One person keeps it', '가져갈 사람': 'Who keeps it',
+    '장부에 기입': 'Add to ledger', '그만두기': 'Cancel', '읽어옴': 'read',
+    '예시로 해보기': 'Try a sample', '직접 적기': 'Type it in',
+    '실제 금액': 'Actual amount', '돌려받은 금액': 'Refunded amount',
+    '대상': 'Covers', '확정': 'Confirm', '닫기': 'Close',
+    '빠른 정산': 'Quick split', '정산 완료': 'settled',
+    'Ledger 첫 화면으로': 'Ledger home', '언어': 'Language', '화폐': 'Currency',
+    '이 항목 선택': 'Select this row', '정산 완료': 'SETTLED',
+    '통화': 'Currency', '영수증 금액': 'On the receipt',
+  };
+
+  const EN_RE = [
+    [/^(KRW|JPY|USD|EUR|GBP) 청구액$/, (_, a) => 'Charged in ' + a],
+    [/^(날짜|금액) ([↑↓])$/, (_, a, b) => (a === '날짜' ? 'Date ' : 'Amount ') + b],
+    [/^(\d+)차 중간 정산 마감$/, (_, a) => 'Interim settlement #' + a + ' closed'],
+    [/^(\d+)차 중간 정산$/, (_, a) => 'Interim settlement #' + a],
+    [/^(.+)건 기입$/, (_, a) => a + ' entries'],
+    [/^(.+)건 선택함$/, (_, a) => a + ' selected'],
+    [/^아직 정산하지 않은 (.+)건$/, (_, a) => a + ' not settled yet'],
+    [/^(.+)건$/, (_, a) => a + ' items'],
+    [/^(.+)일$/, (_, a) => a + ' days'],
+    [/^(.+)회$/, (_, a) => a + ' times'],
+    [/^(.+)개$/, (_, a) => a + ''],
+    [/^미정산 (.+)$/, (_, a) => 'unsettled ' + a],
+    [/^공동 (.+)인$/, (_, a) => 'shared by ' + a],
+    [/^일부 (.+)인$/, (_, a) => a + ' of us'],
+    [/^(.+) 개인$/, (_, a) => a + ' only'],
+    [/^(.+)명은 (.+)$/, (_, a, b) => a + ' pay ' + b],
+    [/^(.+)명$/, (_, a) => a + ' people'],
+    [/^(.+)에게 보냄$/, (_, a) => 'to ' + a],
+    [/^(.+)에게서 받음$/, (_, a) => 'from ' + a],
+    [/^(.+)님이 확인하면 닫힙니다$/, (_, a) => 'closes when ' + a + ' confirms'],
+    [/^기입할 때의 팀원 (.+)$/, (_, a) => 'team at entry: ' + a],
+    [/^팀 전체 (.+)$/, (_, a) => 'whole team, ' + a],
+    [/^(.+)차 정산$/, (_, a) => 'Settlement #' + a],
+    [/^(.+)차 중간 정산$/, (_, a) => 'Interim settlement #' + a],
+    [/^선택 항목 정산$/, () => 'Selected items'],
+    [/^(.+) 정산$/, (_, a) => a],
+    [/^처음 결제 (.+)$/, (_, a) => 'originally ' + a],
+    [/^실제 금액 (.+)$/, (_, a) => 'actual ' + a],
+    [/^(보정|환불) (.+)$/, (_, a, b) => (a === '보정' ? 'correction ' : 'refund ') + b],
+    [/^(.+) 확정$/, (_, a) => 'confirmed ' + a],
+    [/^(.+) 마감$/, (_, a) => a + ' closed'],
+  ];
+
+  /** 화면을 그린 뒤 글자만 바꿔 끼운다. 구조는 건드리지 않는다. */
+  function localize(root) {
+    if (locale === 'ko' || !root) return;
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walk.nextNode()) nodes.push(walk.currentNode);
+    for (const node of nodes) {
+      const raw = node.nodeValue;
+      const key = raw.trim();
+      if (!key) continue;
+      if (EN[key] !== undefined) { node.nodeValue = raw.replace(key, EN[key]); continue; }
+      for (const [re, fn] of EN_RE) {
+        const m = key.match(re);
+        if (m) { node.nodeValue = raw.replace(key, fn(...m)); break; }
+      }
+    }
+    root.querySelectorAll('[placeholder]').forEach((n) => {
+      if (EN[n.placeholder]) n.placeholder = EN[n.placeholder];
+    });
+    root.querySelectorAll('[aria-label]').forEach((n) => {
+      const v = n.getAttribute('aria-label');
+      if (EN[v]) n.setAttribute('aria-label', EN[v]);
+    });
+  }
+
+  /* ================================================================
+     빠른 N빵 (§5.1)
+     가입도 저장도 없다. 열자마자 계산이 되어야 한다.
+     여러 명이 나눠 냈다면 팀 장부와 똑같은 엔진으로 송금까지 계산한다.
+  ================================================================ */
+  function quickMembers() {
+    return quick.payers.map((p, i) => ({ id: 'q' + i, name: p.name || '이름 ' + (i + 1) }));
+  }
+
+  function quickResult() {
+    const members = quickMembers();
+    const ids = members.map((m) => m.id);
+    const expenses = quick.payers
+      .map((p, i) => ({
+        id: 'qe' + i, ledgerId: 'quick', date: '2026-01-01',
+        title: (p.name || '이름 ' + (i + 1)) + ' 결제', amount: Math.round(Number(p.amount)) || 0,
+        payerId: 'q' + i, teamMemberIds: ids, allocation: { type: 'all' },
+        createdAt: '', createdBy: 'q' + i,
+      }))
+      .filter((e) => e.amount > 0);
+    if (!expenses.length) return null;
+    return { result: computeSettlement(expenses, members), members };
+  }
+
+  function quickOutcome() {
+    const q = quickResult();
+    if (!q) return '';
+    return '<div style="margin-top:32px">' +
+      '<div class="caption" style="margin-bottom:8px">보낼 돈</div>' +
+      remitListFor(q.result, q.members, 'quick') + '</div>';
+  }
+
+  /** 빠른 N빵도 카카오톡으로 보낼 수 있어야 한다. 어느 채팅방에 보낼지는 카카오톡이 묻는다. */
+  function quickKakao() {
+    const total = Math.round(Number(quick.total)) || 0;
+    const q = quick.detailed ? quickResult() : null;
+    if (q && q.result.transfers.length) {
+      return '빠른 정산\n\n' +
+        q.result.transfers.map((t) =>
+          nameOf(q.members, t.fromMemberId) + ' → ' + nameOf(q.members, t.toMemberId) +
+          '\n' + cash(t.amount)).join('\n\n') +
+        '\n\n대상 금액\n' + cash(q.result.totalAmount);
+    }
+    const n = Math.max(1, Math.round(Number(quick.people)) || 1);
+    const set = [...new Set(E.splitEvenly(total, Array.from({ length: n }, (_, i) => 'p' + i)).map((x) => x.amount))];
+    return '빠른 정산\n\n' + n + '명\n한 사람당 ' + cash(set[0]) +
+      (set.length > 1 ? ' 또는 ' + cash(set[1]) : '') + '\n\n총 금액\n' + cash(total);
+  }
+
+  function quickShareBlock() {
+    if (!(Math.round(Number(quick.total)) || 0)) return '';
+    return '<div class="row" style="margin-top:34px">' +
+      '<button class="act small" data-qshare="1">카카오톡으로 보내기</button></div>' +
+      (quick.share ? '<pre class="msg" style="margin-top:14px">' + esc(quickKakao()) + '</pre>' : '');
+  }
+
+  function quickSummary() {
+    const n = Math.max(1, Math.round(Number(quick.people)) || 1);
+    const total = Math.round(Number(quick.total)) || 0;
+    const head = '<div class="label">한 사람당</div>';
+    if (!total) return head + '<div class="each faint">' + cash(0) + '</div>';
+
+    const shares = E.splitEvenly(total, Array.from({ length: n }, (_, i) => 'p' + i));
+    const set = [...new Set(shares.map((x) => x.amount))];
+    const odd = shares.filter((x) => x.roundingAdjusted).length;
+    return head + '<div class="each">' + cash(set[0]) + '</div>' +
+      // 나머지가 생길 때만 말한다. 딱 나뉘면 아무 말도 필요 없다.
+      (set.length > 1 ? '<p class="note">' + (n - odd) + '명은 ' + cash(set[1]) + '</p>' : '');
+  }
+
+  function viewQuick() {
+    const n = Math.max(1, Math.round(Number(quick.people)) || 1);
+    const total = Math.round(Number(quick.total)) || 0;
+    const simple = '<div class="result">' + quickSummary() + '</div>';
+
+    let detail = '';
+    if (quick.detailed) {
+      const rows = quick.payers.map((p, i) =>
+        '<tr><td><input type="text" data-q="name" data-i="' + i + '" value="' + esc(p.name) +
+          '" placeholder="이름"></td>' +
+        '<td><input type="text" inputmode="decimal" class="num" style="text-align:right" ' +
+          'data-q="amount" data-i="' + i + '" value="' + (Number(p.amount) ? money(p.amount) : '') +
+          '" placeholder="낸 금액"></td>' +
+        '<td style="white-space:nowrap">' + (quick.payers.length > 2
+          ? '<button class="plain" data-qdel="' + i + '">빼기</button>' : '') + '</td></tr>').join('');
+
+      detail =
+        '<div style="margin-top:38px">' +
+        '<div class="caption">누가 얼마씩 냈나</div>' +
+        '<div class="scroll" style="margin-top:12px;max-width:460px"><table class="book"><tbody>' +
+        rows + '</tbody></table></div>' +
+        '<p style="margin-top:12px"><button class="plain" data-qadd="1">사람 추가</button></p>' +
+        '<div id="quick-out">' + quickOutcome() + '</div>' +
+        '</div>';
+    }
+
+    // 갈림길 두 개. 한쪽은 가입 없이 바로 계산, 한쪽은 팀 장부.
+    if (!quick.open) {
+      return '<div class="gate"><div class="choices">' +
+        '<button class="choice" data-qopen="1">바로 나누기' +
+          '<span class="sub">가입 없이</span></button>' +
+        '<button class="choice" data-teams="1">팀 장부' +
+          '<span class="sub">' + (signedIn ? ledgers.length + '개' : '로그인 필요') + '</span></button>' +
+        '</div></div>';
+    }
+
+    return '<div class="gate" style="padding-top:56px">' +
+      '<div class="calc-in">' +
+        '<label>총 금액<input type="text" inputmode="decimal" class="num" data-q="total" ' +
+          'value="' + (total ? money(total) : '') + '" placeholder="0"></label>' +
+        '<label>인원<input type="text" inputmode="numeric" class="num short" data-q="people" ' +
+          'value="' + n + '"></label>' +
+      '</div>' + simple +
+      '<p class="back"><button class="plain" data-go="quick">돌아가기</button></p>' +
+      (quick.detailed
+        ? detail
+        : '<p style="margin-top:34px"><button class="plain" data-qmode="1">' +
+          '각자 낸 금액 입력</button></p>') +
+      '<div id="quick-share">' + quickShareBlock() + '</div>' +
+      '</div>';
+  }
+
+  function loginPanel() {
+    return '<div class="gate">' +
+      '<div class="choices">' +
+        '<button class="choice" data-demo="1">이메일</button>' +
+        '<button class="choice" data-demo="1">카카오</button>' +
+      '</div>' +
+      '<p class="back"><button class="plain" data-close-login="1">돌아가기</button></p>' +
+      '</div>';
+  }
+
+  /** 팀 고르기. 수업이 둘이면 팀도 둘이다. */
+  function viewTeams() {
+    return '<div class="gate"><div class="choices">' +
+      ledgers.map((l) => {
+        const open = l.expenses.filter((e) =>
+          !l.settlements.some((st) => st.snapshot.expenseIds.includes(e.id)));
+        const owed = open.reduce((a, e) => a + e.amount, 0);
+        return '<button class="choice" data-team="' + l.id + '">' + esc(l.teamName) +
+          '<span class="sub">' + (owed ? '미정산 ' + cash(owed) : '정산 완료') + '</span></button>';
+      }).join('') +
+      '</div><p class="back"><button class="plain" data-go="quick">돌아가기</button></p></div>';
+  }
+
+  /**
+   * 완료 도장. 같은 각도로 여러 번 찍히면 인쇄처럼 보이므로
+   * 번호에서 각도와 위치를 조금씩 어긋나게 뽑는다.
+   */
+  /** 줄 하나에 찍는 작은 도장 */
+  function rowMark(id) {
+    const h = [...id].reduce((a, c) => a + c.charCodeAt(0), 0);
+    return '<span class="done-mark" style="transform:rotate(' + (-9 + (h % 16)) + 'deg)">완료</span>';
+  }
+
+  function mark(sub, seed, size) {
+    const angle = -16 + ((seed * 7) % 11);
+    const dx = (seed * 5) % 9;
+    const dy = (seed * 3) % 7;
+    return '<span class="mark' + (size ? ' ' + size : '') + '" aria-hidden="true" ' +
+      'style="right:' + (16 + dx) + 'px;top:' + (-4 + dy) + 'px;' +
+      'transform:rotate(' + angle + 'deg)">' +
+      '<span class="big">정산 완료</span>' +
+      (sub ? '<span class="small">' + esc(sub) + '</span>' : '') + '</span>';
+  }
+
+  /* ================================================================
+     검산 — 사람 단위로 계산 경로를 전부 드러낸다 (§14, §23.3)
+  ================================================================ */
+  function proofFor(result, memberId, highlight, roster) {
+    const who = (id) => (roster ? nameOf(roster, id) : nm(id));
+    const b = result.balances.find((x) => x.memberId === memberId);
+    const mine = result.transfers.filter((t) => t.fromMemberId === memberId || t.toMemberId === memberId);
+    let running = b.totalPaid;
+    let rows = '<tr><td class="v">' + money(b.totalPaid) + '</td><td class="l">낸 돈</td></tr>';
+    for (const t of mine) {
+      const out = t.fromMemberId === memberId;
+      running += out ? t.amount : -t.amount;
+      rows += '<tr' + (highlight && t === highlight ? ' class="hit"' : '') + '>' +
+        '<td class="v">' + (out ? '+ ' : '− ') + money(t.amount) + '</td>' +
+        '<td class="l">' + esc(who(out ? t.toMemberId : t.fromMemberId)) + (out ? '에게 보냄' : '에게서 받음') + '</td></tr>';
+    }
+    rows += '<tr class="close"><td class="v">' + money(running) + '</td><td class="l">합계</td></tr>';
+    rows += '<tr><td class="v faint">' + money(b.totalOwed) + '</td><td class="l">낼 몫</td></tr>';
+
+    const scale = Math.max(...result.balances.map((x) => Math.max(x.totalPaid, x.totalOwed))) || 1;
+    const from = ((b.totalPaid / scale) * 100).toFixed(2);
+    const to = ((b.totalOwed / scale) * 100).toFixed(2);
+
+    return '<div><div class="caption" style="margin-bottom:10px">' + esc(who(memberId)) + '</div>' +
+      '<table class="tally">' + rows + '</table>' +
+      '<div class="converge" data-to="' + to + '">' +
+        '<div class="track"></div>' +
+        '<div class="bar" style="width:' + from + '%"></div>' +
+        '<div class="mark" style="left:' + to + '%"></div>' +
+        '<div class="cap" style="left:' + to + '%">낼 몫</div>' +
+      '</div></div>';
+  }
+
+  const remitList = (result, key) => remitListFor(result, null, key);
+
+  function remitListFor(result, roster, key) {
+    const who = (id) => (roster ? nameOf(roster, id) : nm(id));
+    if (!result.transfers.length) {
+      return '<p class="faint" style="padding:14px 0">없음</p>';
+    }
+    return result.transfers.map((t, i) => {
+      const id = key + ':' + i;
+      const open = openProof === id;
+      let html = '<button class="remit" data-proof="' + id + '" aria-expanded="' + open + '">' +
+        '<span class="who">' + esc(who(t.fromMemberId)) + ' → ' + esc(who(t.toMemberId)) + '</span>' +
+        '<span class="sum">' + cash(t.amount) + '</span>' +
+        '<span class="ask">' + (open ? '접기' : '계산 보기') + '</span></button>';
+      if (open) {
+        html += '<div class="proof"><div class="proof-pair">' +
+          proofFor(result, t.fromMemberId, t, roster) + proofFor(result, t.toMemberId, t, roster) +
+          '</div></div>';
+      }
+      return html;
+    }).join('');
+  }
+
+  function balanceTable(result) {
+    const rows = result.balances.map((b) => {
+      const v = b.netBalance;
+      const state = v === 0 ? '맞음' : v > 0 ? '받을 돈' : '보낼 돈';
+      return '<tr><td>' + esc(nm(b.memberId)) + (b.memberId === me ? ' <span class="faint">나</span>' : '') + '</td>' +
+        '<td class="r money">' + money(b.totalPaid) + '</td>' +
+        '<td class="r money">' + money(b.totalOwed) + '</td>' +
+        '<td class="r money' + (v < 0 ? ' debit' : '') + '">' + (v > 0 ? '+' : '') + money(v) + '</td>' +
+        '<td class="muted">' + state + '</td></tr>';
+    }).join('');
+    return '<div class="scroll"><table class="book"><thead><tr>' +
+      '<th>팀원</th><th class="r money">낸 돈</th><th class="r money">낼 몫</th>' +
+      '<th class="r money">차액</th><th>상태</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  /* ================================================================
+     홈
+  ================================================================ */
+  function viewHome() {
+    const s = summarizeLedger(ledger);
+    const settled = settledExpenseIds(ledger);
+    const mine = s.pending.balances.find((b) => b.memberId === me);
+    const v = mine ? mine.netBalance : 0;
+    const slips = slipNumbers();
+    const recent = byDate(ledger.expenses).slice(-6).reverse();
+
+
+    const owe =
+      '<section><div class="caption">주고받을 돈</div>' +
+      (v === 0
+        ? '<p class="muted" style="margin-top:16px">없음</p>'
+        : '<table class="book" style="margin-top:16px;max-width:520px"><tbody>' +
+          '<tr><td>' + (v > 0 ? '받을 예정' : '보낼 예정') + '</td>' +
+          '<td class="r num' + (v < 0 ? ' debit' : '') + '" style="padding-right:24px">' + money(Math.abs(v)) + '</td>' +
+          '<td class="muted">확정 전</td></tr>' +
+          '</tbody></table>' +
+          '<p style="margin-top:14px"><button class="plain" data-go="settle">정산 내역 보기</button></p>') +
+      '</section>';
+
+    return '<section>' +
+      '<div class="summary">' +
+        '<div><div class="label">전체 지출</div><div class="figure">' + cash(s.totalSpent) + '</div>' +
+          '<div class="under">' + s.expenseCount + '건 기입</div></div>' +
+        '<div><div class="label">아직 정산 안 함</div><div class="figure">' + cash(s.unsettledAmount) + '</div>' +
+          '<div class="under">' + (s.expenseCount - settled.size) + '건</div></div>' +
+        '<div><div class="label">내 몫</div>' +
+          '<div class="figure' + (v < 0 ? ' debit' : '') + '">' +
+            (v === 0 ? '맞음' : (v > 0 ? '+' : '−') + cash(Math.abs(v))) + '</div>' +
+          '<div class="under">' + (v === 0 ? '주고받을 것 없음' : v > 0 ? '받을 예정' : '보낼 예정') + '</div></div>' +
+      '</div>' +
+      '<table class="facts" style="margin-top:20px">' +
+        '<tr><td class="k">함께 나눌 돈</td><td class="v">' + cash(s.sharedTotal) + '</td></tr>' +
+        '<tr><td class="k">개인이 가져갈 것</td><td class="v">' + cash(s.personalTotal) + '</td></tr>' +
+      '</table>' +
+    '</section>' +
+    owe +
+    '<section>' +
+      '<div class="row" style="justify-content:space-between;margin-bottom:14px">' +
+        '<div><div class="caption">최근 기입</div></div>' +
+        '<button class="plain" data-go="book">장부 전체 보기</button></div>' +
+      '<div class="scroll"><table class="book"><tbody>' +
+      recent.map((e) => '<tr class="entry">' +
+        '<td class="slip">' + slips.get(e.id) + '</td>' +
+        '<td class="day">' + md(e.date) + '</td>' +
+        '<td>' + esc(e.title) + (e.adjustment ? ' <span class="tag">' + adjustmentLabel(e) + '</span>' : '') + '</td>' +
+        '<td class="muted">' + esc(nm(e.payerId)) + '</td>' +
+        '<td class="r money' + (e.amount < 0 ? ' debit' : '') + '">' + money(e.amount) + '</td>' +
+        '<td class="muted">' + esc(allocationLabel(e, M())) + '</td></tr>').join('') +
+      '</tbody></table></div>' +
+    '</section>' +
+    '';
+  }
+
+  /* ================================================================
+     장부
+  ================================================================ */
+  function viewBook() {
+    if (ledger.expenses.length === 0) {
+      return '<section><div class="empty">' +
+        '<button class="act primary" data-go="add">＋ 지출 기입</button></div></section>';
+    }
+
+    const settled = settledExpenseIds(ledger);
+    const slips = slipNumbers();
+
+    const chrono = byDate(ledger.expenses);
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    const list = sort.key === 'amount'
+      ? [...chrono].sort((a, b) => (a.amount - b.amount) * dir)
+      : (sort.dir === 'asc' ? chrono : [...chrono].reverse());
+
+    // 마감선은 시간 순서 위에서만 뜻이 있다. 금액순으로 늘어놓으면 구획이 성립하지 않으므로
+    // 그때는 그리지 않는다. 정산 여부는 상태 칸이 계속 알려 준다.
+    const chronological = sort.key === 'date' && sort.dir === 'asc';
+    const closings = chronological
+      ? [...ledger.settlements].sort((a, b) => (a.date < b.date ? -1 : 1))
+      : [];
+
+    shown = list.filter((e) => !settled.has(e.id)).map((e) => e.id);
+
+    const head = (key, label, cls) => {
+      const on = sort.key === key;
+      return '<th class="' + cls + '"' +
+        (on ? ' aria-sort="' + (sort.dir === 'asc' ? 'ascending' : 'descending') + '"' : '') + '>' +
+        '<button class="sortbtn" data-sort="' + key + '">' + label +
+        (on ? (sort.dir === 'asc' ? ' ↑' : ' ↓') : '') + '</button></th>';
+    };
+
+    let rows = '';
+    let ci = 0;
+
+    const closingRow = (s) =>
+      '<tr class="closing"><td colspan="8" class="stamped">' +
+      '<span class="num">' + ymd(s.date) + '</span> &nbsp; <b>' + esc(s.label) + ' 마감</b> &nbsp; ' +
+      '<span class="num">' + cash(s.snapshot.totalAmount) + '</span> &nbsp; ' +
+      '<button class="plain" data-go="settle">정산 내역</button>' +
+      mark('', s.seq, 'sm') + '</td></tr>';
+
+    for (const e of list) {
+      while (ci < closings.length && closings[ci].date < e.date) { rows += closingRow(closings[ci]); ci++; }
+      const done = settled.has(e.id);
+      rows += '<tr class="entry' + (done ? ' done' : '') + '">' +
+        '<td>' + (done ? '' : '<input type="checkbox" data-sel="' + e.id + '"' +
+          (selection.has(e.id) ? ' checked' : '') + ' aria-label="이 항목 선택">') + '</td>' +
+        '<td class="slip">' + slips.get(e.id) + '</td>' +
+        '<td class="day">' + md(e.date) + '</td>' +
+        '<td><button class="subject" data-row="' + e.id + '">' + esc(e.title) + '</button>' +
+          (e.adjustment ? ' <span class="tag">' + adjustmentLabel(e) + '</span>' : '') +
+          (e.receiptImage ? ' <span class="tag">영수증</span>' : '') + '</td>' +
+        '<td class="muted">' + esc(nm(e.payerId)) + '</td>' +
+        '<td class="r money' + (e.amount < 0 ? ' debit' : '') + '">' + money(e.amount) + '</td>' +
+        '<td class="muted">' + esc(allocationLabel(e, M())) + '</td>' +
+        '<td>' + (done ? rowMark(e.id) : '') + '</td></tr>';
+      if (openRow === e.id) rows += '<tr><td class="opened" colspan="8">' + entryDetail(e) + '</td></tr>';
+    }
+    while (ci < closings.length) { rows += closingRow(closings[ci]); ci++; }
+
+    const n = selection.size;
+    const total = ledger.expenses.filter((e) => selection.has(e.id)).reduce((a, e) => a + e.amount, 0);
+
+    return '<section>' +
+      '<div class="caption">장부</div>' +
+      '<div class="scroll" style="margin-top:14px"><table class="book"><thead><tr>' +
+        '<th style="width:24px"></th><th>번호</th>' + head('date', '날짜', '') +
+        '<th>항목</th><th>결제</th>' + head('amount', '금액', 'r money') +
+        '<th>부담</th><th>상태</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="row" style="margin-top:20px">' +
+      (n
+        ? '<span>' + n + '건 선택함<span class="num" style="margin-left:12px">' + cash(total) + '</span></span>' +
+          '<button class="act small" data-settle-selected="1">선택한 것만 정산</button>' +
+          '<button class="plain" data-clear-sel="1">선택 해제</button>'
+        : '') +
+      '</div></section>';
+  }
+
+  function entryDetail(e) {
+    const shares = breakdownOf(e).shares;
+    const adjustments = adjustmentsFor(ledger.expenses, e.id);
+    const eff = effectiveAmount(ledger.expenses, e);
+    const target = e.adjustment ? ledger.expenses.find((x) => x.id === e.adjustment.targetExpenseId) : null;
+
+    const shareRows = shares.map((s) =>
+      '<tr><td class="l">' + esc(nm(s.memberId)) + '</td><td class="v">' + money(s.amount) +
+      (s.roundingAdjusted ? ' <span class="faint">(+1)</span>' : '') + '</td></tr>').join('');
+
+    const facts =
+      (e.originalCurrency
+        ? '<tr><td class="k">영수증 금액</td><td>' +
+          E.formatMoney(e.originalAmount, e.originalCurrency, locale) +
+          ' <span class="faint">' + esc(e.originalCurrency) + '</span></td></tr>'
+        : '') +
+      (e.vendor ? '<tr><td class="k">판매처</td><td>' + esc(e.vendor) + '</td></tr>' : '') +
+      (e.category ? '<tr><td class="k">분류</td><td>' + esc(e.category) + '</td></tr>' : '') +
+      '<tr><td class="k">나눈 기준</td><td>기입할 때의 팀원 ' + e.teamMemberIds.length + '명<br>' +
+        '<span class="faint">' + e.teamMemberIds.map((id) => esc(nm(id))).join(', ') + '</span></td></tr>' +
+      (target ? '<tr><td class="k">' + esc(adjustmentLabel(e)) + ' 대상</td><td>' + esc(target.title) +
+        (e.adjustment.reason ? '<br><span class="faint">' + esc(e.adjustment.reason) + '</span>' : '') + '</td></tr>' : '') +
+      (adjustments.length
+        ? '<tr><td class="k">이후 변동</td><td>' +
+          adjustments.map((a) => esc(adjustmentLabel(a)) + ' ' + cash(a.amount)).join('<br>') +
+          '<br><b>실제 금액 ' + cash(eff) + '</b></td></tr>'
+        : '') +
+      (e.note ? '<tr><td class="k">메모</td><td class="muted">' + esc(e.note) + '</td></tr>' : '');
+
+    const links =
+      (e.productLink ? '<a href="' + esc(e.productLink) + '" target="_blank" rel="noopener">구매처 보기</a>' : '') +
+      (e.receiptImage ? '<button class="plain" data-noop="1">영수증 보기</button>' : '') +
+      '<button class="plain" data-single="' + e.id + '">이 항목만 정산</button>' +
+      (e.adjustment ? '' :
+        '<button class="plain" data-adjust="correction:' + e.id + '">금액 고치기</button>' +
+        '<button class="plain" data-adjust="refund:' + e.id + '">환불 기입</button>');
+
+    return '<div style="padding:18px 14px 22px">' +
+      '<div class="fields" style="gap:30px">' +
+        '<div><div class="caption" style="margin-bottom:8px">누가 얼마씩 부담하나</div>' +
+          '<table class="tally" style="max-width:250px">' + shareRows + '</table>' +
+          (shares.some((s) => s.roundingAdjusted)
+            ? '<p class="faint" style="font-size:12.5px;margin-top:8px">나머지 1원씩 배분</p>' : '') +
+        '</div>' +
+        '<div><table class="facts">' + facts + '</table></div>' +
+      '</div>' +
+      '<div class="row" style="margin-top:18px">' + links + '</div>' +
+      '</div>';
+  }
+
+  /* ================================================================
+     물건
+  ================================================================ */
+  function viewGoods() {
+    const list = byDate(ledger.expenses.filter((e) => !e.adjustment)).reverse();
+    if (!list.length) {
+      return '<section><div class="empty faint">없음</div></section>';
+    }
+    const counts = new Map();
+    for (const e of list) {
+      const key = e.productLink || e.title;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+
+    return '<section>' +
+      '<div class="caption">품목</div>' +
+      '<div class="goods" style="margin-top:20px">' + list.map((e) => {
+        const eff = effectiveAmount(ledger.expenses, e);
+        const dup = counts.get(e.productLink || e.title) > 1;
+        return '<div class="good">' +
+          '<div class="plate">' + esc(e.category || '기타') + '</div>' +
+          '<h3>' + esc(e.title) + '</h3>' +
+          '<div class="price">' + cash(eff) + '</div>' +
+          (eff !== e.amount
+            ? '<div class="faint" style="font-size:12.5px">처음 결제 ' + cash(e.amount) + '</div>' : '') +
+          '<table class="facts"><tbody>' +
+            '<tr><td class="k">날짜</td><td>' + md(e.date) + '</td></tr>' +
+            '<tr><td class="k">결제</td><td>' + esc(nm(e.payerId)) + '</td></tr>' +
+            '<tr><td class="k">부담</td><td>' + esc(allocationLabel(e, M())) + '</td></tr>' +
+            (e.vendor ? '<tr><td class="k">판매처</td><td>' + esc(e.vendor) + '</td></tr>' : '') +
+          '</tbody></table>' +
+          (e.productLink
+            ? '<div style="margin-top:9px"><a href="' + esc(e.productLink) + '" target="_blank" rel="noopener">구매 링크</a></div>' : '') +
+          (dup ? '<div class="again">두 번 구매</div>' : '') +
+          '</div>';
+      }).join('') + '</div></section>';
+  }
+
+  /* ================================================================
+     정산
+  ================================================================ */
+  function viewSettle() {
+    const open = unsettledExpenses(ledger);
+    const pending = computeSettlement(open, M());
+    let html = '';
+
+    if (open.length) {
+      const seq = ledger.settlements.length + 1;
+      html += '<section>' +
+        '<div class="caption">아직 정산하지 않은 ' + open.length + '건</div>' +
+        '<p class="lede">' + ymd(open[0].date) + ' – ' + ymd(open[open.length - 1].date) + '</p>' +
+        '<table class="facts" style="margin-top:16px">' +
+          '<tr><td class="k">대상 금액</td><td class="v">' + cash(pending.totalAmount) + '</td></tr>' +
+          '<tr><td class="k">함께 나눌 돈</td><td class="v">' + cash(pending.sharedAmount) + '</td></tr>' +
+          '<tr><td class="k">개인이 가져갈 것</td><td class="v">' + cash(pending.personalAmount) + '</td></tr>' +
+        '</table>' +
+        '<div style="margin-top:26px">' + balanceTable(pending) + '</div>' +
+        '<div style="margin-top:28px"><div class="caption" style="margin-bottom:8px">보낼 돈</div>' +
+        remitList(pending, 'pending') + '</div>' +
+        '<div class="row" style="margin-top:24px">' +
+          '<button class="act primary" data-confirm="1">정산하기</button></div>' +
+        '</section>';
+    } else {
+      html += '<section><div class="empty faint">정산할 것이 없습니다</div></section>';
+    }
+
+    for (const s of [...ledger.settlements].reverse()) {
+      html += '<section class="stamped">' +
+        mark(ymd(s.date), s.seq) +
+        '<div class="caption">' + esc(s.label) + '</div>' +
+        '<p class="lede">' + ymd(s.date) + ' 확정 · ' + s.snapshot.expenseIds.length + '건 · ' +
+          cash(s.snapshot.totalAmount) + '</p>' +
+        '<div style="margin-top:18px">' + balanceTable(s.snapshot) + '</div>' +
+        '<div style="margin-top:26px"><div class="caption" style="margin-bottom:8px">송금</div>' +
+        remitList(s.snapshot, 'st' + s.seq) + '</div>' +
+        '<div class="row" style="margin-top:20px">' +
+          '<button class="act small" data-kakao="st' + s.seq + '">카카오톡으로 다시 보내기</button></div>' +
+        (kakaoOpen === 'st' + s.seq
+          ? '<pre class="msg" style="margin-top:14px">' + esc(kakaoMessage(s.snapshot, s.seq)) + '</pre>'
+          : '') +
+        '</section>';
+    }
+    return html;
+  }
+
+  function kakaoMessage(result, seq) {
+    return ledger.teamName + '\n' + seq + '차 정산\n\n' +
+      result.transfers.map((t) => nm(t.fromMemberId) + ' → ' + nm(t.toMemberId) + '\n' + cash(t.amount)).join('\n\n') +
+      '\n\n대상 지출 ' + result.expenseIds.length + '건\n' + cash(result.totalAmount) + '\n\n[정산 내역 확인]';
+  }
+
+  /* ================================================================
+     아카이브
+  ================================================================ */
+  function viewArchive() {
+    const s = summarizeLedger(ledger);
+    const dates = byDate(ledger.expenses);
+    const days = Math.round((new Date(dates[dates.length - 1].date) - new Date(dates[0].date)) / 86400000) + 1;
+    const cat = new Map();
+    for (const e of ledger.expenses) cat.set(e.category || '기타', (cat.get(e.category || '기타') || 0) + e.amount);
+    const sorted = [...cat.entries()].sort((a, b) => b[1] - a[1]);
+    const peak = sorted.length ? sorted[0][1] : 1;
+
+    const closed = s.unsettledAmount === 0 && ledger.settlements.length > 0;
+    return '<section' + (closed ? ' class="stamped"' : '') + '>' +
+      (closed ? mark(ymd(ledger.settlements[ledger.settlements.length - 1].date), 9, 'lg') : '') +
+      '<div class="caption">프로젝트 아카이브</div>' +
+      '<h2 style="font-size:clamp(23px,4vw,31px);margin-top:10px">' + esc(ledger.name) + '</h2>' +
+      '<table class="facts" style="margin-top:22px;min-width:340px">' +
+        '<tr><td class="k">기간</td><td class="v">' + days + '일</td></tr>' +
+        '<tr><td class="k">기입</td><td class="v">' + s.expenseCount + '건</td></tr>' +
+        '<tr><td class="k">정산</td><td class="v">' + ledger.settlements.length + '회</td></tr>' +
+        '<tr class="sum"><td class="k">전체 지출</td><td class="v">' + cash(s.totalSpent) + '</td></tr>' +
+      '</table></section>' +
+
+      '<section><div class="caption">무엇에 썼나</div>' +
+      '<table class="facts" style="margin-top:14px;width:100%;max-width:560px"><tbody>' +
+      sorted.map(([k, v]) => {
+        const pct = (v / s.totalSpent) * 100;
+        return '<tr><td class="k">' + esc(k) + '</td>' +
+          '<td style="width:46%;padding-left:16px"><span style="display:block;border-top:4px solid var(--ink);width:' +
+            ((v / peak) * 100).toFixed(1) + '%"></span></td>' +
+          '<td class="v">' + cash(v) + '</td>' +
+          '<td class="v faint" style="width:56px">' + pct.toFixed(0) + '%</td></tr>';
+      }).join('') + '</tbody></table></section>' +
+
+      '<section><div class="caption">정산 이력</div>' +
+      '<table class="facts" style="margin-top:14px;min-width:400px"><tbody>' +
+      ledger.settlements.map((x) =>
+        '<tr><td class="k">' + esc(x.label) + '</td><td class="k faint">' + ymd(x.date) + '</td>' +
+        '<td class="v">' + cash(x.snapshot.totalAmount) + '</td></tr>').join('') +
+      (s.unsettledAmount
+        ? '<tr><td class="k faint">아직 정산 안 함</td><td></td><td class="v faint">' + cash(s.unsettledAmount) + '</td></tr>'
+        : '') +
+      '</tbody></table></section>' +
+
+      '';
+  }
+
+  /* ================================================================
+     지출 기입 (§7, §18.4)
+  ================================================================ */
+  /**
+   * 예시 영수증. 실제로는 AI가 이미지에서 읽어 온다.
+   * 통화도 함께 읽는다. 한국어 영수증이면 대개 원화지만, 해외 결제 화면이면 다르다.
+   * 어느 쪽이든 사용자가 확인하고 넘어간다.
+   */
+  const SAMPLES = [
+    { title: '스카시 아크릴 절단', amount: 47500, curr: 'KRW', vendor: '을지로 아크릴상가', category: '제작비', date: '2026-10-20' },
+    { title: '무광 검정 스프레이 3캔', amount: 27600, curr: 'KRW', vendor: '삼화페인트몰', category: '재료비', date: '2026-10-21', productLink: 'https://example.com/spray-matte' },
+    { title: 'Adobe Stock 이미지 5장', amount: 4995, curr: 'USD', vendor: 'Adobe', category: '기타', date: '2026-10-23' },
+    { title: '전시 리플렛 200부', amount: 88000, curr: 'KRW', vendor: '성원애드피아', category: '출력비', date: '2026-10-22' },
+  ];
+  let sampleIdx = 0;
+
+  function viewAdd() {
+    if (!draft) {
+      return '<section>' +
+        '<div class="caption">지출 기입</div>' +
+        '<div class="drop" style="margin-top:16px">' +
+          '<p><input type="file" accept="image/*" id="file"></p>' +
+          '<p style="margin-top:18px"><button class="act" data-sample="1">예시로 해보기</button></p>' +
+        '</div>' +
+        '<p style="margin-top:18px"><button class="plain" data-manual="1">직접 적기</button></p>' +
+        '</section>';
+    }
+    if (draft.analyzing) {
+      return '<section><div class="caption">지출 기입</div>' +
+        '<p class="muted" style="margin-top:20px">읽는 중</p></section>';
+    }
+
+    const ai = (f) => draft.fromAI.has(f) ? '<span class="ai-mark">읽어옴</span>' : '';
+    const fld = (label, mark, control, wide) =>
+      '<label class="field"' + (wide ? ' style="grid-column:span 2"' : '') + '>' +
+      '<span class="lab">' + label + mark + '</span>' + control + '</label>';
+    const opts = (sel) => M().map((m) =>
+      '<option value="' + m.id + '"' + (m.id === sel ? ' selected' : '') + '>' + esc(m.name) + '</option>').join('');
+    const type = draft.alloc.type;
+
+    return '<section>' +
+      '<div class="caption">' + (draft.adjustment
+        ? (draft.adjustment.kind === 'refund' ? '환불 기입' : '금액 고치기') : '지출 기입') + '</div>' +
+      (draft.adjustment ? adjustNotice() : '') +
+      (isForeign()
+        ? '<p class="notice" style="margin-top:14px">' +
+          esc(draft.curr) + ' → ' + esc(ledgerCurrency()) + '</p>'
+        : '') +
+      (draft.thumb
+        ? '<img src="' + draft.thumb + '" alt="올린 화면" style="max-height:160px;border:1px solid var(--rule);margin-top:16px">'
+        : '') +
+
+      '<div class="fields" style="margin-top:22px">' +
+        fld('항목 이름', ai('title'), '<input type="text" data-f="title" value="' + esc(draft.title) + '">', true) +
+        fld(amountLabel(), ai('amount'),
+          '<input type="text" inputmode="decimal" data-f="amount" class="num" value="' +
+          E.formatNumber(Number(draft.amount) || 0, draft.curr, locale) + '">') +
+        fld('통화', ai('curr'),
+          '<select data-f="curr">' + ['KRW', 'JPY', 'USD', 'EUR', 'GBP'].map((c) =>
+            '<option value="' + c + '"' + (c === draft.curr ? ' selected' : '') + '>' + c + '</option>').join('') +
+          '</select>') +
+        (isForeign()
+          ? fld(ledgerCurrency() + ' 청구액', '',
+              '<input type="text" inputmode="decimal" data-f="charged" class="num" value="' +
+              (draft.charged ? E.formatNumber(draft.charged, ledgerCurrency(), locale) : '') +
+              '" placeholder="0">')
+          : '') +
+        fld('날짜', ai('date'), '<input type="date" data-f="date" value="' + draft.date + '">') +
+        fld('판매처', ai('vendor'), '<input type="text" data-f="vendor" value="' + esc(draft.vendor) + '">') +
+        fld('분류', ai('category'), '<input type="text" data-f="category" value="' + esc(draft.category) + '">') +
+        fld('결제한 사람', '', '<select data-f="payerId">' + opts(draft.payerId) + '</select>') +
+      '</div>' +
+
+      (draft.locked
+        ? '<fieldset style="margin-top:26px"><legend>누가 나눠 내나</legend>' +
+          '<p style="padding:8px 0">' + esc(allocationLabel({ allocation: draft.alloc, teamMemberIds: draft.teamMemberIds }, M())) + '</p>' +
+          '<p class="faint" style="font-size:13px">' + draftBearers().map((id) => esc(nm(id))).join(', ') + '</p></fieldset>'
+        : '<fieldset style="margin-top:26px"><legend>누가 나눠 내나</legend>' +
+          '<label class="pick"><input type="radio" name="alloc" value="all"' + (type === 'all' ? ' checked' : '') + '>' +
+            '<span>팀 전체 ' + draft.teamMemberIds.length + '명</span></label>' +
+          '<label class="pick"><input type="radio" name="alloc" value="partial"' + (type === 'partial' ? ' checked' : '') + '>' +
+            '<span>일부만</span></label>' +
+          (type === 'partial'
+            ? '<div class="pick-sub">' + draft.teamMemberIds.map((id) =>
+                '<label><input type="checkbox" data-p="' + id + '"' +
+                (draft.alloc.participantIds.includes(id) ? ' checked' : '') + '> ' + esc(nm(id)) + '</label>').join('') + '</div>'
+            : '') +
+          '<label class="pick"><input type="radio" name="alloc" value="personal"' + (type === 'personal' ? ' checked' : '') + '>' +
+            '<span>한 사람이 가져감</span></label>' +
+          (type === 'personal'
+            ? '<div class="pick-sub"><label>가져갈 사람 <select data-f="ownerId">' + opts(draft.alloc.ownerId) + '</select></label></div>'
+            : '') +
+          '</fieldset>') +
+
+      '<div class="fields" style="margin-top:24px">' +
+        fld('구매 링크', '', '<input type="text" data-f="productLink" value="' + esc(draft.productLink) + '" placeholder="https://">') +
+        fld('메모', '', '<input type="text" data-f="note" value="' + esc(draft.note) + '">') +
+      '</div>' +
+
+      '<div class="row" style="margin-top:28px">' +
+        '<button class="act primary" data-save="1">장부에 기입</button>' +
+        '<button class="plain" data-cancel="1">그만두기</button>' +
+        '<span class="faint" id="preview">' + previewSplit() + '</span></div>' +
+      '</section>';
+  }
+
+  /** 지금 장부의 통화. 게이트에서는 고르개의 값을 쓴다. */
+  function ledgerCurrency() {
+    return signedIn ? (ledger.currency || 'KRW') : currency;
+  }
+  /** 영수증 통화가 장부 통화와 다르면 해외 결제다. */
+  function isForeign() {
+    return draft.curr !== ledgerCurrency();
+  }
+
+  function draftBearers() {
+    if (draft.alloc.type === 'all') return draft.teamMemberIds;
+    if (draft.alloc.type === 'partial') return draft.alloc.participantIds;
+    return [draft.alloc.ownerId];
+  }
+
+  /**
+   * 화면에 적는 숫자와 장부에 남는 숫자는 다르다.
+   *   금액 고치기 → 실제 금액을 적고, 장부에는 원본과의 차액이 남는다
+   *   환불 기입   → 돌려받은 금액을 적고, 장부에는 음수로 남는다
+   * 어느 쪽이든 바뀐 결과를 저장 전에 그대로 보여준다.
+   */
+  function storedAmount() {
+    // 해외 결제는 카드사가 이미 환산해 청구한다. 그 청구액이 장부 금액이고
+    // 정산도 그것으로 한다. 우리가 환율을 계산하지 않는다.
+    const n = isForeign()
+      ? (Math.round(Number(draft.charged)) || 0)
+      : (Math.round(Number(draft.amount)) || 0);
+    if (!draft.adjustment) return n;
+    if (draft.adjustment.kind === 'refund') return -Math.abs(n);
+    const target = ledger.expenses.find((e) => e.id === draft.adjustment.targetExpenseId);
+    return n - target.amount;
+  }
+
+  function amountLabel() {
+    if (!draft.adjustment) return '금액';
+    return draft.adjustment.kind === 'refund' ? '돌려받은 금액' : '실제 금액';
+  }
+
+  function adjustNotice() {
+    const t = ledger.expenses.find((e) => e.id === draft.adjustment.targetExpenseId);
+    const done = settledExpenseIds(ledger).has(t.id);
+    return '<p class="notice" style="margin-top:14px">' +
+      esc(t.title) + ' <span class="num">' + cash(t.amount) + '</span>' +
+      (draft.adjustment.kind === 'refund' ? '에 대한 환불입니다. ' : '의 금액을 고칩니다. ') +
+      '원본은 그대로 두고 차이만 새 줄로 남깁니다.' +
+      (done ? ' 이 지출은 이미 정산이 끝났으므로 차이는 다음 정산에 실립니다.' : '') +
+      '</p>';
+  }
+
+  function previewSplit() {
+    const signed = storedAmount();
+    if (!signed) return '';
+    const ids = draftBearers();
+    if (!ids.length) return '';
+    const set = [...new Set(E.splitEvenly(signed, ids).map((s) => s.amount))];
+    const head = draft.adjustment
+      ? '장부에 남는 금액 ' + (signed > 0 ? '+' : '') + cash(signed) + ', '
+      : '';
+    return head + ids.length + '명이 나눠서 한 사람당 ' +
+      set.map((n) => E.formatMoney(n, ledgerCurrency(), locale)).join(' 또는 ');
+  }
+
+  function newDraft(seed, fromAI) {
+    return {
+      title: seed.title || '', amount: seed.amount || 0,
+      date: seed.date || new Date().toISOString().slice(0, 10),
+      vendor: seed.vendor || '', category: seed.category || '',
+      productLink: seed.productLink || '', note: '',
+      payerId: me,
+      curr: seed.curr || ledgerCurrency(),   // 영수증에 적힌 통화
+      charged: 0,                            // 장부 통화로 실제 청구된 금액
+      alloc: seed.alloc || { type: 'all' },
+      teamMemberIds: seed.teamMemberIds || currentRoster(ledger),
+      adjustment: seed.adjustment || null, locked: !!seed.adjustment,
+      fromAI: new Set(fromAI || []), thumb: seed.thumb || '', analyzing: false,
+    };
+  }
+
+  /** 보정과 환불은 원본의 부담 구조를 그대로 물려받는다. */
+  function startAdjustment(kind, targetId) {
+    const t = ledger.expenses.find((e) => e.id === targetId);
+    draft = newDraft({
+      title: t.title + (kind === 'refund' ? ' 환불' : ' 금액 고침'),
+      date: new Date().toISOString().slice(0, 10),
+      vendor: t.vendor, category: t.category,
+      alloc: JSON.parse(JSON.stringify(t.allocation)),
+      teamMemberIds: [...t.teamMemberIds],
+      adjustment: { kind, targetExpenseId: targetId },
+    }, []);
+    draft.payerId = t.payerId;
+    draft.amount = kind === 'correction' ? t.amount : 0;
+    view = 'add'; openRow = null; render();
+  }
+
+  function startAnalyze(seed, fields, thumb) {
+    draft = newDraft({ ...seed, thumb }, fields);
+    draft.analyzing = true;
+    render();
+    setTimeout(() => { draft.analyzing = false; render(); }, 700);
+  }
+
+  function saveDraft() {
+    const signed = storedAmount();
+    if (!draft.title.trim()) { flash = '항목 이름을 적어 주세요.'; return render(); }
+    if (isForeign() && !draft.charged) {
+      flash = ledgerCurrency() + ' 청구액을 적어 주세요.';
+      return render();
+    }
+    if (!signed) {
+      flash = draft.adjustment && draft.adjustment.kind === 'correction'
+        ? '원본과 금액이 같습니다. 고칠 차이가 없습니다.'
+        : '금액을 적어 주세요.';
+      return render();
+    }
+    let alloc;
+    if (draft.alloc.type === 'partial') {
+      if (!draft.alloc.participantIds.length) { flash = '부담할 사람을 한 명 이상 골라 주세요.'; return render(); }
+      alloc = { type: 'partial', participantIds: [...draft.alloc.participantIds] };
+    } else if (draft.alloc.type === 'personal') {
+      alloc = { type: 'personal', ownerId: draft.alloc.ownerId };
+    } else alloc = { type: 'all' };
+
+    ledger.expenses.push({
+      id: 'e' + (ledger.expenses.length + 1) + '-' + Date.now().toString(36),
+      ledgerId: ledger.id, date: draft.date, title: draft.title.trim(), amount: signed,
+      payerId: draft.payerId, teamMemberIds: [...draft.teamMemberIds],
+      vendor: draft.vendor, category: draft.category || '기타',
+      allocation: alloc, adjustment: draft.adjustment || undefined,
+      // 영수증에 적힌 통화와 금액. 정산에는 쓰지 않고 근거로만 남는다.
+      originalCurrency: isForeign() ? draft.curr : undefined,
+      originalAmount: isForeign()
+        ? (draft.adjustment && draft.adjustment.kind === 'refund'
+            ? -Math.abs(Math.round(Number(draft.amount)))
+            : Math.round(Number(draft.amount)))
+        : undefined,
+      productLink: draft.productLink || undefined,
+      receiptImage: draft.thumb ? 'uploaded' : undefined,
+      note: draft.note || undefined,
+      createdAt: new Date().toISOString(), createdBy: me,
+    });
+    flash = draft.adjustment
+      ? (draft.adjustment.kind === 'refund' ? '환불을 ' : '고친 금액을 ') + cash(signed) + '으로 기입했습니다. 원본은 그대로입니다.'
+      : '기입했습니다. 장부에 ' + cash(signed) + '이 더해졌습니다.';
+    draft = null; view = 'book'; render();
+  }
+
+  /* ================================================================
+     그리기와 조작
+  ================================================================ */
+  function openSheet(ids, label) {
+    if (!ids.length) { flash = '정산할 지출이 없습니다.'; return render(); }
+    sheet = { ids, label, share: false };
+    render();
+  }
+
+  function closeSheet() {
+    sheet = null;
+    const d = el('sheet');
+    if (d && d.open) d.close();
+    render();
+  }
+
+  function sheetResult() {
+    return computeSettlement(ledger.expenses.filter((e) => sheet.ids.includes(e.id)), M());
+  }
+
+  function sheetMessage(result) {
+    return ledger.teamName + '\n' + sheet.label + '\n\n' +
+      (result.transfers.length
+        ? result.transfers.map((t) =>
+            nm(t.fromMemberId) + ' → ' + nm(t.toMemberId) + '\n' + cash(t.amount)).join('\n\n')
+        : '주고받을 돈 없음') +
+      '\n\n대상 지출 ' + result.expenseIds.length + '건\n' + cash(result.totalAmount);
+  }
+
+  function renderSheet() {
+    const d = el('sheet');
+    if (!sheet) { if (d.open) d.close(); d.innerHTML = ''; return; }
+
+    const r = sheetResult();
+    d.innerHTML = '<div class="sheet">' +
+      '<div class="sheet-top"><div class="caption">' + esc(sheet.label) + '</div>' +
+        '<button class="plain" data-sheet-close="1">닫기</button></div>' +
+      '<table class="facts" style="margin-top:14px">' +
+        '<tr><td class="k">대상</td><td class="v">' + r.expenseIds.length + '건</td></tr>' +
+        '<tr><td class="k">금액</td><td class="v">' + cash(r.totalAmount) + '</td></tr>' +
+      '</table>' +
+      '<div style="margin-top:22px">' + remitList(r, 'sheet') + '</div>' +
+      '<div class="row" style="margin-top:24px">' +
+        '<button class="act primary" data-sheet-confirm="1">확정</button>' +
+        '<button class="act" data-sheet-share="1">카카오톡으로 보내기</button>' +
+      '</div>' +
+      (sheet.share
+        ? '<pre class="msg" style="margin-top:16px">' + esc(sheetMessage(r)) + '</pre>'
+        : '') +
+      '</div>';
+    if (!d.open) d.showModal();
+  }
+
+  function refreshPreview() {
+    const pv = el('preview');
+    if (pv && draft) pv.textContent = previewSplit();
+  }
+
+  /**
+   * 고르개는 그릴 때마다 새로 만든다.
+   * 한 번만 만들어 두면 selected가 처음 값에 박혀서, 바꾼 뒤 되돌릴 때
+   * 셀렉트가 이미 그 값인 것처럼 보여 change 이벤트가 아예 나지 않는다.
+   */
+  function prefs() {
+    const opt = (v, label, on) =>
+      '<option value="' + v + '"' + (on ? ' selected' : '') + '>' + label + '</option>';
+    return '<span class="prefs">' +
+      '<select id="loc" aria-label="언어">' +
+        opt('ko', '한국어', locale === 'ko') + opt('en', 'English', locale === 'en') +
+      '</select>' +
+      // 통화는 장부를 만들 때 정하고 그 뒤로는 바뀌지 않는다. 장부 안에서는
+      // 고를 수 있는 것이 아니라 그 장부의 사실이므로 글자로만 보여 준다.
+      (signedIn
+        ? '<span class="fixed-cur">' + esc(ledger.currency || 'KRW') + '</span>'
+        : '<select id="cur" aria-label="화폐">' +
+            ['KRW', 'JPY', 'USD', 'EUR', 'GBP'].map((c) => opt(c, c, c === currency)).join('') +
+          '</select>') +
+    '</span>';
+  }
+
+  function renderHead() {
+    const logo = '<button class="logo" data-go="quick" aria-label="Ledger 첫 화면으로">Ledger</button>';
+
+    if (view === 'quick' || view === 'login' || view === 'teams' || !signedIn) {
+      el('head').innerHTML = '<div class="topbar">' + logo + prefs() + '</div>';
+      return;
+    }
+
+    el('head').innerHTML =
+      '<div class="topbar">' + logo +
+      '<span class="who">보는 사람 <select id="viewer"></select>' + prefs() + '</span></div>' +
+      '<div class="masthead" style="margin-top:22px">' +
+        '<span class="team">' + esc(ledger.teamName) + '</span>' +
+        '<span class="book">' + esc(ledger.name) + '</span></div>' +
+      '<div class="rule-double"></div>' +
+      '<nav>' +
+        VIEWS.map(([k, label]) =>
+          '<button class="tab" data-go="' + k + '"' + (view === k ? ' aria-current="page"' : '') +
+          '>' + label + '</button>').join('') +
+        '<span class="spacer"></span>' +
+        '<button class="act small primary" data-go="add">＋ 지출 기입</button>' +
+      '</nav>';
+
+    el('viewer').innerHTML = M().map((m) =>
+      '<option value="' + m.id + '"' + (m.id === me ? ' selected' : '') + '>' + esc(m.name) + '</option>').join('');
+  }
+
+  function render() {
+    renderHead();
+    renderSheet();
+
+    const body =
+      view === 'quick' ? viewQuick() :
+      view === 'login' ? loginPanel() :
+      view === 'teams' ? viewTeams() :
+      view === 'home' ? viewHome() :
+      view === 'book' ? viewBook() :
+      view === 'goods' ? viewGoods() :
+      view === 'settle' ? viewSettle() :
+      view === 'archive' ? viewArchive() : viewAdd();
+
+    el('view').innerHTML = (flash ? '<p class="notice" style="margin-top:22px">' + esc(flash) + '</p>' : '') + body;
+    flash = '';
+    localize(el('head'));
+    localize(el('view'));
+    localize(el('sheet'));
+
+    // 낸 돈에서 낼 몫으로 옮겨 가는 모습 (§14.3)
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.converge').forEach((c) => {
+        const bar = c.querySelector('.bar');
+        requestAnimationFrame(() => { bar.style.width = c.dataset.to + '%'; });
+      });
+    });
+  }
+
+  /** 쉬프트를 누른 채 누르면 마지막으로 고른 줄과 이번 줄 사이가 한꺼번에 처리된다. */
+  function pickRow(box, withShift) {
+    const id = box.dataset.sel;
+    const at = shown.indexOf(id);
+    const on = box.checked;
+
+    if (withShift && lastPicked !== null) {
+      const from = shown.indexOf(lastPicked);
+      if (from !== -1 && at !== -1) {
+        for (let i = Math.min(from, at); i <= Math.max(from, at); i += 1) {
+          if (on) selection.add(shown[i]); else selection.delete(shown[i]);
+        }
+      }
+    } else if (on) selection.add(id);
+    else selection.delete(id);
+
+    lastPicked = id;
+    render();
+  }
+
+  document.addEventListener('click', (ev) => {
+    const box = ev.target.closest && ev.target.closest('input[data-sel]');
+    if (box) return pickRow(box, ev.shiftKey);
+
+    const t = ev.target.closest('[data-go],[data-proof],[data-row],[data-adjust],[data-single],' +
+      '[data-settle-selected],[data-clear-sel],[data-confirm],[data-kakao],[data-sample],' +
+      '[data-manual],[data-save],[data-cancel],[data-noop],' +
+      '[data-login],[data-close-login],[data-demo],[data-qmode],[data-qadd],[data-qdel],' +
+      '[data-qopen],[data-qshare],[data-signup],[data-sort],[data-teams],[data-team],' +
+      '[data-sheet-close],[data-sheet-share],[data-sheet-confirm]');
+    if (!t) return;
+    const d = t.dataset;
+
+    if (d.sort) {
+      // 같은 열을 다시 누르면 방향만 뒤집는다. 금액은 큰 것부터 보는 편이 쓸모 있다.
+      sort = sort.key === d.sort
+        ? { key: d.sort, dir: sort.dir === 'asc' ? 'desc' : 'asc' }
+        : { key: d.sort, dir: d.sort === 'amount' ? 'desc' : 'asc' };
+      lastPicked = null;
+      return render();
+    }
+    if (d.qopen !== undefined) { quick.open = true; return render(); }
+    if (d.teams !== undefined) { view = signedIn ? 'teams' : 'login'; return render(); }
+    if (d.team) {
+      ledger = ledgers.find((l) => l.id === d.team);
+      currency = ledger.currency || 'KRW';   // 통화는 장부마다 다를 수 있다
+      me = ledger.members[0].id;
+      selection.clear(); lastPicked = null; openProof = null; openRow = null; kakaoOpen = null;
+      view = 'home';
+      return render();
+    }
+    if (d.qshare !== undefined) { quick.share = !quick.share; return render(); }
+    if (d.login !== undefined || d.signup !== undefined) { view = 'login'; return render(); }
+    if (d.closeLogin !== undefined) { view = 'quick'; quick.open = false; return render(); }
+    if (d.demo !== undefined) { signedIn = true; view = 'teams'; return render(); }
+    if (d.qmode !== undefined) {
+      quick.detailed = true;
+      if (!quick.payers.length) {
+        const n = Math.max(2, Math.round(Number(quick.people)) || 2);
+        quick.payers = Array.from({ length: n }, () => ({ name: '', amount: 0 }));
+      }
+      return render();
+    }
+    if (d.qadd !== undefined) { quick.payers.push({ name: '', amount: 0 }); return render(); }
+    if (d.qdel !== undefined) { quick.payers.splice(Number(d.qdel), 1); openProof = null; return render(); }
+
+    if (d.noop !== undefined) { flash = '프로토타입에는 실제 영수증 이미지가 없습니다.'; return render(); }
+    if (d.go) {
+      view = d.go; openProof = null; openRow = null; kakaoOpen = null;
+      if (d.go === 'quick') quick.open = false;
+      if (d.go !== 'add') draft = null;
+      return render();
+    }
+    if (d.proof) { openProof = openProof === d.proof ? null : d.proof; return render(); }
+    if (d.row) { openRow = openRow === d.row ? null : d.row; return render(); }
+    if (d.single) {
+      const e = ledger.expenses.find((x) => x.id === d.single);
+      return openSheet([d.single], e.title + ' 정산');
+    }
+    if (d.adjust) { const [kind, id] = d.adjust.split(':'); return startAdjustment(kind, id); }
+    if (d.settleSelected) {
+      return openSheet([...selection], '선택 항목 정산');
+    }
+    if (d.sheetClose !== undefined) return closeSheet();
+    if (d.sheetShare !== undefined) { sheet.share = !sheet.share; return render(); }
+    if (d.sheetConfirm !== undefined) {
+      const seq = ledger.settlements.length + 1;
+      const r = sheetResult();
+      ledger.settlements.push({
+        id: 'st' + seq, ledgerId: ledger.id, seq,
+        date: new Date().toISOString().slice(0, 10),
+        label: sheet.label === '선택 항목 정산' ? sheet.label : seq + '차 정산',
+        isFinal: false, snapshot: r,
+      });
+      selection.clear();
+      lastPicked = null;
+      flash = '정산을 확정했습니다. 기입한 지출은 그대로 남습니다.';
+      return closeSheet();
+    }
+    if (d.clearSel) { selection.clear(); return render(); }
+    if (d.confirm) {
+      const seq = ledger.settlements.length + 1;
+      return openSheet(unsettledExpenses(ledger).map((e) => e.id), seq + '차 정산');
+    }
+    if (d.kakao) { kakaoOpen = kakaoOpen === d.kakao ? null : d.kakao; return render(); }
+    if (d.sample) {
+      const s = SAMPLES[sampleIdx % SAMPLES.length]; sampleIdx++;
+      return startAnalyze(s, ['title', 'amount', 'curr', 'date', 'vendor', 'category']);
+    }
+    if (d.manual) { draft = newDraft({}, []); return render(); }
+    if (d.save) return saveDraft();
+    if (d.cancel) { draft = null; view = 'book'; return render(); }
+  });
+
+  document.addEventListener('change', (ev) => {
+    const t = ev.target;
+    if (t.dataset.q) {
+      onQuickInput(t);
+      if (t.dataset.q !== 'name') {
+        const v = Number(String(t.value).replace(/[^0-9]/g, '')) || 0;
+        t.value = v ? money(v) : '';
+      }
+      return; // 다시 그리지 않는다
+    }
+    if (t.id === 'loc') { locale = t.value; return render(); }
+    if (t.id === 'cur') {
+      // 빠른 계산에만 적용된다. 저장되는 장부가 없으므로 마음대로 바꿔도 된다.
+      // 소수 자리가 달라지므로 이미 넣은 금액의 표기도 다시 그린다.
+      currency = t.value;
+      return render();
+    }
+    if (t.id === 'viewer') { me = t.value; return render(); }
+    if (t.id === 'file' && t.files && t.files[0]) {
+      const r = new FileReader();
+      const s = SAMPLES[sampleIdx % SAMPLES.length]; sampleIdx++;
+      r.onload = () => startAnalyze(s, ['title', 'amount', 'curr', 'date', 'vendor', 'category'], r.result);
+      r.readAsDataURL(t.files[0]);
+      return;
+    }
+    if (t.name === 'alloc') {
+      draft.alloc = t.value === 'all' ? { type: 'all' }
+        : t.value === 'partial' ? { type: 'partial', participantIds: [...draft.teamMemberIds] }
+        : { type: 'personal', ownerId: me };
+      return render();
+    }
+    if (t.dataset.p) {
+      const ids = new Set(draft.alloc.participantIds);
+      t.checked ? ids.add(t.dataset.p) : ids.delete(t.dataset.p);
+      draft.alloc.participantIds = draft.teamMemberIds.filter((id) => ids.has(id));
+      return render();
+    }
+    if (t.dataset.f) {
+      const f = t.dataset.f;
+      if (f === 'ownerId') { draft.alloc.ownerId = t.value; return render(); }
+      if (f === 'payerId') { draft.payerId = t.value; return refreshPreview(); }
+      if (f === 'curr') {
+        // 통화가 바뀌면 소수 자리가 달라지므로 이미 읽은 금액을 다시 해석한다.
+        draft.curr = t.value;
+        draft.fromAI.delete('curr');
+        return render();
+      }
+      if (f === 'amount') draft.amount = E.parseMoney(t.value, draft.curr);
+      else if (f === 'charged') draft.charged = E.parseMoney(t.value, ledgerCurrency());
+      else draft[f] = t.value;
+      draft.fromAI.delete(f);
+      const mark = t.closest('label')?.querySelector('.ai-mark');
+      if (mark) mark.remove();
+      return refreshPreview();
+    }
+  });
+
+  /** 결과 블록만 갈아 끼운다. 입력칸은 건드리지 않으므로 커서와 조합 중인 한글이 살아 있다. */
+  function refreshQuick() {
+    const box = document.querySelector('.result');
+    if (box) box.innerHTML = quickSummary();
+    const out = el('quick-out');
+    if (out) out.innerHTML = quickOutcome();
+    const share = el('quick-share');
+    if (share) share.innerHTML = quickShareBlock();
+  }
+
+  /** 빠른 N빵 입력은 칠 때마다 결과만 다시 그린다. 화면 전체를 갈아치우면 커서가 날아간다. */
+  function onQuickInput(t) {
+    const key = t.dataset.q;
+    const count = (v) => Number(String(v).replace(/[^0-9]/g, '')) || 0;
+    // 금액은 통화의 최소 단위 정수로 받는다. USD면 12.99 → 1299센트.
+    const amt = (v) => E.parseMoney(v, currency);
+    if (key === 'total') quick.total = amt(t.value);
+    else if (key === 'people') quick.people = Math.max(1, count(t.value));
+    else if (key === 'name') quick.payers[Number(t.dataset.i)].name = t.value;
+    else if (key === 'amount') quick.payers[Number(t.dataset.i)].amount = amt(t.value);
+  }
+
+  document.addEventListener('input', (ev) => {
+    const t = ev.target;
+    if (t.dataset.q) { onQuickInput(t); return refreshQuick(); }
+    if (!draft || !t.dataset.f || t.tagName === 'SELECT') return;
+    // 저장만 하고 다시 그리지 않는다. 커서와 조합 중인 한글이 날아가면 안 된다.
+    if (t.dataset.f === 'amount') draft.amount = E.parseMoney(t.value, draft.curr);
+    else if (t.dataset.f === 'charged') draft.charged = E.parseMoney(t.value, ledgerCurrency());
+    else draft[t.dataset.f] = t.value;
+    refreshPreview();
+  });
+
+  render();
+})();
+</script>

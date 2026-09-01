@@ -1,0 +1,868 @@
+import type { CurrencyCode, Locale } from './domain/money.ts';
+
+/**
+ * 화면의 말 (§21.1)
+ *
+ * 한 팀이 한 언어로 장부를 쓰지만, 그 팀에 유학생이 있으면 화면은 그 사람의 말로도
+ * 읽혀야 한다. 그래서 화면에 적히는 말은 전부 여기 모여 있다.
+ *
+ * 여기 들어오지 않는 것: 팀 이름, 장부 이름, 팀원 이름, 지출 항목 이름.
+ * 그건 사용자가 적은 것이라 옮기지 않는다.
+ *
+ * 문장을 늘리지 않는다. 여기 있는 것은 대부분 버튼 이름이거나 칸 이름이다.
+ */
+
+export const LANGS: { code: Locale; name: string }[] = [
+  { code: 'ko', name: '한국어' },
+  { code: 'en', name: 'English' },
+  { code: 'ja', name: '日本語' },
+  { code: 'zh', name: '中文' },
+  { code: 'es', name: 'Español' },
+  { code: 'vi', name: 'Tiếng Việt' },
+];
+
+/** 언어를 고르면 빠른 계산의 통화도 함께 정해진다. 장부의 통화는 만들 때 따로 고른다. */
+export const CURRENCY_FOR: Record<Locale, CurrencyCode> = {
+  ko: 'KRW',
+  en: 'USD',
+  ja: 'JPY',
+  zh: 'CNY',
+  es: 'EUR',
+  vi: 'VND',
+};
+
+export type Key =
+  // 첫 화면 · 빠른 계산
+  | 'split' | 'splitSub' | 'team' | 'teamNeedsLogin' | 'teamCount'
+  | 'total' | 'people' | 'each' | 'othersPay' | 'enterEach' | 'whoPaid'
+  | 'name' | 'paidAmount' | 'addPerson' | 'removePerson' | 'toSend'
+  | 'showWork' | 'hideWork' | 'paid' | 'owed' | 'sum' | 'sentTo' | 'gotFrom'
+  | 'shareKakao'
+  // 로그인
+  | 'signIn' | 'email' | 'or' | 'withKakao' | 'withGoogle' | 'withEmail' | 'working'
+  | 'signOut'
+  // 장부 고르기 · 만들기
+  | 'newBook' | 'teamName' | 'bookName' | 'currency' | 'myName' | 'otherMembers'
+  | 'currencyLocked' | 'create' | 'back'
+  // 초대
+  | 'inviteDead' | 'inviteDeadWhy' | 'openBook'
+  // 탭
+  | 'tabHome' | 'tabBook' | 'tabGoods' | 'tabSettle' | 'tabArchive' | 'tabTeam' | 'addExpense'
+  // 홈
+  | 'spentAll' | 'entries' | 'notSettled' | 'countN' | 'myShare' | 'evenNothing'
+  | 'willReceive' | 'willSend' | 'sharedCost' | 'personalCost'
+  | 'moneyMoving' | 'none' | 'gotIt' | 'waitingConfirm' | 'recent' | 'seeWholeBook'
+  // 장부
+  | 'colNo' | 'colDate' | 'colItem' | 'colPayer' | 'colAmount' | 'colBears' | 'colState'
+  | 'doneStamp' | 'settledStamp' | 'closing' | 'eachBears' | 'vendor' | 'category'
+  | 'splitBasis' | 'basisMembers' | 'laterChanges' | 'actualAmount' | 'memo' | 'seeStore'
+  | 'receiptAmount' | 'selectedN' | 'settleSelected' | 'clearSelection' | 'selectRow'
+  | 'settling'
+  // 품목
+  | 'firstPaid' | 'buyLink' | 'boughtTwice'
+  // 정산
+  | 'openCount' | 'targetAmount' | 'colMember' | 'colNet' | 'toReceive' | 'toPay'
+  | 'doSettle' | 'nothingToSettle' | 'confirmedOn' | 'transfers' | 'sendAgain'
+  // 아카이브
+  | 'archiveTitle' | 'period' | 'days' | 'timesN' | 'settleCount' | 'whatOn' | 'settleHistory'
+  // 지출 기입
+  | 'expenseEntry' | 'pickPhoto' | 'writeManually' | 'reading' | 'fromAI'
+  | 'itemName' | 'amount' | 'date' | 'payer' | 'whoSplits'
+  | 'wholeTeam' | 'someOnly' | 'onePersonTakes' | 'whoTakes'
+  | 'productLink' | 'noteField' | 'writeToBook' | 'giveUp' | 'perPerson'
+  | 'photoReads' | 'photoReadsV' | 'photoKinds' | 'photoKindsV' | 'photoHow' | 'photoHowV'
+  | 'photoSentTo' | 'chargedIn' | 'paidIn' | 'foreignNote' | 'uploaded'
+  // 팀
+  | 'membersN' | 'me' | 'linkedAccount' | 'viaInvite' | 'gone' | 'markGone' | 'bringBack'
+  | 'newMemberName' | 'addMember' | 'inviteLinks' | 'until' | 'noExpiry' | 'copy' | 'copied'
+  | 'revoke' | 'makeInvite' | 'renameHint' | 'inviteHint' | 'bookSection'
+  // 부담 방식 · 보정
+  | 'allocAll' | 'allocPartial' | 'allocPersonal' | 'refund' | 'correction'
+  | 'needTitle' | 'needAmount' | 'needCharged' | 'needBearers'
+  | 'membersJoinByLink' | 'yourNameHere' | 'joinAs' | 'sampleBook' | 'making'
+  | 'newBookPlus' | 'sampleSub'
+  | 'sumRow' | 'result' | 'youReceiveLead' | 'youSendLead' | 'youEven' | 'yourTransfers'
+  | 'allSettled' | 'openN' | 'close'
+  | 'deleteBook' | 'deleteWarn' | 'deleteForReal' | 'gotAll' | 'pastSettlements'
+  | 'noAccount' | 'copyAccount' | 'openToss' | 'bank' | 'accountNo' | 'accountHint'
+  | 'iSent' | 'undoSent' | 'sentWaiting' | 'saysSent' | 'simpleSplit'
+  | 'notLinked' | 'mineOnly' | 'save'
+  | 'helperTitle' | 'helperAsk' | 'helperAskWhat' | 'helperAskGo' | 'helperReading'
+  | 'helperCoffee' | 'helperHide' | 'helperShow'
+  | 'sortBy' | 'etc' | 'tossMissing' | 'coffeeThanks' | 'coffeePage' | 'askHint' | 'chat' | 'settledNow' | 'sendItNow' | 'later' | 'settleEndsWhen' | 'waitingN'
+  | 'tipHome' | 'tipBook' | 'tipGoods' | 'tipSettle' | 'tipArchive' | 'tipTeam'
+  | 'tipAdd' | 'tipTeams' | 'tipLogin'
+  | 'accountTitle' | 'accountName' | 'accountEmail' | 'accountNoEmail'
+  | 'accountHow' | 'viaGoogle' | 'viaKakao' | 'viaEmail' | 'viaOther'
+  | 'accountSince' | 'accountLast' | 'accountId';
+
+const ko: Record<Key, string> = {
+  split: '바로 나누기', splitSub: '가입 없이', team: '팀 기록',
+  teamNeedsLogin: '로그인 필요', teamCount: '{n}개',
+  total: '총 금액', people: '인원', each: '한 사람당',
+  othersPay: '{n}명은 {amount}', enterEach: '각자 낸 금액 입력', whoPaid: '각자 낸 금액',
+  name: '이름', paidAmount: '낸 금액', addPerson: '사람 추가', removePerson: '빼기',
+  toSend: '보낼 돈', showWork: '계산 보기', hideWork: '접기',
+  paid: '결제한 금액', owed: '부담할 금액', sum: '합계', sentTo: '{who}에게 보냄', gotFrom: '{who}에게서 받음',
+  shareKakao: '카카오톡으로 보내기',
+
+  signIn: '로그인', email: '이메일', or: '또는',
+  withKakao: '카카오로 계속하기', withGoogle: 'Google로 계속하기', withEmail: '이메일로 계속하기',
+  working: '잠시만', signOut: '로그아웃',
+
+  newBook: '새 장부', teamName: '팀 이름', bookName: '장부 이름', currency: '통화',
+  myName: '본인 이름', otherMembers: '나머지 팀원',
+  currencyLocked: '통화는 만든 뒤 바꿀 수 없습니다.', create: '만들기', back: '돌아가기',
+
+  inviteDead: '이 초대 링크는 더 이상 쓸 수 없습니다',
+  inviteDeadWhy: '만료되었거나 회수된 링크입니다. 장부를 만든 사람에게 새 링크를 요청하세요.',
+  openBook: '이 장부 열기',
+
+  tabHome: '홈', tabBook: '장부', tabGoods: '품목', tabSettle: '정산 내역',
+  tabArchive: '아카이브', tabTeam: '팀', addExpense: '＋ 지출 기입',
+
+  spentAll: '전체 지출', entries: '{n}건 기입', notSettled: '아직 정산 안 함', countN: '{n}건',
+  myShare: '내 몫', evenNothing: '주고받을 것 없음',
+  willReceive: '받을 예정', willSend: '보낼 예정',
+  sharedCost: '공동 부담 지출', personalCost: '별도 개인 지출',
+  moneyMoving: '주고받을 돈', none: '없음', gotIt: '받았어요',
+  waitingConfirm: '{who}님이 확인하면 닫힙니다',
+  recent: '최근 기입', seeWholeBook: '장부 전체 보기',
+
+  colNo: '번호', colDate: '날짜', colItem: '항목', colPayer: '결제', colAmount: '금액',
+  colBears: '부담', colState: '상태',
+  doneStamp: '완료', settledStamp: '정산 완료', closing: '{label} 마감',
+  eachBears: '각자 부담하는 금액', vendor: '판매처', category: '분류',
+  splitBasis: '나눈 기준', basisMembers: '기입할 때의 팀원 {n}명',
+  laterChanges: '이후 변동', actualAmount: '실제 금액 {amount}', memo: '메모',
+  seeStore: '구매처 보기', receiptAmount: '영수증 금액',
+  selectedN: '{n}건 선택함', settleSelected: '선택한 것만 정산', clearSelection: '선택 해제',
+  selectRow: '이 항목 선택', settling: '정산하는 중',
+
+  firstPaid: '처음 결제 {amount}', buyLink: '구매 링크', boughtTwice: '두 번 구매',
+
+  openCount: '아직 정산하지 않은 {n}건', targetAmount: '대상 금액',
+  colMember: '팀원', colNet: '차액', toReceive: '받을 돈', toPay: '보낼 돈',
+  doSettle: '정산하기', nothingToSettle: '정산할 것이 없습니다',
+  confirmedOn: '{date} 확정 · {n}건 · {amount}', transfers: '송금', sendAgain: '카카오톡으로 보내기',
+
+  archiveTitle: '프로젝트 아카이브', period: '기간', days: '{n}일',
+  timesN: '{n}회', settleCount: '정산', whatOn: '무엇에 썼나', settleHistory: '정산 이력',
+
+  expenseEntry: '지출 기입', pickPhoto: '사진 고르기', writeManually: '직접 적기',
+  reading: '읽는 중', fromAI: '읽어옴',
+  itemName: '항목 이름', amount: '금액', date: '날짜', payer: '결제한 사람',
+  whoSplits: '나눠 낼 사람',
+  wholeTeam: '팀 전체 {n}명', someOnly: '일부만', onePersonTakes: '한 사람이 가져감',
+  whoTakes: '가져갈 사람',
+  productLink: '구매 링크', noteField: '메모', writeToBook: '장부에 기입', giveUp: '그만두기',
+  perPerson: '{n}명 · 한 사람당 {amount}',
+  photoReads: '읽어오는 정보', photoReadsV: '항목 이름 · 금액 · 통화 · 날짜 · 판매처',
+  photoKinds: '올릴 수 있는 사진', photoKindsV: '종이 영수증, 결제 완료 화면, 주문 내역, 계좌 이체 내역',
+  photoHow: '올리는 방법', photoHowV: '버튼으로 고르기 · 여기로 끌어다 놓기 · 복사한 화면을 Ctrl+V',
+  photoSentTo: '사진은 Claude가 읽습니다. 읽은 값은 다음 화면에서 확인한 뒤 저장됩니다.',
+  chargedIn: '{code} 청구액', paidIn: '결제 금액 ({code})',
+  foreignNote: '{from}로 결제했지만 장부에는 {to} 청구액이 적힙니다.',
+  uploaded: '올린 사진',
+
+  membersN: '팀원 {n}명', me: '나', linkedAccount: '계정 연결됨', viaInvite: '초대 링크',
+  gone: '나감', markGone: '나감으로 표시', bringBack: '다시 넣기',
+  newMemberName: '새 팀원 이름', addMember: '팀원 추가',
+  inviteLinks: '초대 링크', until: '{date}까지', noExpiry: '기한 없음',
+  copy: '복사', copied: '복사했습니다', revoke: '회수', makeInvite: '초대 링크 만들기',
+  renameHint: '이름을 바꿔도 이미 기입된 계산은 그대로입니다. 나간 사람도 지난 지출에는 남습니다.',
+  inviteHint: '링크를 아는 사람은 이 장부를 열고 지출을 기입할 수 있습니다.',
+  bookSection: '장부',
+
+  allocAll: '공동 {n}인', allocPartial: '일부 {n}인', allocPersonal: '{who} 개인',
+  refund: '환불', correction: '보정',
+  needTitle: '항목 이름을 적어 주세요.', needAmount: '금액을 적어 주세요.',
+  needCharged: '{code} 청구액을 적어 주세요.', needBearers: '나눠 낼 사람을 골라 주세요.',
+  membersJoinByLink: '팀원은 초대 링크로 들어옵니다.',
+  yourNameHere: '이름', joinAs: '들어가기',
+  sampleBook: '＋ 샘플 장부', making: '만드는 중',
+  newBookPlus: '＋ 새 장부', sampleSub: '지어낸 데이터',
+  sumRow: '합계', result: '결과',
+  youReceiveLead: '받을 돈', youSendLead: '보낼 돈', youEven: '주고받을 것 없음',
+  yourTransfers: '내 송금',
+  allSettled: '정산 완료', openN: '미정산 {n}건', close: '닫기',
+  deleteBook: '이 장부 지우기', deleteWarn: '지출과 정산 기록이 모두 사라집니다. 되돌릴 수 없습니다.',
+  deleteForReal: '지웁니다', gotAll: '{n}건 전부 받았어요', pastSettlements: '지난 정산',
+  noAccount: '계좌 없음', copyAccount: '계좌 복사', openToss: '토스로 보내기',
+  bank: '은행', accountNo: '계좌번호',
+  accountHint: '계좌는 본인만 적습니다. 적어 두면 정산할 때 보낼 곳이 바로 뜹니다.',
+  notLinked: '계정 연결 전', mineOnly: '본인만', save: '적기',
+
+  helperTitle: '길잡이', helperAsk: '장부에 대해 묻기', helperAskWhat: '무엇이 궁금한가요',
+  helperAskGo: '묻기', helperReading: '읽는 중',  helperCoffee: '개발자에게 커피 사주기', helperHide: '버리기', helperShow: '길잡이',
+  sortBy: '순서', etc: '기타',
+  tossMissing: '토스가 열리지 않아 계좌를 복사했습니다. 쓰던 은행 앱에 붙여 넣으세요.',
+  coffeeThanks: '눌러서 복사해 주세요. 정말 고맙습니다.', coffeePage: '후원 페이지 열기',
+  settledNow: '정산했습니다', sendItNow: '이 글을 팀에게 보내세요.', later: '나중에',
+  settleEndsWhen: '정산은 글을 보냈다고 끝나지 않습니다. 보낸 사람이 ‘보냈어요’를, 받은 사람이 ‘받았어요’를 눌러 송금이 전부 확인되면 그때 도장이 찍힙니다.',
+  waitingN: '송금 {n}건 확인 중',
+  askHint: 'Enter로 묻고, Esc로 닫아요.',
+  chat: '종이라서 바람에는 좀 약해요.\n저 위의 점을 누르시면 제가 할 수 있는 일이 나와요.\n구겨져도 적힌 건 안 없어져요.\n계산은 제가 하는 게 아니라 장부가 해요. 저는 읽어 드릴 뿐이에요.\n저를 끌어서 아무 데나 놓으셔도 돼요.\n돈 얘기는 미루면 더 어려워지더라고요.\n영수증은 버리면 끝이지만, 장부는 남아요.\n가끔은 접혀서 자고 싶어요.\n천천히 보셔도 돼요. 저는 여기 있을게요.\n잉크가 마르면 글씨가 흐려져요. 저희는 원래 그래요.\n누가 얼마 냈는지는 제가 안 잊어요.\n숫자가 안 맞으면 제가 먼저 놀랄 거예요.',
+  tipHome: '전체 지출이랑 당신의 몫이 맨 위에 있어요.\n보내셨으면 ‘보냈어요’를 눌러 주세요.\n궁금한 건 AI인 저에게 물어보셔도 돼요.',
+  tipBook: '줄을 눌러 보시면 어떻게 갈라졌는지 펼쳐져요.\n왼쪽 칸을 고르면 그것만 정산할 수 있어요.\n사진을 누르면 영수증이 크게 열려요.',
+  tipGoods: '산 물건만이 아니라 구독이나 서비스도 여기 모여요.\n날짜·금액·분류로 순서를 바꿀 수 있어요.\n사진에 마우스를 올리면 원본이 나와요.',
+  tipSettle: '아직 정산 안 한 걸 여기서 확정해요.\n도장을 찍으면 숫자는 다시 안 바뀌어요.\n한 번 보고 눌러 주세요.',
+  tipArchive: '프로젝트가 끝나면 이 한 장이 남아요.\n얼마 동안, 무엇에 썼는지가 여기 모여요.',
+  tipTeam: '팀원이랑 초대 링크가 있는 곳이에요.\n계좌는 본인만 적을 수 있어요.\n저도 남의 계좌는 못 만져요.',
+  tipAdd: '영수증 사진을 올려 주시면 제가 읽어 볼게요.\n항목이랑 금액을 뽑아 드려요.\n맞는지는 다음 화면에서 꼭 봐 주세요.',
+  tipTeams: '여기가 장부 목록이에요.\n＋ 새 장부로 하나 만들어 보세요.\n샘플 장부를 먼저 눌러 보셔도 좋고요.',
+  tipLogin: '안녕하세요, 저는 영수증이에요.\n로그인하시면 이 장부가 계정에 남아요.\n다른 기기로 들어오셔도 그대로예요.',
+  accountTitle: '내 계정', accountName: '이름', accountEmail: '이메일',
+  accountNoEmail: '받지 못했습니다', accountHow: '로그인 방법',
+  viaGoogle: '구글 계정', viaKakao: '카카오 계정', viaEmail: '이메일 링크', viaOther: '기타',
+  accountSince: '가입한 날', accountLast: '이번 로그인', accountId: '계정 번호',
+  iSent: '보냈어요', undoSent: '취소', sentWaiting: '보냄, 확인 기다리는 중',
+  saysSent: '{who}님이 보냈다고 합니다', simpleSplit: '똑같이 나누기',
+};
+
+const en: Record<Key, string> = {
+  split: 'Split now', splitSub: 'no account', team: 'Team records',
+  teamNeedsLogin: 'sign in', teamCount: '{n}',
+  total: 'Total', people: 'People', each: 'Each',
+  othersPay: '{n} pay {amount}', enterEach: 'Enter what each paid', whoPaid: 'What each paid',
+  name: 'Name', paidAmount: 'Paid', addPerson: 'Add person', removePerson: 'Remove',
+  toSend: 'Transfers', showWork: 'Show the math', hideWork: 'Hide',
+  paid: 'Paid', owed: 'Their share', sum: 'Total', sentTo: 'sent to {who}', gotFrom: 'received from {who}',
+  shareKakao: 'Send via KakaoTalk',
+
+  signIn: 'Sign in', email: 'Email', or: 'or',
+  withKakao: 'Continue with Kakao', withGoogle: 'Continue with Google', withEmail: 'Continue with Email',
+  working: 'Working', signOut: 'Sign out',
+
+  newBook: 'New ledger', teamName: 'Team name', bookName: 'Ledger name', currency: 'Currency',
+  myName: 'Your name', otherMembers: 'Other members',
+  currencyLocked: 'The currency cannot be changed once the ledger is created.',
+  create: 'Create', back: 'Back',
+
+  inviteDead: 'This invite link no longer works',
+  inviteDeadWhy: 'It expired or was revoked. Ask whoever created the ledger for a new link.',
+  openBook: 'Open this ledger',
+
+  tabHome: 'Home', tabBook: 'Ledger', tabGoods: 'Items', tabSettle: 'Settlements',
+  tabArchive: 'Archive', tabTeam: 'Team', addExpense: '＋ Add expense',
+
+  spentAll: 'Total spent', entries: '{n} entries', notSettled: 'Not settled yet', countN: '{n}',
+  myShare: 'My balance', evenNothing: 'nothing to move',
+  willReceive: 'to receive', willSend: 'to send',
+  sharedCost: 'Shared expenses', personalCost: 'Personal expenses',
+  moneyMoving: 'Money to move', none: 'None', gotIt: 'Received',
+  waitingConfirm: 'closes when {who} confirms',
+  recent: 'Recent entries', seeWholeBook: 'See the whole ledger',
+
+  colNo: 'No.', colDate: 'Date', colItem: 'Item', colPayer: 'Paid by', colAmount: 'Amount',
+  colBears: 'Split', colState: 'State',
+  doneStamp: 'DONE', settledStamp: 'SETTLED', closing: '{label} closed',
+  eachBears: 'What each one bears', vendor: 'Vendor', category: 'Category',
+  splitBasis: 'Split across', basisMembers: '{n} members at time of entry',
+  laterChanges: 'Later changes', actualAmount: 'Actual {amount}', memo: 'Note',
+  seeStore: 'Open store page', receiptAmount: 'Receipt amount',
+  selectedN: '{n} selected', settleSelected: 'Settle selected', clearSelection: 'Clear',
+  selectRow: 'Select this row', settling: 'Settling',
+
+  firstPaid: 'first paid {amount}', buyLink: 'Purchase link', boughtTwice: 'bought twice',
+
+  openCount: '{n} entries not settled', targetAmount: 'Amount covered',
+  colMember: 'Member', colNet: 'Net', toReceive: 'receives', toPay: 'pays',
+  doSettle: 'Settle', nothingToSettle: 'Nothing to settle',
+  confirmedOn: 'confirmed {date} · {n} entries · {amount}',
+  transfers: 'Transfers', sendAgain: 'Send via KakaoTalk',
+
+  archiveTitle: 'Project archive', period: 'Span', days: '{n} days',
+  timesN: '{n}', settleCount: 'Settlements', whatOn: 'What it went on', settleHistory: 'Settlement history',
+
+  expenseEntry: 'Add expense', pickPhoto: 'Choose a photo', writeManually: 'Type it myself',
+  reading: 'Reading', fromAI: 'read',
+  itemName: 'Item name', amount: 'Amount', date: 'Date', payer: 'Paid by',
+  whoSplits: 'Who splits it',
+  wholeTeam: 'Whole team, {n}', someOnly: 'Only some of us', onePersonTakes: 'One person keeps it',
+  whoTakes: 'Who keeps it',
+  productLink: 'Purchase link', noteField: 'Note', writeToBook: 'Write to ledger', giveUp: 'Cancel',
+  perPerson: '{n} people · {amount} each',
+  photoReads: 'What it reads', photoReadsV: 'item name · amount · currency · date · vendor',
+  photoKinds: 'What works', photoKindsV: 'paper receipts, payment confirmations, order pages, transfer records',
+  photoHow: 'How to add one', photoHowV: 'the button · drag it here · paste a screenshot with Ctrl+V',
+  photoSentTo: 'Claude reads the photo. You check what it read on the next screen before saving.',
+  chargedIn: 'Charged in {code}', paidIn: 'Paid ({code})',
+  foreignNote: 'Paid in {from}, but the ledger records the {to} charge.',
+  uploaded: 'uploaded photo',
+
+  membersN: '{n} members', me: 'you', linkedAccount: 'account linked', viaInvite: 'invite link',
+  gone: 'left', markGone: 'Mark as left', bringBack: 'Bring back',
+  newMemberName: 'New member name', addMember: 'Add member',
+  inviteLinks: 'Invite links', until: 'until {date}', noExpiry: 'no expiry',
+  copy: 'Copy', copied: 'Copied', revoke: 'Revoke', makeInvite: 'Create invite link',
+  renameHint: 'Renaming leaves recorded entries untouched. Someone who left stays on past expenses.',
+  inviteHint: 'Anyone with the link can open this ledger and record expenses.',
+  bookSection: 'Ledger',
+
+  allocAll: 'shared, {n}', allocPartial: 'some, {n}', allocPersonal: '{who} alone',
+  refund: 'refund', correction: 'correction',
+  needTitle: 'Give the item a name.', needAmount: 'Enter the amount.',
+  needCharged: 'Enter the {code} charge.', needBearers: 'Pick who splits it.',
+  membersJoinByLink: 'Teammates join through the invite link.',
+  yourNameHere: 'Name', joinAs: 'Enter',
+  sampleBook: '＋ Sample ledger', making: 'Creating',
+  newBookPlus: '＋ New ledger', sampleSub: 'made-up data',
+  sumRow: 'Total', result: 'Result',
+  youReceiveLead: 'You receive', youSendLead: 'You send', youEven: 'Nothing to move',
+  yourTransfers: 'yours',
+  allSettled: 'settled', openN: '{n} open', close: 'Close',
+  deleteBook: 'Delete this ledger', deleteWarn: 'Every expense and settlement goes with it. This cannot be undone.',
+  deleteForReal: 'Delete', gotAll: 'Received all {n}', pastSettlements: 'Past settlements',
+  noAccount: 'no account on file', copyAccount: 'Copy account', openToss: 'Open in Toss',
+  bank: 'Bank', accountNo: 'Account number',
+  accountHint: 'Only you can write your own account. With it on file, settlements show where to send.',
+  notLinked: 'not linked yet', mineOnly: 'yours only', save: 'Save',
+
+  helperTitle: 'Helper', helperAsk: 'Ask about this ledger', helperAskWhat: 'What would you like to know',
+  helperAskGo: 'Ask', helperReading: 'Reading',  helperCoffee: 'Buy the developer a coffee', helperHide: 'Throw away', helperShow: 'Helper',
+  sortBy: 'Order', etc: 'Other',
+  tossMissing: 'Toss did not open, so the account is copied. Paste it into your bank app.',
+  coffeeThanks: 'Tap to copy. Thank you.', coffeePage: 'Open the sponsor page',
+  settledNow: 'Settled', sendItNow: 'Send this to the team.', later: 'Later',
+  settleEndsWhen: 'Sending the message does not close it. The stamp goes on once every transfer is confirmed — the sender taps “I sent it”, the receiver taps “Got it”.',
+  waitingN: '{n} transfers pending',
+  askHint: 'Enter to ask, Esc to close.',
+  chat: 'I am paper, so I am not great with wind.\nTap the dot above me to see what I can do.\nCrumple me and the writing still stays.\nThe ledger does the arithmetic, not me. I just read it out.\nYou can drag me anywhere you like.\nMoney talk only gets harder the longer you leave it.\nA receipt ends when you throw it away. A ledger stays.\nSometimes I would like to fold up and nap.\nTake your time. I will be here.\nWhen the ink dries we go faint. That is just how receipts are.\nI do not forget who paid what.\nIf the numbers stop adding up, I will be startled first.',
+  tipHome: 'Your total and your share are up top.\nSent money? Tap “I sent it”.\nAsk me anything — I am the AI here.',
+  tipBook: 'Tap a row to see how it was split.\nTick the boxes to settle only those.\nTap a photo for the receipt.',
+  tipGoods: 'Not only things you bought — subscriptions and services land here too.\nReorder by date, amount or category.\nHover a photo to see the original.',
+  tipSettle: 'Close out what is unsettled here.\nOnce stamped, the numbers never change.\nPlease look once before you press.',
+  tipArchive: 'When the project ends, this page stays.\nHow long, and what it went on.',
+  tipTeam: 'Members and invite links live here.\nOnly you can write your own account.\nNot even I can touch anyone else’s.',
+  tipAdd: 'Upload a receipt photo and I will read it.\nI pull out the item and the amount.\nPlease check me on the next screen.',
+  tipTeams: 'These are your ledgers.\nMake one with ＋ New ledger.\nOr open the sample first.',
+  tipLogin: 'Hello, I am a receipt.\nSign in and this ledger stays with your account.\nSame on any device.',
+  accountTitle: 'My account', accountName: 'Name', accountEmail: 'Email',
+  accountNoEmail: 'Not provided', accountHow: 'Signed in with',
+  viaGoogle: 'Google account', viaKakao: 'Kakao account', viaEmail: 'Email link', viaOther: 'Other',
+  accountSince: 'Joined', accountLast: 'This sign-in', accountId: 'Account no.',
+  iSent: 'I sent it', undoSent: 'Undo', sentWaiting: 'sent, awaiting confirmation',
+  saysSent: '{who} says they sent it', simpleSplit: 'Split evenly instead',
+};
+
+const ja: Record<Key, string> = {
+  split: 'すぐに割り勘', splitSub: '登録なし', team: 'チームの記録',
+  teamNeedsLogin: 'ログインが必要', teamCount: '{n}件',
+  total: '合計金額', people: '人数', each: '一人あたり',
+  othersPay: '{n}人は {amount}', enterEach: '各自が払った額を入力', whoPaid: '各自が払った額',
+  name: '名前', paidAmount: '払った額', addPerson: '追加', removePerson: '削除',
+  toSend: '送る金額', showWork: '計算を見る', hideWork: '閉じる',
+  paid: '支払った額', owed: '負担する額', sum: '合計', sentTo: '{who}に送る', gotFrom: '{who}から受け取る',
+  shareKakao: 'カカオトークで送る',
+
+  signIn: 'ログイン', email: 'メールアドレス', or: 'または',
+  withKakao: 'カカオで続ける', withGoogle: 'Googleで続ける', withEmail: 'メールで続ける',
+  working: 'しばらくお待ちください', signOut: 'ログアウト',
+
+  newBook: '新しい帳簿', teamName: 'チーム名', bookName: '帳簿名', currency: '通貨',
+  myName: '自分の名前', otherMembers: '他のメンバー',
+  currencyLocked: '通貨は作成後に変更できません。', create: '作成', back: '戻る',
+
+  inviteDead: 'この招待リンクはもう使えません',
+  inviteDeadWhy: '期限切れか、取り消されたリンクです。帳簿を作った人に新しいリンクを頼んでください。',
+  openBook: 'この帳簿を開く',
+
+  tabHome: 'ホーム', tabBook: '帳簿', tabGoods: '品目', tabSettle: '精算履歴',
+  tabArchive: 'アーカイブ', tabTeam: 'チーム', addExpense: '＋ 支出を記入',
+
+  spentAll: '支出合計', entries: '{n}件', notSettled: '未精算', countN: '{n}件',
+  myShare: '自分の残高', evenNothing: 'やり取りなし',
+  willReceive: '受け取り予定', willSend: '送金予定',
+  sharedCost: '共同負担の支出', personalCost: '個人別の支出',
+  moneyMoving: 'やり取りする金額', none: 'なし', gotIt: '受け取りました',
+  waitingConfirm: '{who}さんが確認すると閉じます',
+  recent: '最近の記入', seeWholeBook: '帳簿をすべて見る',
+
+  colNo: '番号', colDate: '日付', colItem: '項目', colPayer: '支払', colAmount: '金額',
+  colBears: '負担', colState: '状態',
+  doneStamp: '完了', settledStamp: '精算完了', closing: '{label} 締め',
+  eachBears: '各自の負担額', vendor: '販売元', category: '分類',
+  splitBasis: '分けた基準', basisMembers: '記入時のメンバー{n}人',
+  laterChanges: 'その後の変動', actualAmount: '実際の金額 {amount}', memo: 'メモ',
+  seeStore: '購入先を見る', receiptAmount: 'レシートの金額',
+  selectedN: '{n}件選択', settleSelected: '選んだ分だけ精算', clearSelection: '選択解除',
+  selectRow: 'この項目を選択', settling: '精算中',
+
+  firstPaid: '当初 {amount}', buyLink: '購入リンク', boughtTwice: '二回購入',
+
+  openCount: '未精算 {n}件', targetAmount: '対象金額',
+  colMember: 'メンバー', colNet: '差額', toReceive: '受け取り', toPay: '支払い',
+  doSettle: '精算する', nothingToSettle: '精算するものがありません',
+  confirmedOn: '{date} 確定 · {n}件 · {amount}', transfers: '送金', sendAgain: 'カカオトークで送る',
+
+  archiveTitle: 'プロジェクトのアーカイブ', period: '期間', days: '{n}日',
+  timesN: '{n}回', settleCount: '精算', whatOn: '何に使ったか', settleHistory: '精算の履歴',
+
+  expenseEntry: '支出を記入', pickPhoto: '写真を選ぶ', writeManually: '手で入力する',
+  reading: '読み取り中', fromAI: '読み取り',
+  itemName: '項目名', amount: '金額', date: '日付', payer: '支払った人',
+  whoSplits: '分けて払う人',
+  wholeTeam: 'チーム全体 {n}人', someOnly: '一部だけ', onePersonTakes: '一人が引き取る',
+  whoTakes: '引き取る人',
+  productLink: '購入リンク', noteField: 'メモ', writeToBook: '帳簿に記入', giveUp: 'やめる',
+  perPerson: '{n}人 · 一人あたり {amount}',
+  photoReads: '読み取るもの', photoReadsV: '項目名 · 金額 · 通貨 · 日付 · 販売元',
+  photoKinds: '使える写真', photoKindsV: '紙のレシート、決済完了画面、注文履歴、振込明細',
+  photoHow: '取り込み方', photoHowV: 'ボタンで選ぶ · ここにドラッグ · コピーした画面を Ctrl+V',
+  photoSentTo: '写真は Claude が読みます。読み取った値は次の画面で確認してから保存します。',
+  chargedIn: '{code} 請求額', paidIn: '決済金額 ({code})',
+  foreignNote: '{from}で決済しましたが、帳簿には{to}の請求額が記録されます。',
+  uploaded: 'アップロードした写真',
+
+  membersN: 'メンバー {n}人', me: '自分', linkedAccount: 'アカウント連携済み', viaInvite: '招待リンク',
+  gone: '離脱', markGone: '離脱として記録', bringBack: '戻す',
+  newMemberName: '新しいメンバー名', addMember: 'メンバーを追加',
+  inviteLinks: '招待リンク', until: '{date}まで', noExpiry: '期限なし',
+  copy: 'コピー', copied: 'コピーしました', revoke: '取り消す', makeInvite: '招待リンクを作る',
+  renameHint: '名前を変えても記入済みの計算は変わりません。離脱した人も過去の支出には残ります。',
+  inviteHint: 'リンクを知っている人はこの帳簿を開いて支出を記入できます。',
+  bookSection: '帳簿',
+
+  allocAll: '共同 {n}人', allocPartial: '一部 {n}人', allocPersonal: '{who} 個人',
+  refund: '返金', correction: '訂正',
+  needTitle: '項目名を入力してください。', needAmount: '金額を入力してください。',
+  needCharged: '{code} の請求額を入力してください。', needBearers: '分けて払う人を選んでください。',
+  membersJoinByLink: 'メンバーは招待リンクから入ります。',
+  yourNameHere: '名前', joinAs: '入る',
+  sampleBook: '＋ サンプル帳簿', making: '作成中',
+  newBookPlus: '＋ 新しい帳簿', sampleSub: '架空のデータ',
+  sumRow: '合計', result: '結果',
+  youReceiveLead: '受け取る金額', youSendLead: '送る金額', youEven: 'やり取りなし',
+  yourTransfers: '自分の送金',
+  allSettled: '精算完了', openN: '未精算 {n}件', close: '閉じる',
+  deleteBook: 'この帳簿を削除', deleteWarn: '支出と精算の記録がすべて消えます。元に戻せません。',
+  deleteForReal: '削除する', gotAll: '{n}件すべて受け取りました', pastSettlements: '過去の精算',
+  noAccount: '口座なし', copyAccount: '口座をコピー', openToss: 'Tossで送る',
+  bank: '銀行', accountNo: '口座番号',
+  accountHint: '口座は本人だけが書けます。書いておくと精算のときに送り先がすぐ出ます。',
+  notLinked: 'アカウント未連携', mineOnly: '本人のみ', save: '書く',
+
+  helperTitle: '案内役', helperAsk: '帳簿について聞く', helperAskWhat: '何が知りたいですか',
+  helperAskGo: '聞く', helperReading: '読み中',  helperCoffee: '開発者にコーヒーを', helperHide: '捨てる', helperShow: '案内役',
+  sortBy: '順序', etc: 'その他',
+  tossMissing: 'Tossが開かなかったので口座をコピーしました。銀行アプリに貼り付けてください。',
+  coffeeThanks: '押すとコピーされます。ありがとうございます。', coffeePage: '支援ページを開く',
+  settledNow: '精算しました', sendItNow: 'この文をチームに送ってください。', later: 'あとで',
+  settleEndsWhen: '送っただけでは終わりません。送った人が「送りました」、受け取った人が「受け取りました」を押して、すべての送金が確認されたときに判が押されます。',
+  waitingN: '送金 {n}件 確認中',
+  askHint: 'Enterで質問、Escで閉じます。',
+  chat: '紙なので、風には少し弱いんです。\n上の点を押すと、わたしにできることが出ます。\nくしゃくしゃになっても、書かれたものは消えません。\n計算はわたしではなく帳簿がします。わたしは読むだけです。\nわたしをどこへでも引っ張って置いていいですよ。\nお金の話は、後回しにするほど難しくなります。\nレシートは捨てたら終わりですが、帳簿は残ります。\nたまには折りたたんで眠りたいです。\nゆっくりで大丈夫です。ここにいますから。\nインクが乾くと薄くなります。レシートはそういうものです。\n誰がいくら出したかは忘れません。\n数が合わなかったら、わたしが先に驚きます。',
+  tipHome: '全体の支出とあなたの分が上にあります。\n送ったら「送りました」を押してくださいね。\n気になることはAIのわたしに聞いてください。',
+  tipBook: '行を押すとどう割れたか開きます。\n左の欄を選べばそれだけ精算できます。\n写真を押すとレシートが大きく開きます。',
+  tipGoods: '買ったものだけでなく、サブスクやサービスもここに集まります。\n日付・金額・分類で並べ替えられます。\n写真にカーソルを乗せると元の写真が出ます。',
+  tipSettle: 'まだ精算していない分をここで確定します。\n判を押すと数字はもう変わりません。\n一度見てから押してくださいね。',
+  tipArchive: 'プロジェクトが終わるとこの一枚が残ります。\nどれくらいの間、何に使ったか。',
+  tipTeam: 'メンバーと招待リンクの場所です。\n口座はご本人だけが書けます。\nわたしも他人の口座は触れません。',
+  tipAdd: 'レシートの写真を上げてくだされば読んでみます。\n品名と金額を取り出します。\n合っているかは次の画面で見てくださいね。',
+  tipTeams: 'ここが帳簿の一覧です。\n＋ 新しい帳簿で作ってみてください。\nサンプルを先に開いてもいいですよ。',
+  tipLogin: 'こんにちは、わたしはレシートです。\nログインするとこの帳簿がアカウントに残ります。\nどの端末から来ても同じです。',
+  accountTitle: 'マイアカウント', accountName: '名前', accountEmail: 'メール',
+  accountNoEmail: '受け取っていません', accountHow: 'ログイン方法',
+  viaGoogle: 'Google アカウント', viaKakao: 'カカオアカウント', viaEmail: 'メールリンク', viaOther: 'その他',
+  accountSince: '登録日', accountLast: '今回のログイン', accountId: 'アカウント番号',
+  iSent: '送りました', undoSent: '取り消す', sentWaiting: '送金済み、確認待ち',
+  saysSent: '{who}さんが送ったとのことです', simpleSplit: '均等に割る',
+};
+
+const zh: Record<Key, string> = {
+  split: '立即分账', splitSub: '无需注册', team: '团队记录',
+  teamNeedsLogin: '需要登录', teamCount: '{n}个',
+  total: '总金额', people: '人数', each: '每人',
+  othersPay: '{n}人为 {amount}', enterEach: '输入各自付款金额', whoPaid: '各自付款金额',
+  name: '姓名', paidAmount: '付款额', addPerson: '添加', removePerson: '移除',
+  toSend: '需转账', showWork: '查看算法', hideWork: '收起',
+  paid: '已付金额', owed: '应担金额', sum: '合计', sentTo: '转给{who}', gotFrom: '收自{who}',
+  shareKakao: '通过 KakaoTalk 发送',
+
+  signIn: '登录', email: '邮箱', or: '或',
+  withKakao: '使用 Kakao 继续', withGoogle: '使用 Google 继续', withEmail: '使用邮箱继续',
+  working: '请稍候', signOut: '退出登录',
+
+  newBook: '新建账本', teamName: '团队名称', bookName: '账本名称', currency: '币种',
+  myName: '本人姓名', otherMembers: '其他成员',
+  currencyLocked: '账本创建后币种无法更改。', create: '创建', back: '返回',
+
+  inviteDead: '该邀请链接已失效',
+  inviteDeadWhy: '链接已过期或被撤回。请向创建账本的人索取新链接。',
+  openBook: '打开此账本',
+
+  tabHome: '首页', tabBook: '账本', tabGoods: '品项', tabSettle: '结算记录',
+  tabArchive: '归档', tabTeam: '团队', addExpense: '＋ 记一笔',
+
+  spentAll: '总支出', entries: '{n}笔', notSettled: '尚未结算', countN: '{n}笔',
+  myShare: '我的余额', evenNothing: '无需往来',
+  willReceive: '待收', willSend: '待付',
+  sharedCost: '共同承担的支出', personalCost: '个人单独的支出',
+  moneyMoving: '待转金额', none: '无', gotIt: '已收到',
+  waitingConfirm: '{who}确认后关闭',
+  recent: '最近记录', seeWholeBook: '查看整本账',
+
+  colNo: '编号', colDate: '日期', colItem: '项目', colPayer: '付款', colAmount: '金额',
+  colBears: '分担', colState: '状态',
+  doneStamp: '完成', settledStamp: '已结算', closing: '{label} 结账',
+  eachBears: '各自分担金额', vendor: '商家', category: '分类',
+  splitBasis: '分摊依据', basisMembers: '记录时的成员 {n}人',
+  laterChanges: '后续变动', actualAmount: '实际金额 {amount}', memo: '备注',
+  seeStore: '查看购买页', receiptAmount: '票面金额',
+  selectedN: '已选 {n}笔', settleSelected: '仅结算所选', clearSelection: '取消选择',
+  selectRow: '选择此行', settling: '结算中',
+
+  firstPaid: '原付 {amount}', buyLink: '购买链接', boughtTwice: '买过两次',
+
+  openCount: '尚未结算 {n}笔', targetAmount: '涉及金额',
+  colMember: '成员', colNet: '差额', toReceive: '应收', toPay: '应付',
+  doSettle: '结算', nothingToSettle: '没有需要结算的内容',
+  confirmedOn: '{date} 确认 · {n}笔 · {amount}', transfers: '转账', sendAgain: '通过 KakaoTalk 发送',
+
+  archiveTitle: '项目归档', period: '周期', days: '{n}天',
+  timesN: '{n}次', settleCount: '结算', whatOn: '钱花在哪', settleHistory: '结算历史',
+
+  expenseEntry: '记一笔', pickPhoto: '选择照片', writeManually: '手动填写',
+  reading: '读取中', fromAI: '已读取',
+  itemName: '项目名称', amount: '金额', date: '日期', payer: '付款人',
+  whoSplits: '由谁分担',
+  wholeTeam: '全队 {n}人', someOnly: '仅部分人', onePersonTakes: '归一人所有',
+  whoTakes: '归属人',
+  productLink: '购买链接', noteField: '备注', writeToBook: '记入账本', giveUp: '取消',
+  perPerson: '{n}人 · 每人 {amount}',
+  photoReads: '读取内容', photoReadsV: '项目名称 · 金额 · 币种 · 日期 · 商家',
+  photoKinds: '可用照片', photoKindsV: '纸质小票、支付完成页、订单记录、转账记录',
+  photoHow: '添加方式', photoHowV: '点按钮选择 · 拖到此处 · 复制截图后 Ctrl+V',
+  photoSentTo: '照片由 Claude 读取。读取结果在下一屏确认后保存。',
+  chargedIn: '{code} 扣款金额', paidIn: '支付金额 ({code})',
+  foreignNote: '以{from}支付，但账本记录的是{to}扣款金额。',
+  uploaded: '上传的照片',
+
+  membersN: '成员 {n}人', me: '我', linkedAccount: '已关联账户', viaInvite: '邀请链接',
+  gone: '已退出', markGone: '标记为退出', bringBack: '重新加入',
+  newMemberName: '新成员姓名', addMember: '添加成员',
+  inviteLinks: '邀请链接', until: '有效至 {date}', noExpiry: '无期限',
+  copy: '复制', copied: '已复制', revoke: '撤回', makeInvite: '生成邀请链接',
+  renameHint: '改名不会改变已记录的计算。已退出的人仍保留在过去的支出中。',
+  inviteHint: '知道链接的人都能打开此账本并记录支出。',
+  bookSection: '账本',
+
+  allocAll: '共同 {n}人', allocPartial: '部分 {n}人', allocPersonal: '{who} 个人',
+  refund: '退款', correction: '更正',
+  needTitle: '请填写项目名称。', needAmount: '请填写金额。',
+  needCharged: '请填写 {code} 扣款金额。', needBearers: '请选择由谁分担。',
+  membersJoinByLink: '成员通过邀请链接加入。',
+  yourNameHere: '姓名', joinAs: '进入',
+  sampleBook: '＋ 示例账本', making: '创建中',
+  newBookPlus: '＋ 新建账本', sampleSub: '虚构数据',
+  sumRow: '合计', result: '结果',
+  youReceiveLead: '你应收', youSendLead: '你应付', youEven: '无需往来',
+  yourTransfers: '我的转账',
+  allSettled: '已结算', openN: '未结算 {n}笔', close: '收起',
+  deleteBook: '删除此账本', deleteWarn: '所有支出与结算记录都会一并消失，且无法恢复。',
+  deleteForReal: '确认删除', gotAll: '{n}笔全部已收到', pastSettlements: '过往结算',
+  noAccount: '未填账户', copyAccount: '复制账户', openToss: '用 Toss 转账',
+  bank: '银行', accountNo: '账号',
+  accountHint: '账户只能本人填写。填好后，结算时会直接显示转账去向。',
+  notLinked: '尚未关联账号', mineOnly: '仅本人', save: '保存',
+
+  helperTitle: '助手', helperAsk: '询问这本账本', helperAskWhat: '想知道什么',
+  helperAskGo: '问', helperReading: '读取中',  helperCoffee: '请开发者喝杯咖啡', helperHide: '丢掉', helperShow: '助手',
+  sortBy: '排序', etc: '其他',
+  tossMissing: 'Toss 未能打开，已复制账户。请粘贴到银行 App。',
+  coffeeThanks: '点击复制。谢谢。', coffeePage: '打开赞助页面',
+  settledNow: '已结算', sendItNow: '把这段发给团队。', later: '稍后',
+  settleEndsWhen: '发出去并不算结束。付款方点“已转账”、收款方点“已收到”，所有转账都确认之后才会盖章。',
+  waitingN: '{n} 笔转账待确认',
+  askHint: '按 Enter 提问，Esc 关闭。',
+  chat: '我是纸做的，怕风。\n按一下我头上的点，就能看到我会做什么。\n就算被揉皱了，写下的东西也不会消失。\n算数是账本做的，不是我。我只负责读给你听。\n你可以把我拖到任何地方。\n钱的事，越往后拖越难说。\n收据扔了就没了，账本会留下来。\n偶尔也想折起来睡一觉。\n慢慢看就好，我在这儿。\n墨干了字就淡了。收据本来就这样。\n谁付了多少，我不会忘。\n要是数字对不上，我会先吓一跳。',
+  tipHome: '总支出和你的份额都在上面。\n转出了就点“已转账”。\n有不明白的，问我这个 AI 就好。',
+  tipBook: '点一行就能看到怎么分摊的。\n勾左边的方框可以只结算那几笔。\n点照片会放大看收据。',
+  tipGoods: '不只是买的东西，订阅和服务也都收在这里。\n可按日期、金额、分类排序。\n鼠标停在照片上会显示原图。',
+  tipSettle: '还没结算的在这里确定。\n盖了章数字就不再变了。\n请先看一眼再按。',
+  tipArchive: '项目结束后留下的就是这一页。\n花了多久、花在哪里。',
+  tipTeam: '成员和邀请链接在这里。\n账户只能本人填写。\n连我也碰不了别人的账户。',
+  tipAdd: '上传收据照片，我来读读看。\n我会取出品名和金额。\n对不对请在下一屏确认。',
+  tipTeams: '这是你的账本列表。\n用 ＋ 新账本创建一个吧。\n也可以先打开示例账本。',
+  tipLogin: '你好，我是一张收据。\n登录后这本账本会留在你的账号里。\n换设备也一样。',
+  accountTitle: '我的账号', accountName: '姓名', accountEmail: '邮箱',
+  accountNoEmail: '未提供', accountHow: '登录方式',
+  viaGoogle: 'Google 账号', viaKakao: 'Kakao 账号', viaEmail: '邮件链接', viaOther: '其他',
+  accountSince: '注册日期', accountLast: '本次登录', accountId: '账号编号',
+  iSent: '已转账', undoSent: '撤销', sentWaiting: '已转账，等待确认',
+  saysSent: '{who}表示已转账', simpleSplit: '改为平均分',
+};
+
+const es: Record<Key, string> = {
+  split: 'Dividir ahora', splitSub: 'sin cuenta', team: 'Registros del equipo',
+  teamNeedsLogin: 'inicia sesión', teamCount: '{n}',
+  total: 'Total', people: 'Personas', each: 'Cada uno',
+  othersPay: '{n} pagan {amount}', enterEach: 'Introducir lo que pagó cada uno',
+  whoPaid: 'Lo que pagó cada uno',
+  name: 'Nombre', paidAmount: 'Pagó', addPerson: 'Añadir persona', removePerson: 'Quitar',
+  toSend: 'Transferencias', showWork: 'Ver el cálculo', hideWork: 'Ocultar',
+  paid: 'Pagó', owed: 'Su parte', sum: 'Total', sentTo: 'envía a {who}', gotFrom: 'recibe de {who}',
+  shareKakao: 'Enviar por KakaoTalk',
+
+  signIn: 'Iniciar sesión', email: 'Correo', or: 'o',
+  withKakao: 'Continuar con Kakao', withGoogle: 'Continuar con Google',
+  withEmail: 'Continuar con correo',
+  working: 'Un momento', signOut: 'Cerrar sesión',
+
+  newBook: 'Nuevo libro', teamName: 'Nombre del equipo', bookName: 'Nombre del libro',
+  currency: 'Moneda', myName: 'Tu nombre', otherMembers: 'Otros integrantes',
+  currencyLocked: 'La moneda no se puede cambiar una vez creado el libro.',
+  create: 'Crear', back: 'Volver',
+
+  inviteDead: 'Este enlace de invitación ya no sirve',
+  inviteDeadWhy: 'Caducó o fue revocado. Pide un enlace nuevo a quien creó el libro.',
+  openBook: 'Abrir este libro',
+
+  tabHome: 'Inicio', tabBook: 'Libro', tabGoods: 'Artículos', tabSettle: 'Liquidaciones',
+  tabArchive: 'Archivo', tabTeam: 'Equipo', addExpense: '＋ Añadir gasto',
+
+  spentAll: 'Gasto total', entries: '{n} apuntes', notSettled: 'Sin liquidar', countN: '{n}',
+  myShare: 'Mi saldo', evenNothing: 'nada que mover',
+  willReceive: 'a recibir', willSend: 'a enviar',
+  sharedCost: 'Gastos compartidos', personalCost: 'Gastos personales aparte',
+  moneyMoving: 'Dinero por mover', none: 'Nada', gotIt: 'Recibido',
+  waitingConfirm: 'se cierra cuando {who} lo confirme',
+  recent: 'Apuntes recientes', seeWholeBook: 'Ver el libro entero',
+
+  colNo: 'N.º', colDate: 'Fecha', colItem: 'Concepto', colPayer: 'Pagó', colAmount: 'Importe',
+  colBears: 'Reparto', colState: 'Estado',
+  doneStamp: 'HECHO', settledStamp: 'LIQUIDADO', closing: '{label} cerrado',
+  eachBears: 'Lo que asume cada uno', vendor: 'Comercio', category: 'Categoría',
+  splitBasis: 'Repartido entre', basisMembers: '{n} integrantes al anotarlo',
+  laterChanges: 'Cambios posteriores', actualAmount: 'Importe real {amount}', memo: 'Nota',
+  seeStore: 'Ver la tienda', receiptAmount: 'Importe del recibo',
+  selectedN: '{n} seleccionados', settleSelected: 'Liquidar lo seleccionado',
+  clearSelection: 'Quitar selección', selectRow: 'Seleccionar esta fila', settling: 'Liquidando',
+
+  firstPaid: 'pagado {amount}', buyLink: 'Enlace de compra', boughtTwice: 'comprado dos veces',
+
+  openCount: '{n} apuntes sin liquidar', targetAmount: 'Importe incluido',
+  colMember: 'Integrante', colNet: 'Diferencia', toReceive: 'recibe', toPay: 'paga',
+  doSettle: 'Liquidar', nothingToSettle: 'No hay nada que liquidar',
+  confirmedOn: 'confirmado {date} · {n} apuntes · {amount}',
+  transfers: 'Transferencias', sendAgain: 'Enviar por KakaoTalk',
+
+  archiveTitle: 'Archivo del proyecto', period: 'Duración', days: '{n} días',
+  timesN: '{n}', settleCount: 'Liquidaciones', whatOn: 'En qué se fue',
+  settleHistory: 'Historial de liquidaciones',
+
+  expenseEntry: 'Añadir gasto', pickPhoto: 'Elegir una foto', writeManually: 'Escribirlo yo',
+  reading: 'Leyendo', fromAI: 'leído',
+  itemName: 'Concepto', amount: 'Importe', date: 'Fecha', payer: 'Quién pagó',
+  whoSplits: 'Quién lo reparte',
+  wholeTeam: 'Todo el equipo, {n}', someOnly: 'Solo algunos', onePersonTakes: 'Se lo queda una persona',
+  whoTakes: 'Quién se lo queda',
+  productLink: 'Enlace de compra', noteField: 'Nota', writeToBook: 'Anotar en el libro',
+  giveUp: 'Cancelar', perPerson: '{n} personas · {amount} cada una',
+  photoReads: 'Qué lee', photoReadsV: 'concepto · importe · moneda · fecha · comercio',
+  photoKinds: 'Qué sirve', photoKindsV: 'tickets en papel, confirmaciones de pago, pedidos, transferencias',
+  photoHow: 'Cómo añadirla', photoHowV: 'con el botón · arrastrándola aquí · pegando una captura con Ctrl+V',
+  photoSentTo: 'Claude lee la foto. Compruebas lo leído en la pantalla siguiente antes de guardar.',
+  chargedIn: 'Cargo en {code}', paidIn: 'Importe pagado ({code})',
+  foreignNote: 'Pagado en {from}, pero el libro registra el cargo en {to}.',
+  uploaded: 'foto subida',
+
+  membersN: '{n} integrantes', me: 'tú', linkedAccount: 'cuenta vinculada', viaInvite: 'enlace de invitación',
+  gone: 'salió', markGone: 'Marcar como salido', bringBack: 'Volver a añadir',
+  newMemberName: 'Nombre del nuevo integrante', addMember: 'Añadir integrante',
+  inviteLinks: 'Enlaces de invitación', until: 'hasta {date}', noExpiry: 'sin caducidad',
+  copy: 'Copiar', copied: 'Copiado', revoke: 'Revocar', makeInvite: 'Crear enlace de invitación',
+  renameHint: 'Cambiar el nombre no altera los apuntes ya registrados. Quien sale permanece en los gastos pasados.',
+  inviteHint: 'Cualquiera con el enlace puede abrir este libro y anotar gastos.',
+  bookSection: 'Libro',
+
+  allocAll: 'común, {n}', allocPartial: 'algunos, {n}', allocPersonal: 'solo {who}',
+  refund: 'devolución', correction: 'corrección',
+  needTitle: 'Ponle un nombre al concepto.', needAmount: 'Introduce el importe.',
+  needCharged: 'Introduce el cargo en {code}.', needBearers: 'Elige quién lo reparte.',
+  membersJoinByLink: 'Los integrantes entran por el enlace de invitación.',
+  yourNameHere: 'Nombre', joinAs: 'Entrar',
+  sampleBook: '＋ Libro de ejemplo', making: 'Creando',
+  newBookPlus: '＋ Nuevo libro', sampleSub: 'datos inventados',
+  sumRow: 'Total', result: 'Resultado',
+  youReceiveLead: 'Recibes', youSendLead: 'Envías', youEven: 'Nada que mover',
+  yourTransfers: 'tuyo',
+  allSettled: 'liquidado', openN: '{n} sin liquidar', close: 'Cerrar',
+  deleteBook: 'Eliminar este libro', deleteWarn: 'Se van con él todos los gastos y liquidaciones. No se puede deshacer.',
+  deleteForReal: 'Eliminar', gotAll: 'Recibí las {n}', pastSettlements: 'Liquidaciones anteriores',
+  noAccount: 'sin cuenta', copyAccount: 'Copiar cuenta', openToss: 'Abrir en Toss',
+  bank: 'Banco', accountNo: 'Número de cuenta',
+  accountHint: 'Solo tú puedes escribir tu cuenta. Guardada, la liquidación muestra a dónde enviar.',
+  notLinked: 'sin cuenta vinculada', mineOnly: 'solo tuyo', save: 'Guardar',
+
+  helperTitle: 'Ayudante', helperAsk: 'Preguntar sobre el libro', helperAskWhat: 'Qué quieres saber',
+  helperAskGo: 'Preguntar', helperReading: 'Leyendo',  helperCoffee: 'Invitar un café al desarrollador', helperHide: 'Tirar', helperShow: 'Ayudante',
+  sortBy: 'Orden', etc: 'Otros',
+  tossMissing: 'Toss no se abrió; la cuenta está copiada. Pégala en tu app bancaria.',
+  coffeeThanks: 'Toca para copiar. Gracias.', coffeePage: 'Abrir la página de apoyo',
+  settledNow: 'Liquidado', sendItNow: 'Envía esto al equipo.', later: 'Más tarde',
+  settleEndsWhen: 'Enviar el mensaje no lo cierra. El sello llega cuando cada envío queda confirmado: quien paga marca «Lo envié» y quien recibe marca «Recibido».',
+  waitingN: '{n} envíos pendientes',
+  askHint: 'Enter para preguntar, Esc para cerrar.',
+  chat: 'Soy de papel, el viento no me sienta bien.\nToca el punto de arriba para ver lo que sé hacer.\nAunque me arrugues, lo escrito sigue ahí.\nLas cuentas las hace el libro, no yo. Yo solo las leo.\nPuedes arrastrarme a donde quieras.\nHablar de dinero solo se pone más difícil cuanto más se deja.\nUn recibo se acaba al tirarlo; un libro se queda.\nA veces me gustaría doblarme y dormir un rato.\nTómate tu tiempo. Aquí estaré.\nCuando la tinta se seca nos volvemos pálidos. Es lo que hay.\nNo olvido quién puso cuánto.\nSi los números dejan de cuadrar, me asustaré yo primero.',
+  tipHome: 'El total y tu parte están arriba.\n¿Enviaste dinero? Toca «Lo envié».\nPregúntame lo que sea: la IA soy yo.',
+  tipBook: 'Toca una fila para ver el reparto.\nMarca las casillas para liquidar solo esas.\nToca una foto para ver el recibo.',
+  tipGoods: 'No solo cosas compradas: también suscripciones y servicios.\nOrdena por fecha, importe o categoría.\nPasa el ratón por una foto para ver la original.',
+  tipSettle: 'Aquí se cierra lo que sigue sin liquidar.\nUna vez sellado, los números no cambian.\nMíralo una vez antes de pulsar.',
+  tipArchive: 'Al terminar el proyecto queda esta página.\nCuánto duró y en qué se gastó.',
+  tipTeam: 'Aquí viven integrantes y enlaces de invitación.\nSolo tú escribes tu cuenta.\nNi yo toco las ajenas.',
+  tipAdd: 'Súbeme la foto de un recibo y la leo.\nSaco el concepto y el importe.\nRevísame en la pantalla siguiente.',
+  tipTeams: 'Estos son tus libros.\nCrea uno con ＋ Libro nuevo.\nO abre antes el de ejemplo.',
+  tipLogin: 'Hola, soy un recibo.\nInicia sesión y este libro queda en tu cuenta.\nIgual en cualquier dispositivo.',
+  accountTitle: 'Mi cuenta', accountName: 'Nombre', accountEmail: 'Correo',
+  accountNoEmail: 'No recibido', accountHow: 'Iniciaste sesión con',
+  viaGoogle: 'Cuenta de Google', viaKakao: 'Cuenta de Kakao', viaEmail: 'Enlace por correo', viaOther: 'Otro',
+  accountSince: 'Te uniste', accountLast: 'Esta sesión', accountId: 'N.º de cuenta',
+  iSent: 'Ya lo envié', undoSent: 'Deshacer', sentWaiting: 'enviado, pendiente de confirmar',
+  saysSent: '{who} dice que lo envió', simpleSplit: 'Dividir por igual',
+};
+
+const vi: Record<Key, string> = {
+  split: 'Chia ngay', splitSub: 'không cần tài khoản', team: 'Sổ của nhóm',
+  teamNeedsLogin: 'cần đăng nhập', teamCount: '{n}',
+  total: 'Tổng tiền', people: 'Số người', each: 'Mỗi người',
+  othersPay: '{n} người trả {amount}', enterEach: 'Nhập số tiền từng người đã trả',
+  whoPaid: 'Số tiền từng người đã trả',
+  name: 'Tên', paidAmount: 'Đã trả', addPerson: 'Thêm người', removePerson: 'Bỏ',
+  toSend: 'Cần chuyển', showWork: 'Xem cách tính', hideWork: 'Thu gọn',
+  paid: 'Đã trả', owed: 'Phần phải chịu', sum: 'Tổng', sentTo: 'chuyển cho {who}', gotFrom: 'nhận từ {who}',
+  shareKakao: 'Gửi qua KakaoTalk',
+
+  signIn: 'Đăng nhập', email: 'Email', or: 'hoặc',
+  withKakao: 'Tiếp tục với Kakao', withGoogle: 'Tiếp tục với Google', withEmail: 'Tiếp tục với email',
+  working: 'Đang xử lý', signOut: 'Đăng xuất',
+
+  newBook: 'Sổ mới', teamName: 'Tên nhóm', bookName: 'Tên sổ', currency: 'Tiền tệ',
+  myName: 'Tên của bạn', otherMembers: 'Các thành viên khác',
+  currencyLocked: 'Không thể đổi tiền tệ sau khi tạo sổ.', create: 'Tạo', back: 'Quay lại',
+
+  inviteDead: 'Liên kết mời này không còn dùng được',
+  inviteDeadWhy: 'Liên kết đã hết hạn hoặc bị thu hồi. Hãy xin người tạo sổ một liên kết mới.',
+  openBook: 'Mở sổ này',
+
+  tabHome: 'Trang chính', tabBook: 'Sổ', tabGoods: 'Món đồ', tabSettle: 'Lịch sử chia',
+  tabArchive: 'Lưu trữ', tabTeam: 'Nhóm', addExpense: '＋ Ghi chi tiêu',
+
+  spentAll: 'Tổng chi', entries: '{n} khoản', notSettled: 'Chưa chia', countN: '{n} khoản',
+  myShare: 'Số dư của tôi', evenNothing: 'không cần chuyển gì',
+  willReceive: 'sẽ nhận', willSend: 'sẽ chuyển',
+  sharedCost: 'Chi chung', personalCost: 'Chi riêng từng người',
+  moneyMoving: 'Tiền cần chuyển', none: 'Không có', gotIt: 'Đã nhận',
+  waitingConfirm: 'đóng lại khi {who} xác nhận',
+  recent: 'Ghi gần đây', seeWholeBook: 'Xem toàn bộ sổ',
+
+  colNo: 'Số', colDate: 'Ngày', colItem: 'Khoản', colPayer: 'Người trả', colAmount: 'Số tiền',
+  colBears: 'Chia', colState: 'Trạng thái',
+  doneStamp: 'XONG', settledStamp: 'ĐÃ CHIA', closing: 'Chốt {label}',
+  eachBears: 'Phần mỗi người chịu', vendor: 'Nơi bán', category: 'Phân loại',
+  splitBasis: 'Chia theo', basisMembers: '{n} thành viên lúc ghi',
+  laterChanges: 'Thay đổi sau đó', actualAmount: 'Số tiền thực {amount}', memo: 'Ghi chú',
+  seeStore: 'Xem nơi mua', receiptAmount: 'Số tiền trên hoá đơn',
+  selectedN: 'Đã chọn {n}', settleSelected: 'Chỉ chia phần đã chọn', clearSelection: 'Bỏ chọn',
+  selectRow: 'Chọn dòng này', settling: 'Đang chia',
+
+  firstPaid: 'ban đầu {amount}', buyLink: 'Liên kết mua', boughtTwice: 'mua hai lần',
+
+  openCount: 'Chưa chia {n} khoản', targetAmount: 'Số tiền tính',
+  colMember: 'Thành viên', colNet: 'Chênh lệch', toReceive: 'sẽ nhận', toPay: 'phải trả',
+  doSettle: 'Chia tiền', nothingToSettle: 'Không có gì để chia',
+  confirmedOn: 'chốt {date} · {n} khoản · {amount}', transfers: 'Chuyển khoản',
+  sendAgain: 'Gửi qua KakaoTalk',
+
+  archiveTitle: 'Lưu trữ dự án', period: 'Khoảng thời gian', days: '{n} ngày',
+  timesN: '{n} lần', settleCount: 'Số lần chia', whatOn: 'Tiêu vào đâu',
+  settleHistory: 'Lịch sử chia tiền',
+
+  expenseEntry: 'Ghi chi tiêu', pickPhoto: 'Chọn ảnh', writeManually: 'Tự nhập',
+  reading: 'Đang đọc', fromAI: 'đã đọc',
+  itemName: 'Tên khoản', amount: 'Số tiền', date: 'Ngày', payer: 'Người trả',
+  whoSplits: 'Ai cùng chia',
+  wholeTeam: 'Cả nhóm {n} người', someOnly: 'Chỉ một số người', onePersonTakes: 'Một người giữ',
+  whoTakes: 'Người giữ',
+  productLink: 'Liên kết mua', noteField: 'Ghi chú', writeToBook: 'Ghi vào sổ', giveUp: 'Huỷ',
+  perPerson: '{n} người · mỗi người {amount}',
+  photoReads: 'Đọc những gì', photoReadsV: 'tên khoản · số tiền · tiền tệ · ngày · nơi bán',
+  photoKinds: 'Ảnh dùng được', photoKindsV: 'hoá đơn giấy, màn hình thanh toán, lịch sử đặt hàng, biên lai chuyển khoản',
+  photoHow: 'Cách thêm ảnh', photoHowV: 'bấm nút chọn · kéo thả vào đây · dán ảnh chụp bằng Ctrl+V',
+  photoSentTo: 'Claude đọc ảnh. Bạn kiểm tra kết quả ở màn hình sau rồi lưu.',
+  chargedIn: 'Số tiền tính bằng {code}', paidIn: 'Số tiền đã trả ({code})',
+  foreignNote: 'Trả bằng {from}, nhưng sổ ghi số tiền tính bằng {to}.',
+  uploaded: 'ảnh đã tải lên',
+
+  membersN: '{n} thành viên', me: 'tôi', linkedAccount: 'đã liên kết tài khoản',
+  viaInvite: 'liên kết mời',
+  gone: 'đã rời', markGone: 'Đánh dấu đã rời', bringBack: 'Thêm lại',
+  newMemberName: 'Tên thành viên mới', addMember: 'Thêm thành viên',
+  inviteLinks: 'Liên kết mời', until: 'đến {date}', noExpiry: 'không hết hạn',
+  copy: 'Sao chép', copied: 'Đã sao chép', revoke: 'Thu hồi', makeInvite: 'Tạo liên kết mời',
+  renameHint: 'Đổi tên không làm thay đổi các khoản đã ghi. Người đã rời vẫn còn trong các khoản chi cũ.',
+  inviteHint: 'Ai có liên kết đều mở được sổ này và ghi chi tiêu.',
+  bookSection: 'Sổ',
+
+  allocAll: 'chung {n} người', allocPartial: 'một số {n} người', allocPersonal: 'riêng {who}',
+  refund: 'hoàn tiền', correction: 'điều chỉnh',
+  needTitle: 'Hãy đặt tên cho khoản này.', needAmount: 'Hãy nhập số tiền.',
+  needCharged: 'Hãy nhập số tiền tính bằng {code}.', needBearers: 'Hãy chọn ai cùng chia.',
+  membersJoinByLink: 'Thành viên vào bằng liên kết mời.',
+  yourNameHere: 'Tên', joinAs: 'Vào',
+  sampleBook: '＋ Sổ mẫu', making: 'Đang tạo',
+  newBookPlus: '＋ Sổ mới', sampleSub: 'dữ liệu giả lập',
+  sumRow: 'Tổng', result: 'Kết quả',
+  youReceiveLead: 'Bạn nhận', youSendLead: 'Bạn chuyển', youEven: 'Không cần chuyển gì',
+  yourTransfers: 'của tôi',
+  allSettled: 'đã chia xong', openN: 'chưa chia {n}', close: 'Đóng',
+  deleteBook: 'Xoá sổ này', deleteWarn: 'Mọi khoản chi và lần chia tiền sẽ mất theo. Không thể hoàn tác.',
+  deleteForReal: 'Xoá', gotAll: 'Đã nhận cả {n} khoản', pastSettlements: 'Các lần chia trước',
+  noAccount: 'chưa có tài khoản', copyAccount: 'Chép số tài khoản', openToss: 'Mở bằng Toss',
+  bank: 'Ngân hàng', accountNo: 'Số tài khoản',
+  accountHint: 'Chỉ chính chủ ghi được tài khoản của mình. Ghi sẵn thì khi chia tiền sẽ hiện ngay nơi cần chuyển.',
+  notLinked: 'chưa liên kết', mineOnly: 'chỉ mình bạn', save: 'Lưu',
+
+  helperTitle: 'Trợ lý', helperAsk: 'Hỏi về sổ này', helperAskWhat: 'Bạn muốn biết gì',
+  helperAskGo: 'Hỏi', helperReading: 'Đang đọc',  helperCoffee: 'Mời nhà phát triển một ly cà phê', helperHide: 'Vứt đi', helperShow: 'Trợ lý',
+  sortBy: 'Thứ tự', etc: 'Khác',
+  tossMissing: 'Toss không mở được nên đã sao chép tài khoản. Dán vào app ngân hàng.',
+  coffeeThanks: 'Nhấn để sao chép. Cảm ơn bạn.', coffeePage: 'Mở trang ủng hộ',
+  settledNow: 'Đã chia xong', sendItNow: 'Gửi đoạn này cho nhóm.', later: 'Để sau',
+  settleEndsWhen: 'Gửi tin nhắn chưa phải là xong. Dấu chỉ đóng khi mọi khoản chuyển đều được xác nhận — người gửi bấm “Đã gửi”, người nhận bấm “Đã nhận”.',
+  waitingN: 'Còn {n} khoản chờ xác nhận',
+  askHint: 'Enter để hỏi, Esc để đóng.',
+  chat: 'Mình bằng giấy nên hơi sợ gió.\nBấm vào chấm phía trên là thấy mình làm được gì.\nCó nhàu đi thì chữ vẫn còn.\nTính toán là do sổ làm, không phải mình. Mình chỉ đọc lại thôi.\nBạn kéo mình đi đâu cũng được.\nChuyện tiền nong càng để lâu càng khó nói.\nHóa đơn vứt đi là hết, còn sổ thì ở lại.\nThỉnh thoảng mình cũng muốn gấp lại ngủ một giấc.\nCứ từ từ, mình vẫn ở đây.\nMực khô là chữ nhạt đi. Hóa đơn vốn vậy.\nAi trả bao nhiêu, mình không quên đâu.\nNếu các con số không khớp, mình sẽ giật mình trước.',
+  tipHome: 'Tổng chi và phần của bạn ở trên cùng.\nGửi tiền rồi thì bấm “Đã gửi”.\nThắc mắc gì cứ hỏi mình — mình là AI.',
+  tipBook: 'Bấm một dòng để xem chia thế nào.\nTick ô bên trái để chỉ chia những khoản ấy.\nBấm ảnh sẽ mở to hóa đơn.',
+  tipGoods: 'Không chỉ đồ đã mua — đăng ký và dịch vụ cũng nằm ở đây.\nSắp theo ngày, số tiền hay phân loại.\nRê chuột lên ảnh sẽ thấy ảnh gốc.',
+  tipSettle: 'Chốt những khoản chưa chia ở đây.\nĐóng dấu rồi thì các con số không đổi.\nXem một lượt rồi hãy bấm nhé.',
+  tipArchive: 'Dự án xong thì còn lại trang này.\nBao lâu, và tiêu vào đâu.',
+  tipTeam: 'Thành viên và liên kết mời ở đây.\nChỉ chính chủ ghi được tài khoản của mình.\nMình cũng không đụng vào của người khác.',
+  tipAdd: 'Tải ảnh hóa đơn lên, mình đọc thử nhé.\nMình lấy ra tên khoản và số tiền.\nĐúng hay không thì xem giúp ở màn hình sau.',
+  tipTeams: 'Đây là danh sách sổ của bạn.\nTạo một sổ bằng ＋ Sổ mới nhé.\nHoặc mở sổ mẫu xem trước.',
+  tipLogin: 'Xin chào, mình là một tờ hóa đơn.\nĐăng nhập thì sổ này ở lại với tài khoản của bạn.\nMáy nào cũng vậy.',
+  accountTitle: 'Tài khoản của tôi', accountName: 'Tên', accountEmail: 'Email',
+  accountNoEmail: 'Không nhận được', accountHow: 'Đăng nhập bằng',
+  viaGoogle: 'Tài khoản Google', viaKakao: 'Tài khoản Kakao', viaEmail: 'Liên kết email', viaOther: 'Khác',
+  accountSince: 'Ngày tham gia', accountLast: 'Lần đăng nhập này', accountId: 'Số tài khoản',
+  iSent: 'Đã chuyển', undoSent: 'Hoàn tác', sentWaiting: 'đã chuyển, chờ xác nhận',
+  saysSent: '{who} nói đã chuyển', simpleSplit: 'Chia đều',
+};
+
+const DICT: Record<Locale, Record<Key, string>> = { ko, en, ja, zh, es, vi };
+
+/** t('ko','othersPay',{n:3,amount:'₩8,125'}) */
+export function t(locale: Locale, key: Key, vars?: Record<string, string | number>): string {
+  const line = (DICT[locale] ?? ko)[key] ?? ko[key];
+  if (!vars) return line;
+  return line.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+}
+
+/** 페이지마다 한 번 만들어 두고 쓰는 짧은 이름. */
+export type T = (key: Key, vars?: Record<string, string | number>) => string;
+
+export function translator(locale: Locale): T {
+  return (key, vars) => t(locale, key, vars);
+}
