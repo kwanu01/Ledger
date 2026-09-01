@@ -277,6 +277,9 @@ table.book th{
   text-align:left;font-weight:700;font-size:12.5px;color:var(--ink-2);
   padding:0 10px 7px;border-bottom:1px solid var(--rule-hard);white-space:nowrap}
 table.book td{padding:8px 10px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+/* 한글은 낱말 사이에서 끊는다. 그냥 두면 '데미그라/스함박'처럼 낱말 한가운데가
+   갈라져 읽는 사람이 한 번 멈춘다. 끊을 데가 없을 만큼 긴 말만 어디서든 끊는다. */
+table.book td{word-break:keep-all;overflow-wrap:anywhere}
 table.book th:first-child,table.book td:first-child{padding-left:0}
 table.book th:last-child,table.book td:last-child{padding-right:0}
 table.book .r{text-align:right}
@@ -555,6 +558,12 @@ footer a:hover{color:var(--ink)}
   .doc{padding-top:26px}
   .doc .facts td.k{white-space:normal}
 }
+
+/* ── 줄 고치기 ───────────────────────────────────────────────────
+   펼친 줄 안에서 열린다. 위에 선 하나로 끊어, 읽는 자리와 고치는 자리를
+   눈으로 갈라 놓는다. */
+.editline{
+  margin-top:20px;padding-top:20px;border-top:1px solid var(--rule-hard)}
 
 /* ── 해와 달 ─────────────────────────────────────────────────────
    오른쪽 위 구석. 종이 위에 얹힌 것이 아니라 종이의 귀퉁이를 접은 것처럼
@@ -951,6 +960,27 @@ footer a:hover{color:var(--ink)}
      자세한 숫자는 같은 화면 아래 지출 목록에 다 있다. */
   table.book.balances th:nth-child(2), table.book.balances td:nth-child(2),
   table.book.balances th:nth-child(3), table.book.balances td:nth-child(3){display:none}
+
+  /*
+    타이포그래피 (§20.7)
+
+    폰에서는 한 줄에 들어가는 글자가 절반으로 준다. 넓은 화면에서 알맞던
+    자간과 줄 간격이 그대로 오면, 낱말이 흩어져 보이고 표의 칸은 글자를
+    세로로 쪼갠다. 좁아진 만큼 조여 준다.
+
+    자간부터 줄인다. 라벨의 넓은 자간은 여백이 있을 때 격식으로 읽히지만,
+    자리가 없을 때는 그냥 흩어진 글자다.
+  */
+  .caption{letter-spacing:.08em}
+  .masthead .team{letter-spacing:.08em}
+  h1,h2,h3{word-break:keep-all;overflow-wrap:anywhere;text-wrap:balance}
+  p,li,td,.aside,.muted,.faint{word-break:keep-all;overflow-wrap:anywhere}
+
+  /* 큰 숫자는 조금 줄인다. '내 몫'처럼 큰 자리는 화면 폭을 거의 다 쓰는데,
+     그러면 그 위의 라벨이 무엇이었는지 눈에 안 들어온다. 숫자가 커서 잘
+     읽히는 것이 아니라, 라벨과 짝이 보여야 읽힌다. */
+  .my-share .figure{font-size:30px}
+  .summary .figure{font-size:23px}
 
   /* 표에 준 최소 폭을 푼다. 넓은 화면을 위한 값이라 폰에서는 화면보다 크다.
      하나라도 화면보다 넓으면 페이지 전체가 옆으로 밀린다 — 아카이브 화면이

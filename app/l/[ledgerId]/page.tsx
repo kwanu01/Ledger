@@ -143,7 +143,10 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
           </div>
         ) : (
         <div className="scroll">
-          <table className="book">
+          {/* 장부 화면의 표와 같은 이름을 준다. 좁은 화면에서 칸을 접는
+              규칙이 이 이름에 걸려 있다 — 이름이 없어서 여섯 칸이 그대로
+              밀려 들어와 이름이 한 글자씩 세로로 쪼개졌다. */}
+          <table className="book entries">
             <tbody>
               {recent.map((e) => (
                 <tr key={e.id} className="entry">

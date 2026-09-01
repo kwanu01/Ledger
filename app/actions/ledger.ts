@@ -12,6 +12,7 @@ import {
   insertExpense,
   loadLedger,
   removeExpense,
+  editExpense,
 } from '../../lib/db/repo.ts';
 import { currentRoster } from '../../lib/domain/settlement.ts';
 import { failed } from '../../lib/fail.ts';
@@ -149,12 +150,12 @@ export async function recordRefund(args: {
 /**
  * 지출 한 줄 지우기 (§12)
  *
- * 정산에 들어가지 않은 줄만 지운다. 정산에 들어간 줄은 데이터베이스가 막는다
- * (0002_guards.sql) — 확정된 정산의 숫자가 나중에 흔들리면 안 되기 때문이다.
- * 그때는 지우는 대신 보정 항목을 새로 적는 길이 따로 있다.
+ * 없던 기록이 된다. 정산에 이미 들어간 줄이라도 지울 수 있고, 그때는 그
+ * 정산이 통째로 걷어진다 — 정산이 반쯤 맞는 상태로 남지 않게 하기 위해서다.
+ * 걷어진 정산의 나머지 지출은 미정산으로 돌아가므로 다시 정산하면 된다.
  *
- * 잘못 적은 줄을 지우는 것과, 이미 계산에 들어간 줄을 없애는 것은 다른 일이다.
- * 앞의 것만 여기서 한다.
+ * 한 군데만 막혀 있다. 이미 받았다고 확인된 송금이 있는 정산은 못 지운다.
+ * 돈이 실제로 오간 것이고, 그것은 되돌릴 수 없다.
  *
  * 붙어 있던 사진도 함께 지운다. 가리키는 줄이 없어진 사진은 아무도 볼 수 없고
  * 저장소에만 남는다.
@@ -167,6 +168,59 @@ export async function deleteExpense(args: {
     await requireLedgerAccess(args.ledgerId);
     await removeExpense(args.expenseId, args.ledgerId);
     revalidatePath(`/l/${args.ledgerId}`, 'layout');
+    return { ok: true };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/**
+ * 지출 한 줄 고치기 (§12)
+ *
+ * 아직 정산에 들어가지 않은 줄은 원본을 그대로 고친다. 잘못 적은 것을
+ * 바로잡는 데 보정 항목까지 남길 이유는 없다 — 그건 이미 계산에 들어간
+ * 숫자를 건드리지 않으려고 만든 장치다.
+ *
+ * 정산에 들어간 줄은 데이터베이스가 막는다. 그때는 기존대로 보정 항목이다.
+ */
+export async function editExpenseLine(input: {
+  ledgerId: string;
+  expenseId: string;
+  date: string;
+  title: string;
+  amount: number;
+  payerId: string;
+  allocation: Allocation;
+  vendor?: string;
+  category?: string;
+  productLink?: string;
+  note?: string;
+}): Promise<Result> {
+  try {
+    await requireLedgerAccess(input.ledgerId);
+    if (!input.title.trim()) return { ok: false, message: '항목 이름을 입력하세요.' };
+    if (!Number.isInteger(input.amount) || input.amount === 0) {
+      return { ok: false, message: '금액은 0이 아닌 정수여야 합니다.' };
+    }
+    if (input.allocation.type === 'partial' && input.allocation.participantIds.length === 0) {
+      return { ok: false, message: '부담할 사람을 골라 주세요.' };
+    }
+
+    await editExpense({
+      expenseId: input.expenseId,
+      ledgerId: input.ledgerId,
+      date: input.date,
+      title: input.title.trim(),
+      amount: input.amount,
+      payerId: input.payerId,
+      allocation: input.allocation,
+      vendor: input.vendor?.trim() || undefined,
+      category: input.category?.trim() || undefined,
+      productLink: input.productLink?.trim() || undefined,
+      note: input.note?.trim() || undefined,
+    });
+
+    revalidatePath(`/l/${input.ledgerId}`, 'layout');
     return { ok: true };
   } catch (e) {
     return failed(e);

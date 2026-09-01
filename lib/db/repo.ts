@@ -12,6 +12,7 @@ import {
   type SettlementRow,
 } from './mapping.ts';
 import { computeSettlement, unsettledExpenses } from '../domain/settlement.ts';
+import type { Allocation } from '../domain/types.ts';
 import type { Expense, Ledger } from '../domain/types.ts';
 
 /**
@@ -73,50 +74,74 @@ export async function insertExpense(expense: NewExpense): Promise<string> {
 /**
  * 지출 한 줄을 지운다.
  *
- * 장부 조건을 반드시 함께 건다. id 하나만 보고 지우면, 남의 장부 지출 id를
- * 알아낸 사람이 우리 장부 권한으로 그 줄을 지울 수 있다.
+ * 판정은 전부 데이터베이스 함수 안에 있다(0012_delete_settled.sql). 정산에
+ * 들어간 줄이면 그 정산을 통째로 걷어 내고 지우는데, 그 둘은 한 트랜잭션
+ * 안에서 일어나야 한다. 여기서 나눠 부르면 정산만 사라지고 지출은 남는
+ * 중간 상태가 생길 수 있다.
  *
- * 정산에 들어간 줄은 트리거가 막는다(0002_guards.sql). 여기서 먼저 확인하는
- * 이유는 하나다 — 트리거가 막으면 영어 오류가 올라오고, 여기서 막으면 무엇을
- * 해야 하는지 한국어로 말해 줄 수 있다.
- *
- * 붙어 있던 사진은 저장소에 남으므로 줄을 지우기 전에 걷어 낸다. 줄이 먼저
- * 사라지면 어떤 사진이 붙어 있었는지 알 길이 없어진다.
+ * 사진은 줄이 사라지기 전에 걷어 낸다. 줄이 먼저 없어지면 어떤 사진이
+ * 붙어 있었는지 알 길이 없다.
  */
 export async function removeExpense(expenseId: string, ledgerId: string): Promise<void> {
-  const { data: row, error } = await db
+  const { data: row } = await db
     .from('expenses')
-    .select('id, receipt_path, representative_image_path')
+    .select('receipt_path, representative_image_path')
     .eq('id', expenseId)
     .eq('ledger_id', ledgerId)
     .maybeSingle();
+
+  const { error } = await db.rpc('delete_expense_deep', {
+    p_expense_id: expenseId,
+    p_ledger_id: ledgerId,
+  });
   if (error) throw new Error(error.message);
-  if (!row) throw new Error('이 장부의 지출이 아닙니다.');
 
-  const { count } = await db
-    .from('settlement_expenses')
-    .select('expense_id', { count: 'exact', head: true })
-    .eq('expense_id', expenseId);
-  if ((count ?? 0) > 0) {
-    throw new Error('이미 정산된 지출은 지울 수 없습니다. 보정 항목을 새로 기록하세요.');
-  }
-
-  // 이 줄을 대상으로 삼은 보정·환불이 있으면 그것부터 갈 곳을 잃는다.
-  const { count: kids } = await db
-    .from('expenses')
-    .select('id', { count: 'exact', head: true })
-    .eq('adjustment_target_id', expenseId);
-  if ((kids ?? 0) > 0) {
-    throw new Error('이 지출에 딸린 보정·환불 항목이 있습니다. 그것부터 지워 주세요.');
-  }
-
-  const { error: gone } = await db.from('expenses').delete().eq('id', expenseId);
-  if (gone) throw new Error(gone.message);
-
-  // 줄이 없어졌으니 사진은 아무도 볼 수 없다. 못 지워도 삭제는 이미 끝났다.
-  for (const path of [row.receipt_path, row.representative_image_path]) {
+  for (const path of [row?.receipt_path, row?.representative_image_path]) {
     if (path) await dropImage(path as string).catch(() => {});
   }
+}
+
+/**
+ * 지출 한 줄을 고친다.
+ *
+ * 정산에 들어간 줄은 데이터베이스가 막는다(0002_guards.sql). 확정된 정산의
+ * 숫자는 그대로 두고, 그런 줄은 보정 항목으로 바로잡는다 — 원래의 규칙이다.
+ *
+ * 기록 시점의 팀원 명단(team_member_ids)은 건드리지 않는다. 그 줄이 적힌
+ * 순간에 팀에 누가 있었는지는 나중에 바뀔 수 있는 사실이 아니다.
+ */
+export async function editExpense(args: {
+  expenseId: string;
+  ledgerId: string;
+  date: string;
+  title: string;
+  amount: number;
+  payerId: string;
+  allocation: Allocation;
+  vendor?: string;
+  category?: string;
+  productLink?: string;
+  note?: string;
+}): Promise<void> {
+  const a = args.allocation;
+  const { error } = await db
+    .from('expenses')
+    .update({
+      spent_on: args.date,
+      title: args.title,
+      amount: args.amount,
+      payer_member_id: args.payerId,
+      allocation: a.type,
+      participant_member_ids: a.type === 'partial' ? a.participantIds : null,
+      owner_member_id: a.type === 'personal' ? a.ownerId : null,
+      vendor: args.vendor ?? null,
+      category: args.category ?? null,
+      product_link: args.productLink ?? null,
+      note: args.note ?? null,
+    })
+    .eq('id', args.expenseId)
+    .eq('ledger_id', args.ledgerId);
+  if (error) throw new Error(error.message);
 }
 
 export async function insertAdjustment(args: {

@@ -32,10 +32,37 @@ const TAGS: Record<Locale, string> = {
 const localeTag = (locale: Locale) => TAGS[locale] ?? 'ko-KR';
 
 /** 최소 단위 정수 → 사람이 읽는 금액 (통화 기호 포함) */
+/**
+ * 원화는 기호 대신 '원'을 뒤에 붙인다.
+ *
+ * ₩(U+20A9)는 W에 가로줄을 그은 글자다. 본문 활자로 크게 찍으면 그 가로줄이
+ * 취소선처럼 읽힌다 — ₩0 이 '0을 지운 것'으로 보인다. 금액을 적는 자리에서
+ * 그렇게 보이면 안 된다.
+ *
+ * 그리고 한국에서 돈은 원래 '41,300원'이라고 적는다. 기호를 앞에 붙이는 것은
+ * 달러의 관습이다. 카카오톡으로 나가는 정산 내역도 이쪽이 자연스럽게 읽힌다.
+ *
+ * 다른 통화는 그대로 둔다. $와 ¥는 앞에 붙는 것이 그 나라의 관습이고,
+ * 글자 모양도 문제가 없다.
+ */
+/** 원화 뒤에 붙는 말. 화면의 언어를 따른다. */
+const WON: Record<Locale, string> = {
+  ko: '원',
+  en: ' KRW',
+  ja: 'ウォン',
+  zh: '韩元',
+  es: ' KRW',
+  vi: ' KRW',
+};
+
 export function formatMoney(minor: number, code: CurrencyCode = 'KRW', locale: Locale = 'ko'): string {
   const { decimals } = CURRENCIES[code];
   const sign = minor < 0 ? '-' : '';
   const value = Math.abs(minor) / 10 ** decimals;
+
+  if (code === 'KRW') {
+    return `${sign}${new Intl.NumberFormat(localeTag(locale)).format(value)}${WON[locale]}`;
+  }
   // narrowSymbol을 써야 한국어 로캘에서 USD가 'US$'가 아니라 '$'로 나온다.
   // 지원하지 않는 환경이면 기본 표기로 떨어진다.
   const opts: Intl.NumberFormatOptions = {

@@ -76,7 +76,9 @@ do $$ begin raise notice ''; raise notice '[정산 후 불변성]'; end $$;
 select pg_temp.must_fail('정산된 지출은 수정할 수 없다',
   $$update public.expenses set amount = 35000 where id = '40000000-0000-0000-0000-000000000001'$$);
 
-select pg_temp.must_fail('정산된 지출은 삭제할 수 없다',
+-- 0012. 정산된 지출도 지울 수 있다 — 다만 그 정산이 함께 걷어진다.
+-- 직접 DELETE 하는 길은 여전히 막혀 있고, 함수를 거쳐야만 열린다.
+select pg_temp.must_fail('정산된 지출을 직접 삭제할 수는 없다',
   $$delete from public.expenses where id = '40000000-0000-0000-0000-000000000001'$$);
 
 -- 0011. 사진 두 칸만은 예외다. 금액이 아니라 금액의 근거이기 때문이다.
@@ -101,6 +103,37 @@ select pg_temp.must_fail('한 지출이 두 정산에 들어갈 수 없다',
       values ('50000000-0000-0000-0000-000000000009','30000000-0000-0000-0000-000000000001','중복','{}'::jsonb);
     insert into public.settlement_expenses (settlement_id, expense_id)
       values ('50000000-0000-0000-0000-000000000009','40000000-0000-0000-0000-000000000001')$$);
+
+-- 0012. 함수를 거치면 정산된 지출도 지워진다. 그때 정산도 함께 사라진다.
+do $$
+declare n integer; m integer;
+begin
+  -- 아직 아무도 확인하지 않은 정산 하나를 새로 만든다.
+  insert into public.settlements (id, ledger_id, label, snapshot)
+    values ('50000000-0000-0000-0000-000000000007','30000000-0000-0000-0000-000000000001',
+            '삭제 시험','{}'::jsonb);
+  insert into public.expenses (id, ledger_id, spent_on, title, amount, payer_member_id,
+                               team_member_ids, allocation)
+    values ('40000000-0000-0000-0000-000000000077','30000000-0000-0000-0000-000000000001',
+            '2026-10-01','지울 줄',10000,'20000000-0000-0000-0000-000000000001',
+            (select ids from roster4),'all');
+  insert into public.settlement_expenses (settlement_id, expense_id)
+    values ('50000000-0000-0000-0000-000000000007','40000000-0000-0000-0000-000000000077');
+
+  perform public.delete_expense_deep('40000000-0000-0000-0000-000000000077',
+                                     '30000000-0000-0000-0000-000000000001');
+
+  select count(*) into n from public.expenses
+   where id = '40000000-0000-0000-0000-000000000077';
+  select count(*) into m from public.settlements
+   where id = '50000000-0000-0000-0000-000000000007';
+
+  if n = 0 and m = 0 then
+    raise notice '  ✓ 정산된 지출을 지우면 그 정산도 함께 걷어진다';
+  else
+    raise notice '  ✗ 지출 % 건, 정산 % 건이 남았다', n, m;
+  end if;
+end $$;
 
 do $$ begin raise notice ''; raise notice '[부담 구조]'; end $$;
 

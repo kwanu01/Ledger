@@ -52,7 +52,7 @@ export default function Contact({ mail, lang }: { mail: string; lang: Locale }) 
             onClick={() => setOpen(false)}
             aria-label={T('close')}
           >
-            ✕
+            ×
           </button>
         </div>
       )}

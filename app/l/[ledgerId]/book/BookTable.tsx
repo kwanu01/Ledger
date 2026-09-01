@@ -23,6 +23,7 @@ import type { Ledger } from '../../../../lib/domain/types.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
 import ImageField from '../../../ImageField.tsx';
 import DeleteExpense from './DeleteExpense.tsx';
+import EditExpense from './EditExpense.tsx';
 
 /**
  * 장부 (§21.3)
@@ -48,6 +49,8 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [lastPicked, setLastPicked] = useState<string | null>(null);
   const [openRow, setOpenRow] = useState<string | null>(null);
+  /** 지금 고치는 중인 줄. 한 번에 하나만 연다. */
+  const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const settled = useMemo(() => settledExpenseIds(ledger), [ledger]);
@@ -343,6 +346,19 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
                 </div>
               </div>
 
+              {/* 고치는 자리는 이 줄 안에서 열린다. 어느 줄을 고치는 중인지
+                  눈에서 놓치지 않고, 고치면 바로 그 줄이 바뀌는 것이 보인다. */}
+              {editing === e.id && (
+                <EditExpense
+                  ledgerId={ledger.id}
+                  expense={e}
+                  members={ledger.members}
+                  currency={ledger.currency ?? 'KRW'}
+                  lang={lang}
+                  onDone={() => setEditing(null)}
+                />
+              )}
+
               <div className="row" style={{ marginTop: 18, gap: 20 }}>
                 {e.productLink && (
                   <a href={e.productLink} target="_blank" rel="noopener">
@@ -350,23 +366,31 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
                   </a>
                 )}
 
-                {/*
-                  잘못 적은 줄을 지운다.
+                {/* 정산에 들어간 줄은 고치지 않는다. 확정된 숫자를 건드리지
+                    않으려고 보정 항목이 따로 있다. */}
+                {!done && editing !== e.id && (
+                  <button className="plain" onClick={() => setEditing(e.id)}>
+                    {T('editEntry')}
+                  </button>
+                )}
 
-                  정산에 들어간 줄에는 이 단추를 두지 않는다. 확정된 정산의
-                  숫자가 나중에 흔들리면 안 되기 때문이다. 그때는 보정 항목을
-                  새로 적는 길이 따로 있다 — 서버와 데이터베이스도 같이 막는다.
+                {/*
+                  없던 기록으로 만든다.
+
+                  정산에 들어간 줄도 지울 수 있다. 그때는 그 정산이 통째로
+                  걷어지고 나머지 지출은 미정산으로 돌아간다 — 정산이 반쯤
+                  맞는 상태로 남지 않게 하려는 것이다. 이미 받았다고 확인된
+                  송금이 있으면 서버가 막는다. 돈이 실제로 오간 것이라서.
 
                   되돌릴 수 없어서 한 번 더 묻는다. 창을 띄우지는 않는다.
                 */}
-                {!settled.has(e.id) && (
-                  <DeleteExpense
-                    ledgerId={ledger.id}
-                    expenseId={e.id}
-                    title={e.title}
-                    lang={lang}
-                  />
-                )}
+                <DeleteExpense
+                  ledgerId={ledger.id}
+                  expenseId={e.id}
+                  title={e.title}
+                  settled={done}
+                  lang={lang}
+                />
               </div>
             </div>
           </td>

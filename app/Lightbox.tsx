@@ -58,7 +58,7 @@ export default function Lightbox({
             {caption && <figcaption>{caption}</figcaption>}
           </figure>
           <button className="lightbox-x" onClick={() => setOpen(false)} aria-label="닫기">
-            ✕
+            ×
           </button>
         </div>
       )}

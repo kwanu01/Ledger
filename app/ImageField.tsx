@@ -99,7 +99,7 @@ export default function ImageField({
           disabled={pending}
           onClick={() => file.current?.click()}
         >
-          <span className="plus" aria-hidden="true">＋</span>
+          <span className="plus" aria-hidden="true">+</span>
           <span>
             {pending
               ? T('working')
