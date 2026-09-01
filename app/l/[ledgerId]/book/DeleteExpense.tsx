@@ -54,17 +54,23 @@ export default function DeleteExpense({
 
   if (!asking) {
     return (
-      <button className="plain" disabled={pending} onClick={() => setAsking(true)}>
+      <button
+        className="plain"
+        disabled={pending}
+        onClick={(e) => {
+          setAsking(true);
+          // 무엇이 함께 사라지는지는 수증이가 말한다. 이 자리에 문장을 넣으면
+          // 펼친 줄이 옆으로 벌어진다. 여기 남는 것은 단추뿐이다.
+          say(T(settled ? 'deleteSettledWarn' : 'deleteEntryWarn', { title }), 'warn', e.currentTarget);
+        }}
+      >
         {pending ? T('working') : T('deleteEntry')}
       </button>
     );
   }
 
   return (
-    <span className="row" style={{ gap: 14 }}>
-      <span className="debit">
-        {T(settled ? 'deleteSettledWarn' : 'deleteEntryWarn', { title })}
-      </span>
+    <span className="acts">
       <button className="plain danger" disabled={pending} onClick={drop}>
         {T('deleteForReal')}
       </button>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { markTransferReceived, markTransferSent } from '../../actions/ledger.ts';
+import { useHelper } from '../../helper/HelperContext.tsx';
 import { translator } from '../../../lib/i18n.ts';
 import { formatMoney, type CurrencyCode, type Locale } from '../../../lib/domain/money.ts';
 
@@ -65,6 +66,7 @@ export default function Moving({
 }) {
   const router = useRouter();
   const T = translator(lang);
+  const { say } = useHelper();
   const [busy, setBusy] = useState(false);
   /** 대신 확인하려고 되묻는 중인 송금. 되돌릴 수 없어서 한 번 더 묻는다. */
   const [asking, setAsking] = useState<string | null>(null);
@@ -189,8 +191,7 @@ export default function Moving({
                 </td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {asking === t.transferId ? (
-                    <span className="row" style={{ gap: 12 }}>
-                      <span className="debit">{T('confirmForWarn')}</span>
+                    <span className="acts">
                       <button
                         className="plain danger"
                         disabled={busy}
@@ -215,7 +216,10 @@ export default function Moving({
                     <button
                       className="plain"
                       disabled={busy}
-                      onClick={() => setAsking(t.transferId)}
+                      onClick={(e) => {
+                        setAsking(t.transferId);
+                        say(T('confirmForWarn'), 'warn', e.currentTarget);
+                      }}
                     >
                       {T('confirmFor')}
                     </button>

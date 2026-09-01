@@ -14,21 +14,37 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
  */
 
 export type Tone = 'warn' | 'info';
-export type Line = { id: number; text: string; tone: Tone };
+/** 말이 가리키는 자리. 화면 좌표(px). 있으면 수증이가 그리로 걸어간다. */
+export type Spot = { x: number; y: number; w: number; h: number };
+export type Line = { id: number; text: string; tone: Tone; at?: Spot };
 
 type Ctx = {
   line: Line | null;
-  say: (text: string, tone?: Tone) => void;
+  say: (text: string, tone?: Tone, near?: HTMLElement | null) => void;
   hush: () => void;
 };
 
 const HelperCtx = createContext<Ctx | null>(null);
 
-/** 도우미가 없는 자리에서 불러도 터지지 않는다. 말할 곳이 없으면 조용히 넘어간다. */
-export function useHelper(): { say: (text: string, tone?: Tone) => void } {
+/**
+ * 도우미가 없는 자리에서 불러도 터지지 않는다. 말할 곳이 없으면 조용히 넘어간다.
+ *
+ * 세 번째 인자에 **누른 단추**를 넘기면 수증이가 그 옆으로 걸어가서 말한다.
+ * 되묻는 말("정말 지울까요")은 어느 줄에 대한 말인지가 절반이라, 화면 구석에서
+ * 하면 나머지 절반이 사라진다. 그렇다고 그 줄 안에 긴 문장을 넣으면 표가
+ * 벌어져 이름이 세로로 쪼개진다 — 실제로 그렇게 됐다.
+ *
+ * 말은 수증이가 하고, 줄에는 단추만 남긴다.
+ */
+export function useHelper(): {
+  say: (text: string, tone?: Tone, near?: HTMLElement | null) => void;
+} {
   const ctx = useContext(HelperCtx);
   return useMemo(
-    () => ({ say: (text: string, tone: Tone = 'warn') => ctx?.say(text, tone) }),
+    () => ({
+      say: (text: string, tone: Tone = 'warn', near?: HTMLElement | null) =>
+        ctx?.say(text, tone, near),
+    }),
     [ctx],
   );
 }
@@ -42,11 +58,16 @@ let seq = 0;
 export function HelperProvider({ children }: { children: React.ReactNode }) {
   const [line, setLine] = useState<Line | null>(null);
 
-  const say = useCallback((text: string, tone: Tone = 'warn') => {
+  const say = useCallback((text: string, tone: Tone = 'warn', near?: HTMLElement | null) => {
     const t = text.trim();
     if (!t) return;
     seq += 1;
-    setLine({ id: seq, text: t, tone });
+    let at: Spot | undefined;
+    if (near) {
+      const r = near.getBoundingClientRect();
+      if (r.width || r.height) at = { x: r.left, y: r.top, w: r.width, h: r.height };
+    }
+    setLine({ id: seq, text: t, tone, at });
   }, []);
 
   const hush = useCallback(() => setLine(null), []);

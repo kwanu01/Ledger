@@ -454,6 +454,9 @@ a.subject,a.subject:visited{color:var(--ink)}
 
 /* ── 조작부 ──────────────────────────────────────────────────────── */
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;font-size:14px}
+/* 표의 칸 안에 나란히 놓이는 단추들.
+   붙여 두면 '소유권 넘기기탈퇴' 처럼 한 낱말로 읽힌다. 실제로 그랬다. */
+.acts{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
 /* 누르는 것은 button 이기도 하고 링크이기도 하다. 둘을 같은 모양으로 둔다. */
 .act{
   appearance:none;font:inherit;font-size:14.5px;cursor:pointer;border-radius:0;

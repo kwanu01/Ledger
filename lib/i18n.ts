@@ -81,7 +81,7 @@ export type Key =
   | 'photoShort' | 'photoSentTo2'
   | 'closedMark'
   | 'relabelEntry' | 'relabelOnly'
-  | 'ownerTag' | 'handOver' | 'handOverWarn' | 'handOverDo' | 'confirmFor' | 'confirmForWarn' | 'waitedDays' | 'saysSentDays'
+  | 'ownerTag' | 'handOver' | 'handOverWarn' | 'handOverDo' | 'goneWarn' | 'goneDo' | 'confirmFor' | 'confirmForWarn' | 'waitedDays' | 'saysSentDays'
   | 'photoSentTo' | 'chargedIn' | 'paidIn' | 'foreignNote' | 'uploaded'
   // 팀
   | 'membersN' | 'me' | 'gone' | 'markGone' | 'bringBack'
@@ -202,7 +202,9 @@ const ko: Record<Key, string> = {
   membersN: '팀원 {n}명', me: '나',
   gone: '나감', markGone: '탈퇴', bringBack: '다시 넣기',
   ownerTag: '소유자', handOver: '소유권 넘기기',
-  handOverWarn: '{who}님이 이 장부의 소유자가 됩니다. 초대 링크 발급과 장부 삭제 권한이 넘어가고, 되돌리려면 그분이 다시 넘겨야 합니다.',
+  handOverWarn: '{who}님이 소유자가 됩니다.\n되돌리려면 그분이 다시 넘겨야 해요.',
+  goneWarn: '{who}님을 나간 것으로 표시합니다.\n지난 지출에는 그대로 남고, 앞으로의 공동 지출에서만 빠져요.',
+  goneDo: '탈퇴합니다',
   handOverDo: '넘깁니다',
   confirmFor: '대신 확인',
   confirmForWarn: '받은 사람 대신 확인합니다. 되돌릴 수 없고, 누가 눌렀는지 기록에 남습니다.',
@@ -354,7 +356,9 @@ const en: Record<Key, string> = {
   membersN: '{n} members', me: 'you',
   gone: 'left', markGone: 'Leave', bringBack: 'Bring back',
   ownerTag: 'owner', handOver: 'Hand over ownership',
-  handOverWarn: '{who} becomes the owner of this ledger. Invite links and deletion move with it, and only they can hand it back.',
+  handOverWarn: '{who} becomes the owner.\nOnly they can hand it back.',
+  goneWarn: '{who} is marked as left.\nPast expenses keep them; future shared ones will not.',
+  goneDo: 'Leave',
   handOverDo: 'Hand over',
   confirmFor: 'Confirm for them',
   confirmForWarn: 'You confirm on the recipient\u2019s behalf. This cannot be undone, and the record keeps who pressed it.',
@@ -504,7 +508,9 @@ const ja: Record<Key, string> = {
   membersN: 'メンバー {n}人', me: '自分',
   gone: '離脱', markGone: '離脱', bringBack: '戻す',
   ownerTag: 'オーナー', handOver: 'オーナー権を渡す',
-  handOverWarn: '{who}さんがこの帳簿のオーナーになります。招待リンクの発行と帳簿の削除も移り、戻すにはその方が渡し返す必要があります。',
+  handOverWarn: '{who}さんがオーナーになります。\n戻すにはその方が渡し返す必要があります。',
+  goneWarn: '{who}さんを離脱として記録します。\n過去の支出には残り、今後の共同支出から外れます。',
+  goneDo: '離脱にします',
   handOverDo: '渡します',
   confirmFor: '代わりに確認',
   confirmForWarn: '受け取った人の代わりに確認します。元に戻せず、誰が押したかは記録に残ります。',
@@ -654,7 +660,9 @@ const zh: Record<Key, string> = {
   membersN: '成员 {n}人', me: '我',
   gone: '已退出', markGone: '退出', bringBack: '重新加入',
   ownerTag: '所有者', handOver: '转让所有权',
-  handOverWarn: '{who}将成为这本账的所有者。邀请链接和删除权限一并转移，要收回只能由对方再转让回来。',
+  handOverWarn: '{who}将成为所有者。\n要收回只能由对方再转让回来。',
+  goneWarn: '将{who}标记为已退出。\n过去的支出仍保留，今后的共同支出不再计入。',
+  goneDo: '确认退出',
   handOverDo: '转让',
   confirmFor: '代为确认',
   confirmForWarn: '代收款人确认。无法撤销，且会记录是谁按的。',
@@ -809,7 +817,9 @@ const es: Record<Key, string> = {
   membersN: '{n} integrantes', me: 'tú',
   gone: 'salió', markGone: 'Salir', bringBack: 'Volver a añadir',
   ownerTag: 'propietario', handOver: 'Ceder la propiedad',
-  handOverWarn: '{who} pasa a ser propietario de este libro. Los enlaces de invitación y el borrado se van con ello, y solo esa persona puede devolverlo.',
+  handOverWarn: '{who} pasa a ser propietario.\nSolo esa persona puede devolverlo.',
+  goneWarn: 'Se marca que {who} salió.\nSigue en los gastos pasados; no entra en los futuros.',
+  goneDo: 'Marcar salida',
   handOverDo: 'Ceder',
   confirmFor: 'Confirmar por él',
   confirmForWarn: 'Confirmas en su nombre. No se puede deshacer y queda registrado quién lo pulsó.',
@@ -961,7 +971,9 @@ const vi: Record<Key, string> = {
   membersN: '{n} thành viên', me: 'tôi',
   gone: 'đã rời', markGone: 'Rời đi', bringBack: 'Thêm lại',
   ownerTag: 'chủ sổ', handOver: 'Chuyển quyền chủ sổ',
-  handOverWarn: '{who} sẽ thành chủ sổ này. Quyền tạo link mời và xóa sổ cũng chuyển theo, muốn lấy lại thì người đó phải chuyển ngược.',
+  handOverWarn: '{who} sẽ thành chủ sổ.\nMuốn lấy lại thì người đó phải chuyển ngược.',
+  goneWarn: 'Đánh dấu {who} đã rời.\nVẫn còn trong các khoản cũ, không tính vào khoản chung sau này.',
+  goneDo: 'Xác nhận rời',
   handOverDo: 'Chuyển',
   confirmFor: 'Xác nhận thay',
   confirmForWarn: 'Bạn xác nhận thay người nhận. Không thể hoàn tác và sổ ghi lại ai đã bấm.',

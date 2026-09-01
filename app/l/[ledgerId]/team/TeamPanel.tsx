@@ -59,8 +59,8 @@ export default function TeamPanel({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [editTeam, setEditTeam] = useState(false);
-  /** 소유권을 넘기려고 되묻는 중인 팀원. 되돌릴 수 없는 일이라 한 번 더 묻는다. */
-  const [handing, setHanding] = useState<string | null>(null);
+  /** 되묻는 중인 팀원과, 무엇을 되묻는지. 되돌리기 어려운 일이라 한 번 더 묻는다. */
+  const [ask, setAsk] = useState<{ id: string; kind: 'hand' | 'leave' } | null>(null);
   const [newTeam, setNewTeam] = useState('');
   const [armed, setArmed] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -148,43 +148,82 @@ export default function TeamPanel({
                     )}
                   </td>
                   <td className="muted">{m.active ? '' : T('gone')}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    {/* 소유권 넘기기. 지금 소유자만, 계정 있는 활성 팀원에게만.
-                        초대 링크로만 들어온 사람에게 넘기면 그 장부에 다시
-                        들어올 수 있는 소유자가 없어진다. */}
-                    {owner && !m.isOwner && m.active && m.hasAccount && (
-                      handing === m.id ? (
-                        <span className="row" style={{ gap: 12 }}>
-                          <span className="debit">{T('handOverWarn', { who: m.name })}</span>
+                  {/*
+                    할 수 있는 일들.
+
+                    **되묻는 말은 이 칸에 넣지 않는다.** 넣어 봤더니 긴 문장이
+                    표를 벌려서, 이름이 'J/o/s/e/p/h' 처럼 한 글자씩 세로로
+                    쪼개졌다. 표의 칸은 낱말이 들어가는 자리지 문장이 들어가는
+                    자리가 아니다.
+
+                    그래서 말은 수증이가 한다. 누른 단추 옆으로 걸어와서 붉은
+                    글씨로 한 줄. 이 칸에는 단추만 남는다.
+                  */}
+                  <td>
+                    <span className="acts">
+                      {ask?.id === m.id ? (
+                        <>
                           <button
                             className="plain danger"
                             disabled={busy}
                             onClick={() => {
-                              setHanding(null);
-                              run(() => handOverOwnership({ ledgerId, memberId: m.id }));
+                              const go = ask.kind;
+                              setAsk(null);
+                              run(() =>
+                                go === 'hand'
+                                  ? handOverOwnership({ ledgerId, memberId: m.id })
+                                  : setMemberActive({
+                                      ledgerId,
+                                      memberId: m.id,
+                                      active: !m.active,
+                                    }),
+                              );
                             }}
                           >
-                            {T('handOverDo')}
+                            {ask.kind === 'hand' ? T('handOverDo') : T('goneDo')}
                           </button>
-                          <button className="plain" onClick={() => setHanding(null)}>
+                          <button className="plain" onClick={() => setAsk(null)}>
                             {T('close')}
                           </button>
-                        </span>
+                        </>
                       ) : (
-                        <button className="plain" disabled={busy} onClick={() => setHanding(m.id)}>
-                          {T('handOver')}
-                        </button>
-                      )
-                    )}
-                    {(m.isMe || owner) && handing !== m.id && (
-                      <button
-                        className="plain"
-                        disabled={busy}
-                        onClick={() => run(() => setMemberActive({ ledgerId, memberId: m.id, active: !m.active }))}
-                      >
-                        {m.active ? T('markGone') : T('bringBack')}
-                      </button>
-                    )}
+                        <>
+                          {/* 소유권 넘기기. 지금 소유자만, 계정 있는 활성
+                              팀원에게만. 초대 링크로만 들어온 사람에게 넘기면
+                              그 장부에 다시 들어올 수 있는 소유자가 없어진다. */}
+                          {owner && !m.isOwner && m.active && m.hasAccount && (
+                            <button
+                              className="plain"
+                              disabled={busy}
+                              onClick={(e) => {
+                                setAsk({ id: m.id, kind: 'hand' });
+                                say(T('handOverWarn', { who: m.name }), 'warn', e.currentTarget);
+                              }}
+                            >
+                              {T('handOver')}
+                            </button>
+                          )}
+                          {(m.isMe || owner) && (
+                            <button
+                              className="plain"
+                              disabled={busy}
+                              onClick={(e) => {
+                                // 다시 넣는 것은 되묻지 않는다. 잃는 것이 없다.
+                                if (!m.active) {
+                                  return run(() =>
+                                    setMemberActive({ ledgerId, memberId: m.id, active: true }),
+                                  );
+                                }
+                                setAsk({ id: m.id, kind: 'leave' });
+                                say(T('goneWarn', { who: m.name }), 'warn', e.currentTarget);
+                              }}
+                            >
+                              {m.active ? T('markGone') : T('bringBack')}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </span>
                   </td>
                 </tr>
               ))}

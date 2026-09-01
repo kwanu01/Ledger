@@ -621,7 +621,17 @@ export default function Helper({ lang }: { lang: Locale }) {
     };
   }, [tipAt, menu, asking, line, sayAt, play]);
 
-  /* 할 말이 생기면 손을 흔든다. 말풍선은 스스로 열지 않는다. */
+  /*
+   * 할 말이 생기면 손을 흔든다. 말풍선은 스스로 열지 않는다.
+   *
+   * 말이 자리를 가리키고 있으면(line.at) **그 옆으로 걸어간다.**
+   * 되묻는 말은 어느 줄에 대한 말인지가 절반이라, 화면 구석에서 하면
+   * 나머지 절반이 사라진다. 옆에 서서 말하면 가리키는 일과 말하는 일이
+   * 한 번에 된다.
+   *
+   * 순간이동하지 않는다 — aim 만 옮기고 나머지는 용수철이 한다. 걸어가는
+   * 동안 눈이 그 자리를 따라가므로, 도착했을 때 어디를 보라는 말이 필요 없다.
+   */
   useEffect(() => {
     if (!line) return;
     lastSeen.current = Date.now();
@@ -629,7 +639,24 @@ export default function Helper({ lang }: { lang: Locale }) {
     setMenu(false);
     setAsking(false);
     play('gasp', 'wiggle', 820); // 놀란다. 무슨 일이 났다는 뜻이다.
-  }, [line, play]);
+
+    const at = line.at;
+    if (!at || hidden || dragging.current || !root.current) return;
+
+    const m = measure(root.current);
+    const roomX = Math.max(6, window.innerWidth - 6 - m.dx - m.vw);
+    const roomY = Math.max(TOP_ROOM, window.innerHeight - 6 - m.dy - m.vh);
+
+    // 누른 자리의 오른쪽에 선다. 오른쪽이 좁으면 왼쪽으로 간다.
+    // 어느 쪽에 서든 말은 자리가 남는 쪽에 붙는다(sayRight).
+    const right = at.x + at.w + 14 - m.dx;
+    const left = at.x - m.vw - 14 - m.dx;
+    const x = clamp(right + m.vw <= window.innerWidth - 6 ? right : left, 6, roomX);
+    // 발끝이 그 줄에 닿게. 머리가 아니라 발이 기준이라 높이만큼 올린다.
+    const y = clamp(at.y + at.h / 2 - m.vh + 30 - m.dy, TOP_ROOM, roomY);
+
+    aim.current = { x, y };
+  }, [line, play, hidden]);
 
   /*
    * 조용할 때.
