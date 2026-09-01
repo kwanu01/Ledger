@@ -33,6 +33,9 @@
   --debit:#cc0000;      /* 상태 색 — 보낼 돈, 환불 */
   --stamp:#cf3a2c;      /* 고무도장 잉크. 숫자가 아니라 종이 위에 얹힌 물건의 색이다 */
   --hl:#f4f4f4;
+  /* 정산이 끝난 구획의 바탕. 마감선 뒤로 넘어간 자리라는 표시다.
+     색을 칠하는 것이 아니라 종이의 밝기를 한 단 낮추는 것에 가깝다. */
+  --settled:#f4f4f4;
   --field:#ffffff;
   --script:"Mrs Saint Delafield","Snell Roundhand","Apple Chancery",cursive;
   --ink-blot:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' seed='7'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.3 0 0 0 -0.02'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23b)'/%3E%3C/svg%3E");
@@ -54,14 +57,14 @@
     --paper:#000000; --ink:#ffffff; --ink-2:#a6a6a6; --ink-3:#767676;
     --rule:#4d4d4d; --rule-2:#2b2b2b; --rule-hard:#ffffff;
     --link:#7da2ff; --link-v:#c2a3ff; --debit:#ff6f6f; --stamp:#e8574a;
-    --hl:#141414; --field:#0a0a0a;
+    --hl:#141414; --settled:#131313; --field:#0a0a0a;
   }
 }
 :root[data-theme="dark"]{
   --paper:#000000; --ink:#ffffff; --ink-2:#a6a6a6; --ink-3:#767676;
   --rule:#4d4d4d; --rule-2:#2b2b2b; --rule-hard:#ffffff;
   --link:#7da2ff; --link-v:#c2a3ff; --debit:#ff6f6f; --stamp:#e8574a;
-  --hl:#141414; --field:#0a0a0a;
+  --hl:#141414; --settled:#131313; --field:#0a0a0a;
 }
 
 *{box-sizing:border-box}
@@ -293,7 +296,17 @@ table tbody tr:last-child > td{border-bottom:0}
 table tbody tr.closing:last-child > td{border-bottom:3px double var(--rule-hard)}
 table.book .slip{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);width:40px}
 table.book .day{font-family:var(--mono);color:var(--ink-2);white-space:nowrap}
-table.book tr.done td{color:var(--ink-2)}
+/* 정산이 끝난 줄 (§12)
+
+   글자만 흐리게 두었더니 어디까지가 끝난 구획인지 훑어서는 안 보였다.
+   한 줄씩 흐린 것과, 구획 하나가 통째로 닫힌 것은 다른 사실이다.
+
+   그래서 바탕을 한 단 낮춘다. 마감선(tr.closing)과 같은 톤이라, 정산된
+   줄들과 그것을 닫는 마감선이 하나의 덩어리로 읽힌다. 색을 더하는 것이
+   아니라 종이의 밝기를 낮추는 쪽이다 — 그 구획은 이미 지나간 자리다. */
+table.book tr.done td{color:var(--ink-2);background:var(--settled)}
+/* 닫힌 구획 안에서는 줄 사이의 선을 지운다. 덩어리가 갈라져 보이지 않게. */
+table.book tr.done + tr.done td{border-top:0}
 table.book tbody tr.entry:hover{background:var(--hl)}
 th button.sortbtn{
   appearance:none;background:none;border:0;padding:0;margin:0;cursor:pointer;
@@ -301,14 +314,30 @@ th button.sortbtn{
 th button.sortbtn:hover{text-decoration:underline;text-underline-offset:3px}
 th[aria-sort] button.sortbtn{color:var(--ink)}
 /* 정산 마감. 회계에서 마감은 이중선이다. */
-tr.closing td{
+/* 마감줄은 여러 칸을 하나로 합친 줄이라, 그냥 두면 표의 맨 왼쪽에서 시작해
+   위아래 줄의 전표 번호와 어긋난다. 첫 칸(고르는 칸)의 폭만큼 들여, 장부의
+   모든 줄이 한 선에서 시작하게 한다. 오른쪽도 마지막 칸과 같은 선에서 끝난다. */
+table.book tr.closing td{
   border-top:3px double var(--rule-hard);border-bottom:3px double var(--rule-hard);
-  padding:13px 14px;font-size:13.5px;background:var(--hl)}
-/* 날짜 · 이름 … 합계 · 도장. 가운데를 늘려 양끝을 밀어 놓는다. */
-.close-line{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.close-line .day{color:var(--ink-2);white-space:nowrap}
-.close-line b{font-weight:700}
-.close-line .total{margin-left:auto;white-space:nowrap}
+  /* 전표 번호가 시작하는 자리에 맞춘다. 재어 보고 정한 값이다. */
+  padding:13px 0 13px 30px;font-size:13.5px;background:var(--settled)}
+/* 마감줄의 짜임 (§12)
+   날짜는 왼쪽, 이름은 **가운데**, 합계와 도장은 오른쪽.
+
+   이름을 왼쪽에 두었더니 위아래의 기록들과 같은 줄처럼 읽혔다. 이 줄은
+   기록이 아니라 구획을 닫는 표시다. 가운데에 놓으면 그 사실이 형태로 먼저
+   보인다 — 인쇄물에서 장을 나누는 표제가 가운데 오는 것과 같은 이유다.
+
+   양옆을 1fr로 같게 잡아야 이름이 화면의 진짜 가운데에 온다. 날짜와 합계의
+   길이가 달라도 흔들리지 않는다. */
+.close-line{
+  display:grid;grid-template-columns:1fr auto 1fr;
+  align-items:center;gap:10px 16px}
+.close-line .day{color:var(--ink-2);white-space:nowrap;justify-self:start}
+.close-line b{font-weight:700;text-align:center;white-space:nowrap}
+.close-line .close-sum{
+  display:flex;align-items:center;gap:14px;justify-self:end;white-space:nowrap}
+.close-line .total{white-space:nowrap}
 /* 이 도장만은 자리를 차지한다. 겹쳐 찍으면 합계를 가린다. */
 .close-line .mark{position:static;flex:none}
 
@@ -590,7 +619,7 @@ footer a:hover{color:var(--ink)}
 @media print{
   :root{
     --paper:#fff; --ink:#000; --ink-2:#3a3a3a; --ink-3:#666;
-    --rule:#8c8c8c; --rule-2:#c8c8c8; --rule-hard:#000; --hl:#f4f4f4;
+    --rule:#8c8c8c; --rule-2:#c8c8c8; --rule-hard:#000; --hl:#f4f4f4; --settled:#f0f0f0;
   }
   body{padding:0;font-size:10.5pt}
   nav, .who, footer, .act, input[type=checkbox], .empty{display:none !important}
@@ -916,7 +945,7 @@ footer a:hover{color:var(--ink)}
    펴지는 자리로 보낸다. 표는 표로 남고, 읽을 것만 남는다.
    ══════════════════════════════════════════════════════════════════ */
 @media (max-width:640px){
-  body{padding:0 16px}
+  body{padding:0 22px}
 
   /* 머리글 — 로고와 계정만. 팀에서의 내 이름은 팀 화면에 있다. */
   .topbar{gap:10px}
@@ -929,24 +958,171 @@ footer a:hover{color:var(--ink)}
   nav .spacer{display:none}
   nav .act.primary{width:100%;margin-top:12px;text-align:center;padding:11px 18px}
 
-  /* 장부 — 세 칸만 남긴다. 나머지는 줄을 누르면 펴진다.
-     .entries 에만 건다. 같은 book 표를 팀·정산·초대 화면도 쓰는데,
-     거기서 둘째 칸을 접으면 엉뚱한 것이 사라진다. */
   table.book{font-size:14px}
-  table.book.entries th:nth-child(2), table.book.entries td:nth-child(2),  /* 전표 */
-  table.book.entries th:nth-child(5), table.book.entries td:nth-child(5),  /* 결제 */
-  table.book.entries th:nth-child(7), table.book.entries td:nth-child(7){  /* 부담 */
-    display:none}
   table.book th,table.book td{padding:8px 7px}
   table.book th:first-child,table.book td:first-child{padding-left:0}
-  table.book.entries th:first-child,table.book.entries td:first-child{width:20px}
   .subject{text-align:left}
 
-  /* 마감줄 — 도장이 밖으로 나가지 않게 아래로 내린다. */
-  tr.closing td{padding:11px 8px}
-  .close-line{gap:6px 12px}
-  .close-line .total{margin-left:auto}
-  .close-line .mark.sm{margin-left:0}
+  /* ────────────────────────────────────────────────────────────────
+     장부 — 폰에서는 표를 그만두고 기록으로 그린다.
+
+     칸을 숨기는 방식으로 오래 버텼는데, 그건 넓은 화면용 표를 접어 두는
+     것이라 화면이 하나 늘 때마다 접는 규칙이 하나씩 붙었다. 빠뜨리면
+     이름이 한 글자씩 세로로 쪼개졌다. 폰에 여덟 칸은 애초에 안 들어간다.
+
+     그래서 같은 표를 **다르게 그린다.** 한 줄이 한 기록이 된다.
+
+         001                              09.01
+         식사(데미그라스함박 외 2건)
+         서민영 · 개인                  41,300원
+         ────────────────────────────────────────
+
+     상자를 두르지 않는다. 초창기 웹 문서가 그랬듯 글과 괘선만으로 나눈다.
+     다만 그때처럼 아무렇게나 흘리지는 않는다 — 세로 리듬을 맞추고, 숫자는
+     자릿수를 맞춰 오른쪽에 세운다.
+
+     장부다움은 셋이 떠맡는다. 줄마다 남는 **전표 번호**, 구획을 닫는
+     **이중 마감선**, 그리고 정산이 끝난 줄에 찍히는 **도장**. 세로 괘선은
+     감쌀 칸이 없으니 폰에서는 물러난다.
+     ──────────────────────────────────────────────────────────────── */
+  table.book.entries,
+  table.book.entries thead,
+  table.book.entries tbody,
+  table.book.entries tr,
+  table.book.entries td{display:block;width:auto}
+
+  /* 칸 이름은 표에서만 뜻이 있다. 기록에는 이름표가 붙지 않는다. */
+  table.book.entries thead{display:none}
+
+  /*
+    한 기록의 짜임.
+
+        001                         09.01  [☐ 또는 도장]
+        식사(데미그라스함박 외 2건)
+        서민영 · 개인                       41,300원
+
+    두 가지를 지킨다.
+
+    **세 줄이 같은 선에서 시작한다.** 시작선이 어긋나면 내용을 읽기 전에
+    정돈되지 않았다는 인상이 먼저 온다.
+
+    **좌우 여백이 같다.** 왼쪽에 고르는 칸을 위한 홈을 파 두면 글이 오른쪽으로
+    밀려 한쪽만 넓어진다. 그래서 고르는 칸을 오른쪽 끝, 머리 줄로 옮겼다.
+    거기는 원래 상태가 적히는 자리이고 — 고를 수 있는 줄에는 체크칸이,
+    끝난 줄에는 도장이 온다. 둘은 함께 나타나지 않으므로 한 자리를 나눠 쓴다.
+  */
+  table.book.entries tr.entry{
+    display:grid;
+    grid-template-columns:auto 1fr auto auto;
+    grid-template-areas:
+      "slip  .     day    mark"
+      "title title title  title"
+      "who   bears amount amount";
+    align-items:baseline;
+    column-gap:10px;
+    row-gap:4px;
+    padding:16px 0 17px;
+    border-bottom:1px solid var(--rule-2)}
+  table.book.entries tr.entry:last-child{border-bottom:0}
+  table.book.entries tr.entry > td{border:0;padding:0;white-space:normal}
+
+  /* 어느 칸이 어디로 가는지. 표의 순서 그대로다.
+     고르는 칸(1)과 도장(8)은 함께 나타나지 않으므로 한 자리를 나눠 쓴다. */
+  table.book.entries td:nth-child(1),
+  table.book.entries td:nth-child(8){grid-area:mark;justify-self:end}
+  table.book.entries td:nth-child(2){grid-area:slip}
+  table.book.entries td:nth-child(3){grid-area:day}
+  table.book.entries td:nth-child(4){grid-area:title}
+  table.book.entries td:nth-child(5){grid-area:who;white-space:nowrap}
+  table.book.entries td:nth-child(6){grid-area:amount}
+  table.book.entries td:nth-child(7){grid-area:bears}
+
+  /* 첫 줄 — 전표 번호와 날짜. 기록의 머리다. 작고 흐리게 둔다. */
+  table.book.entries td.slip,
+  table.book.entries td.day{
+    font-size:12px;color:var(--ink-3);letter-spacing:.04em;width:auto}
+  table.book.entries td.day{justify-self:end}
+
+  /* 가운데 줄 — 무엇을 샀는지. 이 기록에서 가장 먼저 읽혀야 하는 것이다. */
+  table.book.entries td:nth-child(4){
+    font-size:16px;line-height:1.45;margin:1px 0 2px}
+  table.book.entries .subject{font-size:inherit}
+
+  /* 아래 줄 — 누가 냈고 어떻게 나뉘는지, 그리고 금액.
+     금액은 세로 괘선 대신 크기로 선다.
+
+     짧은 말은 절대 세로로 쪼개지지 않게 한다. 이름 석 자가 한 글자씩 줄바꿈
+     되면 읽는 것이 아니라 더듬게 된다. 자리가 모자라면 줄을 넘길 것이 아니라
+     칸이 좁은 것이므로, 넘치지 않도록 폭을 나눠 준다. */
+  table.book.entries td:nth-child(5),
+  table.book.entries td:nth-child(7){
+    font-size:12.5px;color:var(--ink-2);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;min-width:0}
+  /* '서민영'과 '개인' 사이의 가운뎃점. 두 칸을 한 덩어리로 읽히게 한다. */
+  table.book.entries td:nth-child(7)::before{content:"· ";color:var(--ink-3)}
+  table.book.entries td.money{
+    font-size:16.5px;font-weight:700;justify-self:end;
+    border-left:0;border-right:0;text-align:right}
+
+  /* 고른 줄 — 정산할 것을 표시한 상태. 왼쪽에 굵은 선 하나로 알린다. */
+  table.book.entries tr.entry:has(input:checked){
+    box-shadow:inset 3px 0 0 var(--ink);padding-left:11px}
+
+  /* 기록으로 그릴 때는 가로로 구를 것이 없다. 구르는 상자를 그대로 두면
+     바깥으로 내민 띠가 그만큼 잘려 나가므로, 이 모양일 때만 상자를 푼다. */
+  .scroll:has(table.book.entries){overflow-x:visible}
+
+  /* 정산이 끝난 줄. 넓은 화면과 같은 톤으로 바탕을 낮춘다.
+     기록이 세로로 이어지는 폰에서는 이 덩어리가 더 크게 보인다 —
+     어디까지가 닫힌 구획인지 훑기만 해도 보여야 한다.
+
+     띠는 **화면 끝까지** 늘리고, 글은 제자리에 둔다. 띠의 가장자리와 글의
+     시작선이 겹쳐 있으면 글이 종이 밖으로 흘러내리는 것처럼 보인다. 여백은
+     띠 안쪽에 있어야 띠가 글을 담은 것으로 읽힌다.
+
+     밀어낸 만큼(22px) 안쪽에서 되돌려 주므로 글의 시작선은 정산되지 않은
+     줄과 똑같이 남는다. 달라지는 것은 바탕뿐이다. */
+  table.book.entries tr.entry.done,
+  table.book.entries tr.closing{
+    margin-left:-22px;margin-right:-22px;
+    padding-left:22px;padding-right:22px}
+  table.book.entries tr.entry.done{
+    color:var(--ink-2);background:var(--settled);
+    border-bottom-color:var(--rule)}
+  table.book.entries tr.entry.done + tr.entry.done{border-top:0}
+  table.book.entries tr.entry.done td.money{font-weight:400}
+
+  /* 펼친 자리는 기록 아래에 그대로 이어 붙는다. */
+  table.book.entries td.opened{
+    padding:0 0 18px;border-bottom:1px solid var(--rule-2)}
+
+  /* 마감선 — 구획을 닫는 자리다. 폰에서는 화면 폭을 다 쓴다.
+
+     선과 바탕은 **줄(tr)**이 지고, 칸(td)은 글만 담는다. 줄은 화면 끝까지
+     늘어나 있으므로 닫는 선도 끝까지 그어지고, 글은 그 안쪽 여백에 앉는다.
+     위의 정산된 줄들과 같은 폭·같은 바탕이라 한 덩어리로 닫힌다. */
+  table.book.entries tr.closing{
+    display:block;
+    border-top:3px double var(--rule-hard);
+    border-bottom:3px double var(--rule-hard);
+    background:var(--settled)}
+  /* 표에서 떼어 낸 칸은 스스로 폭을 갖지 못한다. 한 줄을 다 쓰라고 적어 준다.
+     적지 않으면 안에 든 글의 길이만큼만 차지해 오른쪽으로 밀려 붙는다. */
+  table.book.entries tr.closing td{
+    display:block;width:100%;box-sizing:border-box;
+    border:0;background:none;padding:13px 0}
+
+  /* 마감줄 — 폰에서는 셋을 한 줄에 넣을 자리가 없다. 이름을 가운데 한 줄로
+     올리고, 날짜와 합계를 그 아래 양끝에 둔다. 가운데에 있다는 사실은 그대로다. */
+  .close-line{
+    grid-template-columns:auto 1fr;
+    grid-template-areas:
+      "label label"
+      "day   sum";
+    gap:8px 12px}
+  .close-line b{grid-area:label;justify-self:center}
+  .close-line .day{grid-area:day}
+  .close-line .close-sum{grid-area:sum}
 
   /* 품목 — 한 칸씩. 사진이 화면을 다 먹지 않도록 조금 낮춘다. */
   .goods{grid-template-columns:1fr;gap:26px}

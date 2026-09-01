@@ -19,7 +19,11 @@ export function allocationLabel(expense: Expense, members: Member[], locale: Loc
     case 'partial':
       return t(locale, 'allocPartial', { n: a.participantIds.length });
     case 'personal':
-      return t(locale, 'allocPersonal', { who: nameOf(members, a.ownerId) });
+      // 결제한 사람이 곧 가져가는 사람이면 이름을 두 번 적지 않는다.
+      // 화면에는 결제자가 바로 옆에 있어서 '서민영 · 서민영 개인'이 된다.
+      return a.ownerId === expense.payerId
+        ? t(locale, 'allocSelf')
+        : t(locale, 'allocPersonal', { who: nameOf(members, a.ownerId) });
   }
 }
 

@@ -152,14 +152,18 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
       <td colSpan={8}>
         <div className="close-line">
           <span className="num day">{s.date}</span>
+          {/* 이름은 가운데. 이 줄은 기록이 아니라 구획을 닫는 표시라서,
+              왼쪽에서 읽기 시작하는 다른 줄들과 다르게 앉힌다. */}
           <b>{T('closing', { label: s.label })}</b>
-          <span className="num total">{cash(s.snapshot.totalAmount)}</span>
-          <span
-            className="mark sm"
-            aria-hidden="true"
-            style={{ transform: `rotate(${-11 + ((s.seq * 7) % 9)}deg)` }}
-          >
-            <span className="big">{T('settledStamp')}</span>
+          <span className="close-sum">
+            <span className="num total">{cash(s.snapshot.totalAmount)}</span>
+            <span
+              className="mark sm"
+              aria-hidden="true"
+              style={{ transform: `rotate(${-11 + ((s.seq * 7) % 9)}deg)` }}
+            >
+              <span className="big">{T('settledStamp')}</span>
+            </span>
           </span>
         </div>
       </td>
