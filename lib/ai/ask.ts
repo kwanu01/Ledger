@@ -2,6 +2,7 @@ import 'server-only';
 import type { Ledger } from '../domain/types.ts';
 import { computeSettlement, nameOf, settledExpenseIds } from '../domain/settlement.ts';
 import { formatNumber } from '../domain/money.ts';
+import { ENDPOINT, MODEL, meter, type Usage } from './usage.ts';
 
 /**
  * 장부에 대해 묻기 (§21.10)
@@ -16,15 +17,23 @@ import { formatNumber } from '../domain/money.ts';
  * 건네고, 그 표에 있는 숫자만 쓰라고 못 박는다.
  */
 
-const MODEL = process.env.LEDGER_AI_MODEL || 'claude-sonnet-4-5';
-const ENDPOINT = 'https://api.anthropic.com/v1/messages';
-
 /** 너무 큰 장부는 최근 것부터 자른다. 잘랐다는 사실도 함께 알린다. */
 const MAX_ROWS = 200;
 
+/**
+ * 앞선 대화는 여섯 마디까지, 한 마디는 1000자까지만 싣는다.
+ *
+ * 앞선 대화는 화면에서 올라오는 값이라 얼마든지 길어질 수 있다. 길이를 재지
+ * 않으면 한 번 부르는 값이 부르는 쪽 마음대로 커진다. 그 값은 키 주인이 낸다.
+ */
+const MAX_TURNS = 6;
+const MAX_TURN_CHARS = 1000;
+
 export type Turn = { role: 'user' | 'assistant'; text: string };
 
-export type AskResult = { ok: true; answer: string } | { ok: false; message: string };
+export type AskResult =
+  | { ok: true; answer: string; usage: Usage }
+  | { ok: false; message: string; usage?: Usage };
 
 /**
  * 장부를 글로 옮긴다. 화면에 있는 것과 같은 사실만 담는다.
@@ -137,7 +146,10 @@ export async function askAboutLedger(args: {
   if (!key) return { ok: false, message: '아직 설정되지 않았습니다.' };
 
   const messages = [
-    ...args.history.slice(-6).map((t) => ({ role: t.role, content: t.text })),
+    ...args.history.slice(-MAX_TURNS).map((t) => ({
+      role: t.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+      content: String(t.text ?? '').slice(0, MAX_TURN_CHARS),
+    })),
     {
       role: 'user' as const,
       content: `장부:\n\n${digest(args.ledger, args.meId)}\n\n---\n\n질문: ${args.question}`,
@@ -167,13 +179,17 @@ export async function askAboutLedger(args: {
     return { ok: false, message: '대답하지 못했습니다.' };
   }
 
-  const body = (await res.json()) as { content?: { type: string; text?: string }[] };
+  const body = (await res.json()) as {
+    content?: { type: string; text?: string }[];
+    usage?: { input_tokens?: number; output_tokens?: number };
+  };
+  const usage = meter(body.usage);
   const text = (body.content ?? [])
     .filter((c) => c.type === 'text')
     .map((c) => c.text ?? '')
     .join('')
     .trim();
 
-  if (!text) return { ok: false, message: '대답하지 못했습니다.' };
-  return { ok: true, answer: text };
+  if (!text) return { ok: false, message: '대답하지 못했습니다.', usage };
+  return { ok: true, answer: text, usage };
 }

@@ -8,12 +8,12 @@ import {
   currentPass,
   issuePass,
   teamForInvite,
-  AccessError,
 } from '../../lib/access.ts';
 import { currentUser } from '../../lib/auth-client.ts';
 import { db } from '../../lib/db/client.ts';
 import { dropLedgerImages } from '../../lib/db/images.ts';
 import { CURRENCIES, type CurrencyCode } from '../../lib/domain/money.ts';
+import { failed } from '../../lib/fail.ts';
 
 /**
  * 계정과 장부를 잇는 자리.
@@ -26,10 +26,6 @@ export type Result<T = undefined> =
   | ({ ok: true } & (T extends undefined ? { value?: never } : { value: T }))
   | { ok: false; message: string };
 
-function failed(e: unknown): { ok: false; message: string } {
-  if (e instanceof AccessError) return { ok: false, message: e.message };
-  return { ok: false, message: e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다.' };
-}
 
 /** 로그인한 사용자의 프로필 행을 보장한다. 처음 들어올 때 한 번 만들어진다. */
 export async function ensureProfile(): Promise<{ id: string; displayName: string }> {
@@ -127,7 +123,15 @@ export async function createTeamAndLedger(input: {
   }
 }
 
-/** 초대 링크 발급. 링크를 아는 사람은 팀에 들어올 수 있으므로 회수와 만료가 가능하다. */
+/**
+ * 초대 링크 발급 (§5.2)
+ *
+ * 링크를 가진 사람은 이 팀에 들어와 장부 전체를 본다. 문을 여는 열쇠를 만드는
+ * 일이라 장부를 만든 사람만 한다. 아무 팀원이나 만들 수 있으면, 한 사람만
+ * 흔들려도 팀 전체의 기록이 열린다.
+ *
+ * 회수와 만료가 함께 있는 것도 같은 이유다.
+ */
 export async function createInvite(args: {
   ledgerId: string;
   expiresInDays?: number;
@@ -135,8 +139,12 @@ export async function createInvite(args: {
   try {
     const pass = await requireLedgerAccess(args.ledgerId);
     if (!pass.userId) return { ok: false, message: '초대 링크는 로그인한 사람만 만들 수 있습니다.' };
+    if (!(await isOwner(pass))) {
+      return { ok: false, message: '초대 링크는 이 장부를 만든 사람만 발급할 수 있습니다.' };
+    }
 
-    const days = args.expiresInDays ?? 120;
+    // 기간은 넣더라도 한 해를 넘기지 않는다. 오래된 열쇠는 잊힌 채 남는다.
+    const days = Math.min(Math.max(Math.trunc(args.expiresInDays ?? 120), 1), 365);
     const { data, error } = await db
       .from('invites')
       .insert({
@@ -157,6 +165,9 @@ export async function createInvite(args: {
 export async function revokeInvite(args: { ledgerId: string; token: string }): Promise<Result> {
   try {
     const pass = await requireLedgerAccess(args.ledgerId);
+    if (!(await isOwner(pass))) {
+      return { ok: false, message: '초대 링크는 이 장부를 만든 사람만 회수할 수 있습니다.' };
+    }
     const { error } = await db
       .from('invites')
       .update({ revoked_at: new Date().toISOString() })
@@ -305,9 +316,15 @@ export async function setMemberActive(args: {
 
 export type InviteRow = { token: string; createdAt: string; expiresAt: string | null };
 
-/** 살아 있는 초대 링크만. 회수했거나 기간이 지난 것은 보여 주지 않는다. */
+/**
+ * 살아 있는 초대 링크만. 회수했거나 기간이 지난 것은 보여 주지 않는다.
+ *
+ * 링크 자체가 열쇠라서, 발급할 수 있는 사람에게만 보인다. 팀원이라도
+ * 만든 사람이 아니면 빈 목록을 받는다.
+ */
 export async function liveInvites(ledgerId: string): Promise<InviteRow[]> {
   const pass = await requireLedgerAccess(ledgerId);
+  if (!(await isOwner(pass))) return [];
   const { data } = await db
     .from('invites')
     .select('token, created_at, expires_at, revoked_at')
@@ -451,6 +468,38 @@ export async function claimMembership(): Promise<void> {
   if (mine) return;
 
   await db.from('members').update({ user_id: user.id }).eq('id', pass.memberId);
+}
+
+/**
+ * 팀 이름 바꾸기.
+ *
+ * 만든 사람만 바꾼다. 팀 이름은 모두의 화면에 뜨고 카카오톡으로 나가는 글의
+ * 첫 줄이기도 하다. 초대 링크로 들어온 사람이 바꿀 수 있으면, 그 링크를 받은
+ * 누구든 남의 팀 이름을 갈아 끼울 수 있게 된다.
+ *
+ * 지난 정산 글에 이미 옛 이름이 적혀 나갔더라도 그건 그대로 둔다. 보낸 글은
+ * 보낸 그대로가 맞다.
+ */
+export async function renameTeam(args: { ledgerId: string; name: string }): Promise<Result> {
+  try {
+    const pass = await requireLedgerAccess(args.ledgerId);
+    if (!(await isOwner(pass))) {
+      return { ok: false, message: '팀을 만든 사람만 이름을 바꿀 수 있습니다.' };
+    }
+
+    const name = args.name.trim();
+    if (!name) return { ok: false, message: '팀 이름을 적어 주세요.' };
+    if (name.length > 60) return { ok: false, message: '팀 이름이 너무 깁니다.' };
+
+    const { error } = await db.from('teams').update({ name }).eq('id', pass.teamId);
+    if (error) throw new Error(error.message);
+
+    revalidatePath(`/l/${args.ledgerId}`, 'layout');
+    revalidatePath('/teams');
+    return { ok: true };
+  } catch (e) {
+    return failed(e);
+  }
 }
 
 /* ── 장부 지우기 ────────────────────────────────────────────────────────── */

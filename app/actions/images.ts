@@ -1,7 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireLedgerAccess, AccessError } from '../../lib/access.ts';
+import { requireLedgerAccess } from '../../lib/access.ts';
+import { failed } from '../../lib/fail.ts';
 import {
   ALLOWED_TYPES,
   MAX_BYTES,
@@ -29,10 +30,7 @@ import {
 
 export type ImageResult = { ok: true; path: string | null } | { ok: false; message: string };
 
-function failed(e: unknown): ImageResult {
-  if (e instanceof AccessError) return { ok: false, message: e.message };
-  return { ok: false, message: e instanceof Error ? e.message : '사진을 저장하지 못했습니다.' };
-}
+const oops = (e: unknown) => failed(e, '사진을 저장하지 못했습니다.');
 
 export async function attachImage(formData: FormData): Promise<ImageResult> {
   try {
@@ -66,14 +64,23 @@ export async function attachImage(formData: FormData): Promise<ImageResult> {
       bytes: await file.arrayBuffer(),
       contentType: file.type,
     });
-    await setExpenseImage({ expenseId, kind, path });
+
+    // 저장소에 올린 다음 장부의 칸을 채운다. 칸을 채우다 막히면 방금 올린
+    // 파일은 아무도 가리키지 않는 채로 남는다. 그래서 실패하면 되돌린다.
+    try {
+      await setExpenseImage({ expenseId, kind, path });
+    } catch (e) {
+      await dropImage(path);
+      throw e;
+    }
+
     // 바꿔 끼웠으면 옛 파일은 쓸 데가 없다.
     await dropImage(now.path);
 
     revalidatePath(`/l/${ledgerId}`, 'layout');
     return { ok: true, path };
   } catch (e) {
-    return failed(e);
+    return oops(e);
   }
 }
 
@@ -96,6 +103,6 @@ export async function removeImage(args: {
     revalidatePath(`/l/${args.ledgerId}`, 'layout');
     return { ok: true, path: null };
   } catch (e) {
-    return failed(e);
+    return oops(e);
   }
 }

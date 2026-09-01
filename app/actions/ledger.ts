@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireLedgerAccess, AccessError } from '../../lib/access.ts';
+import { requireLedgerAccess } from '../../lib/access.ts';
 import {
   cancelSettlement,
   confirmSettlement,
@@ -13,6 +13,7 @@ import {
   loadLedger,
 } from '../../lib/db/repo.ts';
 import { currentRoster } from '../../lib/domain/settlement.ts';
+import { failed } from '../../lib/fail.ts';
 import type { Allocation } from '../../lib/domain/types.ts';
 
 /**
@@ -29,11 +30,6 @@ export type Result<T = undefined> =
   | ({ ok: true } & (T extends undefined ? { value?: never } : { value: T }))
   | { ok: false; message: string };
 
-function failed(e: unknown): { ok: false; message: string } {
-  if (e instanceof AccessError) return { ok: false, message: e.message };
-  const message = e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다.';
-  return { ok: false, message };
-}
 
 /* ── 지출 기록 ────────────────────────────────────────────────────────── */
 
@@ -173,7 +169,7 @@ export async function undoSettlement(args: {
 }): Promise<Result> {
   try {
     await requireLedgerAccess(args.ledgerId);
-    await cancelSettlement(args.settlementId);
+    await cancelSettlement(args.settlementId, args.ledgerId);
     revalidatePath(`/l/${args.ledgerId}`);
     return { ok: true };
   } catch (e) {

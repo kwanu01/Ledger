@@ -30,7 +30,15 @@ export type Pass = {
   memberName: string;
   /** 로그인해서 들어왔으면 그 계정 id. 초대 링크로만 들어왔으면 없다. */
   userId?: string;
+  /**
+   * 발급 시각(초). 쿠키의 maxAge는 브라우저에게 하는 부탁일 뿐이라,
+   * 값 자체가 언제 만들어졌는지 안에도 적어 둔다. 적혀 있지 않거나 넉 달이
+   * 지난 통행증은 받지 않는다.
+   */
+  iat?: number;
 };
+
+const now = () => Math.floor(Date.now() / 1000);
 
 function secret(): string {
   const s = process.env.LEDGER_COOKIE_SECRET;
@@ -57,17 +65,26 @@ function unseal(raw: string | undefined): Pass | null {
   // 길이가 다르면 timingSafeEqual이 던지므로 먼저 거른다.
   if (mac.length !== expected.length) return null;
   if (!timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return null;
+  let pass: Pass;
   try {
-    return JSON.parse(Buffer.from(payload, 'base64url').toString()) as Pass;
+    pass = JSON.parse(Buffer.from(payload, 'base64url').toString()) as Pass;
   } catch {
     return null;
   }
+
+  // 서명이 맞아도 오래된 것은 받지 않는다. 서명은 "누가 만들었나"만 말해 줄 뿐,
+  // "아직 유효한가"는 말해 주지 않는다. 발급 시각이 아예 없는 옛 통행증도
+  // 여기서 걸린다. 다시 초대 링크를 지나오면 새로 발급된다.
+  if (typeof pass.iat !== 'number' || now() - pass.iat > MAX_AGE) return null;
+  if (!pass.teamId || !pass.memberId) return null;
+
+  return pass;
 }
 
 /** 초대 링크를 통과했을 때 호출한다. */
 export async function issuePass(pass: Pass): Promise<void> {
   const jar = await cookies();
-  jar.set(COOKIE, seal(pass), {
+  jar.set(COOKIE, seal({ ...pass, iat: now() }), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -109,12 +126,42 @@ export class AccessError extends Error {}
 async function memberOfTeam(user: AuthUser, teamId: string): Promise<Pass | null> {
   const { data } = await db
     .from('members')
-    .select('id, display_name')
+    .select('id, display_name, active')
     .eq('team_id', teamId)
     .eq('user_id', user.id)
     .maybeSingle();
   if (!data) return null;
+  if (!data.active && !(await ownsTeam(user.id, teamId))) return null;
   return { teamId, memberId: data.id, memberName: data.display_name, userId: user.id };
+}
+
+/**
+ * 장부를 만든 사람인가.
+ *
+ * 명단에서 내려간 사람은 더 들어오지 못한다. 다만 만든 사람만은 예외다.
+ * 자기 이름을 내렸다가 자기 장부에서 잠기면 되돌릴 방법이 없다.
+ */
+async function ownsTeam(userId: string, teamId: string): Promise<boolean> {
+  const { data } = await db.from('teams').select('owner_id').eq('id', teamId).maybeSingle();
+  return Boolean(data && data.owner_id === userId);
+}
+
+/**
+ * 통행증에 적힌 팀원이 아직 그 팀에 있는지 확인한다.
+ *
+ * 통행증은 브라우저에 넉 달 남아 있고, 그동안 명단은 바뀐다. 서명이 맞다는 것은
+ * 그 값을 우리가 만들었다는 뜻일 뿐, 지금도 유효하다는 뜻이 아니다. 이름도
+ * 그동안 바뀌었을 수 있으므로 지금 이름으로 바꿔서 돌려준다.
+ */
+async function stillAMember(pass: Pass): Promise<Pass | null> {
+  const { data } = await db
+    .from('members')
+    .select('display_name, active')
+    .eq('id', pass.memberId)
+    .eq('team_id', pass.teamId)
+    .maybeSingle();
+  if (!data || !data.active) return null;
+  return { ...pass, memberName: data.display_name };
 }
 
 /** 로그인한 사용자가 접근할 수 있는 팀 id 목록 */
@@ -138,21 +185,23 @@ export async function requireLedgerAccess(ledgerId: string): Promise<Pass> {
   if (error || !data) throw new AccessError('장부를 찾을 수 없습니다.');
 
   // 로그인해 있으면 계정이 먼저다. "나"를 정하는 것은 계정이지 쿠키가 아니다.
-  // 보냈어요·받았어요·계좌가 사람을 가리는 이상, 브라우저에 남아 있던 통행증이
+  // 보냈어요·받았어요가 사람을 가리는 이상, 브라우저에 남아 있던 통행증이
   // 다른 계정으로 로그인한 사람을 그 사람으로 만들어서는 안 된다.
+  //
+  // 통행증이 같은 계정 것이면 그대로 믿고 왕복을 줄이던 지름길이 있었으나 없앴다.
+  // 그 사이 명단에서 내려갔거나 이름이 바뀌었어도 넉 달 전 값이 그대로 통했다.
+  // 계정으로 들어온 사람은 언제나 지금 명단을 보고 판정한다.
   if (user) {
-    // 이 계정으로 발급한 통행증이면 그대로 믿는다. 왕복이 한 번 줄어든다.
-    if (cookiePass && cookiePass.teamId === data.team_id && cookiePass.userId === user.id) {
-      return cookiePass;
-    }
     const pass = await memberOfTeam(user, data.team_id);
     if (pass) return pass;
   }
 
   // 아직 계정에 묶이지 않은 사람. 예전 초대 링크로 이름만 적고 들어온 경우다.
   // 로그인하면 claimMembership이 이 줄을 계정에 붙이고, 그다음부터는 위로 온다.
+  // 통행증만으로 들어오는 유일한 길이라, 명단에 아직 있는지 매번 확인한다.
   if (cookiePass && cookiePass.teamId === data.team_id && !cookiePass.userId) {
-    return cookiePass;
+    const alive = await stillAMember(cookiePass);
+    if (alive) return alive;
   }
 
   throw new AccessError('이 장부에 접근할 권한이 없습니다. 초대 링크로 다시 들어와 주세요.');

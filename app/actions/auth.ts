@@ -1,9 +1,10 @@
 'use server';
 
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { authClient } from '../../lib/auth-client.ts';
 import { clearPass } from '../../lib/access.ts';
+import { siteOrigin } from '../../lib/origin.ts';
 
 /**
  * 로그인 (§5.2, §21.8)
@@ -20,13 +21,6 @@ import { clearPass } from '../../lib/access.ts';
  */
 
 type Provider = 'google' | 'kakao';
-
-async function siteOrigin(): Promise<string> {
-  const h = await headers();
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
-  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https');
-  return `${proto}://${host}`;
-}
 
 export type AuthResult = { ok: true; message?: string } | { ok: false; message: string };
 

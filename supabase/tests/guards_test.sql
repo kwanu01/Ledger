@@ -79,6 +79,19 @@ select pg_temp.must_fail('정산된 지출은 수정할 수 없다',
 select pg_temp.must_fail('정산된 지출은 삭제할 수 없다',
   $$delete from public.expenses where id = '40000000-0000-0000-0000-000000000001'$$);
 
+-- 0011. 사진 두 칸만은 예외다. 금액이 아니라 금액의 근거이기 때문이다.
+select pg_temp.must_pass('정산된 지출이라도 영수증 사진은 붙일 수 있다',
+  $$update public.expenses set receipt_path = 'x/y/receipt-1.jpg'
+     where id = '40000000-0000-0000-0000-000000000001'$$);
+
+select pg_temp.must_pass('정산된 지출이라도 품목 사진은 뗄 수 있다',
+  $$update public.expenses set representative_image_path = null
+     where id = '40000000-0000-0000-0000-000000000001'$$);
+
+select pg_temp.must_fail('사진과 금액을 함께 바꾸면 막힌다',
+  $$update public.expenses set receipt_path = 'x/y/receipt-2.jpg', amount = 999
+     where id = '40000000-0000-0000-0000-000000000001'$$);
+
 select pg_temp.must_fail('확정된 정산의 snapshot은 바꿀 수 없다',
   $$update public.settlements set snapshot = '{"totalAmount":1}'::jsonb
      where id = '50000000-0000-0000-0000-000000000001'$$);
@@ -221,7 +234,23 @@ select pg_temp.must_fail('제3자도 확인할 수 없다',
      where id = '60000000-0000-0000-0000-000000000001'$$);
 
 select pg_temp.must_pass('아무도 확인하지 않은 정산은 취소된다',
-  $$select public.cancel_settlement('50000000-0000-0000-0000-000000000009')$$);
+  $$select public.cancel_settlement('50000000-0000-0000-0000-000000000009',
+                                    '30000000-0000-0000-0000-000000000001')$$);
+
+-- 0010. 장부가 다르면 지워지지 않는다. 남의 장부 정산 id를 알아도 소용없어야 한다.
+do $$
+declare n integer;
+begin
+  insert into public.settlements (id, ledger_id, label, snapshot)
+    values ('50000000-0000-0000-0000-000000000008', '30000000-0000-0000-0000-000000000001', '남의 장부 시험', '{}'::jsonb);
+  perform public.cancel_settlement('50000000-0000-0000-0000-000000000008',
+                                   '30000000-0000-0000-0000-0000000000ff');
+  select count(*) into n from public.settlements
+   where id = '50000000-0000-0000-0000-000000000008';
+  if n = 1 then raise notice '  ✓ 다른 장부 id로는 정산이 취소되지 않는다';
+  else raise notice '  ✗ 장부가 달라도 정산이 취소됐다'; end if;
+  delete from public.settlements where id = '50000000-0000-0000-0000-000000000008';
+end $$;
 
 select pg_temp.must_pass('받은 사람은 송금 완료를 확인할 수 있다',
   $$update public.transfers set confirmed_at = now(),
@@ -233,7 +262,8 @@ select pg_temp.must_fail('확인된 송금은 되돌릴 수 없다',
      where id = '60000000-0000-0000-0000-000000000001'$$);
 
 select pg_temp.must_fail('송금이 한 건이라도 확인되면 정산을 취소할 수 없다',
-  $$select public.cancel_settlement('50000000-0000-0000-0000-000000000001')$$);
+  $$select public.cancel_settlement('50000000-0000-0000-0000-000000000001',
+                                    '30000000-0000-0000-0000-000000000001')$$);
 
 do $$
 declare n integer;

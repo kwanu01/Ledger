@@ -158,6 +158,59 @@ function heldPose(dx: number, dy: number, speed: number, wobbly: boolean): strin
   return dx < 0 ? 'point' : 'wave';
 }
 
+/**
+ * 처음 설 자리 (§21.10)
+ *
+ * 오른쪽 아래 구석이 기본이지만, 좁은 화면에서는 거기에 이미 글이 있다.
+ * 종이 한 장이 글씨 위에 얹혀 있으면 읽는 사람만 성가시다.
+ *
+ * 그래서 자리를 몇 군데 놓고 실제로 그 자리에 무엇이 있는지 물어본다.
+ * 브라우저는 어느 점 위에 어떤 요소가 있는지 알려 준다(elementFromPoint).
+ * 글자나 누를 것이 걸리는 자리는 건너뛰고, 아무것도 없는 첫 자리에 선다.
+ * 다 걸리면 원래대로 오른쪽 아래에 선다 — 어디든 서야 하기 때문이다.
+ */
+function freeSpot(W: number, H: number, topRoom: number): { x: number; y: number } {
+  const roomX = Math.max(6, window.innerWidth - W - 6);
+  const roomY = Math.max(topRoom, window.innerHeight - H - 6);
+  const fallback = { x: roomX - 20, y: roomY - 16 };
+
+  // 몸이 실제로 그려지는 자리. 발밑이 아니라 그림이 있는 칸을 본다.
+  const busy = (x: number, y: number) => {
+    const pts: [number, number][] = [
+      [x + W / 2, y + H / 2],
+      [x + 16, y + H - 12],
+      [x + W - 16, y + H - 12],
+      [x + W / 2, y + 18],
+    ];
+    for (const [px, py] of pts) {
+      const el = document.elementFromPoint(px, py);
+      if (!el) continue;
+      // 이 자리를 가리는 것이 무엇인지. 바탕(html·body·wrap)이면 빈자리다.
+      const solid = el.closest(
+        'a,button,input,select,textarea,label,table,h1,h2,h3,p,li,img,figure,pre',
+      );
+      if (solid && solid.textContent?.trim()) return true;
+      if (solid && ['IMG', 'INPUT', 'SELECT', 'TEXTAREA'].includes(solid.tagName)) return true;
+    }
+    return false;
+  };
+
+  const candidates: { x: number; y: number }[] = [
+    fallback,                                   // 오른쪽 아래
+    { x: 6 + 14, y: roomY - 16 },               // 왼쪽 아래
+    { x: roomX - 20, y: Math.round(roomY / 2) },// 오른쪽 가운데
+    { x: 6 + 14, y: Math.round(roomY / 2) },    // 왼쪽 가운데
+    { x: roomX - 20, y: topRoom + 8 },          // 오른쪽 위
+  ];
+
+  for (const c of candidates) {
+    const x = clamp(c.x, 6, roomX);
+    const y = clamp(c.y, topRoom, roomY);
+    if (!busy(x, y)) return { x, y };
+  }
+  return fallback;
+}
+
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export default function Helper({ lang }: { lang: Locale }) {
@@ -237,8 +290,10 @@ export default function Helper({ lang }: { lang: Locale }) {
     }
     const roomX = Math.max(6, window.innerWidth - W - 6);
     const roomY = Math.max(TOP_ROOM, window.innerHeight - H - 6);
-    let x = roomX - 20;
-    let y = roomY - 16;
+    // 기억해 둔 자리가 없으면 빈 자리를 찾아 선다.
+    const first = freeSpot(W, H, TOP_ROOM);
+    let x = first.x;
+    let y = first.y;
     try {
       const s = localStorage.getItem(SPOT_KEY);
       if (s) {

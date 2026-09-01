@@ -26,6 +26,33 @@ const EXT: Record<string, string> = {
 export const ALLOWED_TYPES = Object.keys(EXT);
 export const MAX_BYTES = 5 * 1024 * 1024;
 
+/**
+ * 정말 그림 파일인지 앞머리를 보고 판정한다.
+ *
+ * 브라우저가 보내 주는 종류(Content-Type)는 보내는 쪽이 적는 값이다. 그 말만
+ * 믿으면 어떤 파일이든 image/png 라고 적어 올릴 수 있다. 그렇게 올라간 파일은
+ * 우리 주소로 다시 나가므로, 파일의 앞 몇 바이트를 직접 본다.
+ *
+ * 세 가지만 받는다. 앞머리가 아래와 다르면 종류를 뭐라고 적었든 받지 않는다.
+ */
+export function sniff(bytes: ArrayBuffer): string | null {
+  const b = new Uint8Array(bytes);
+  if (b.length < 12) return null;
+
+  // JPEG: FF D8 FF
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (PNG.every((v, i) => b[i] === v)) return 'image/png';
+
+  // WEBP: 'RIFF' .... 'WEBP'
+  const ascii = (i: number, s: string) => [...s].every((c, k) => b[i + k] === c.charCodeAt(0));
+  if (ascii(0, 'RIFF') && ascii(8, 'WEBP')) return 'image/webp';
+
+  return null;
+}
+
 /** 이 장부의 사진이 맞는지. 남의 장부 경로를 넣어 꺼내 가지 못하게 한다. */
 export function belongsTo(path: string, ledgerId: string): boolean {
   return path.startsWith(`${ledgerId}/`) && !path.includes('..');
@@ -38,7 +65,12 @@ export async function putImage(args: {
   bytes: ArrayBuffer;
   contentType: string;
 }): Promise<string> {
-  const ext = EXT[args.contentType];
+  // 적어 보낸 종류가 아니라 파일이 실제로 무엇인지로 정한다.
+  const real = sniff(args.bytes);
+  if (!real || real !== args.contentType) {
+    throw new Error('JPG · PNG · WEBP 사진만 올릴 수 있습니다.');
+  }
+  const ext = EXT[real];
   if (!ext) throw new Error('사진 파일만 올릴 수 있습니다.');
 
   const stamp = Date.now().toString(36);

@@ -6,6 +6,7 @@ import {
   createInvite,
   deleteTeam,
   renameMember,
+  renameTeam,
   revokeInvite,
   setMemberActive,
   type InviteRow,
@@ -55,6 +56,8 @@ export default function TeamPanel({
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [editTeam, setEditTeam] = useState(false);
+  const [newTeam, setNewTeam] = useState('');
   const [armed, setArmed] = useState(false);
 
   async function run(fn: () => Promise<{ ok: boolean; message?: string }>) {
@@ -155,6 +158,12 @@ export default function TeamPanel({
 
       </section>
 
+      {/*
+        초대 링크는 이 장부의 문을 여는 열쇠다. 만드는 것도 회수하는 것도
+        장부를 만든 사람만 하므로, 다른 팀원에게는 아예 보이지 않게 둔다.
+        보이는데 눌리지 않는 단추만큼 헷갈리는 것이 없다.
+      */}
+      {owner && (
       <section>
         <div className="caption">{T('inviteLinks')}</div>
 
@@ -212,6 +221,7 @@ export default function TeamPanel({
           </button>
         </div>
       </section>
+      )}
 
       <section>
         <div className="caption">{T('bookSection')}</div>
@@ -219,7 +229,52 @@ export default function TeamPanel({
           <tbody>
             <tr>
               <td className="k">{T('teamName')}</td>
-              <td className="v">{teamName}</td>
+              {/* 팀 이름은 만든 사람만 고친다. 모두의 화면에 뜨는 이름이라서. */}
+              <td className="v">
+                {!owner ? (
+                  teamName
+                ) : editTeam ? (
+                  <span className="row" style={{ gap: 8 }}>
+                    <input
+                      type="text"
+                      value={newTeam}
+                      autoFocus
+                      style={{ width: 200 }}
+                      onChange={(e) => setNewTeam(e.target.value)}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                          await run(() => renameTeam({ ledgerId, name: newTeam }));
+                          setEditTeam(false);
+                        }
+                        if (e.key === 'Escape') setEditTeam(false);
+                      }}
+                    />
+                    <button
+                      className="act small"
+                      disabled={busy}
+                      onClick={async () => {
+                        await run(() => renameTeam({ ledgerId, name: newTeam }));
+                        setEditTeam(false);
+                      }}
+                    >
+                      {T('rename')}
+                    </button>
+                    <button className="plain" onClick={() => setEditTeam(false)}>
+                      {T('close')}
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    className="plain"
+                    onClick={() => {
+                      setNewTeam(teamName);
+                      setEditTeam(true);
+                    }}
+                  >
+                    {teamName}
+                  </button>
+                )}
+              </td>
             </tr>
           </tbody>
         </table>

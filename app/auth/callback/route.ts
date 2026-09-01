@@ -17,10 +17,20 @@ export async function GET(request: NextRequest) {
   // 그 링크로 돌아가야 이름을 적고 팀에 들어갈 수 있다.
   const jar = await cookies();
   const saved = jar.get('ledger_next')?.value;
-  const next =
-    saved && saved.startsWith('/') && !saved.startsWith('//')
-      ? saved
-      : (searchParams.get('next') ?? '/teams');
+
+  /**
+   * 돌아갈 자리는 반드시 이 사이트 안이어야 한다.
+   *
+   * `//evil.com` 은 프로토콜 상대 주소라 바깥으로 나가고, `@evil.com` 은
+   * 앞부분이 사용자 정보로 읽혀 `teamledger.net@evil.com` 의 진짜 호스트가
+   * evil.com 이 된다. `\evil.com` 도 브라우저에 따라 같은 일이 일어난다.
+   * 로그인 직후에 남의 사이트로 튕기면, 그 화면을 우리 것으로 믿게 된다.
+   *
+   * 그래서 슬래시 하나로 시작하고, 그다음 글자가 슬래시도 역슬래시도
+   * 아닌 것만 통과시킨다. 쿠키든 쿼리든 같은 잣대로 본다.
+   */
+  const inside = (v: string | null | undefined) => (v && /^\/[^/\\]/.test(v) ? v : null);
+  const next = inside(saved) ?? inside(searchParams.get('next')) ?? '/teams';
   jar.delete('ledger_next');
 
   if (!code) {

@@ -1,5 +1,6 @@
 import 'server-only';
 import type { CurrencyCode } from '../domain/money.ts';
+import { ENDPOINT, MODEL, meter, type Usage } from './usage.ts';
 
 /**
  * 영수증 읽기 (§7, §18.4)
@@ -17,15 +18,7 @@ import type { CurrencyCode } from '../domain/money.ts';
  * 나중에 그 줄이 무엇이었는지 알 수 없게 된다. 한 건에 십몇 원 더 드는 대신
  * 이름이 맞는 쪽을 고른다. 비용을 줄이려면 LEDGER_AI_MODEL 로 바꿀 수 있다.
  */
-const MODEL = process.env.LEDGER_AI_MODEL || 'claude-sonnet-4-5';
-const ENDPOINT = 'https://api.anthropic.com/v1/messages';
-
-// 1M 토큰당 USD. 100만분의 1달러 단위 정수로 센다.
-const PRICES: Record<string, [number, number]> = {
-  'claude-sonnet-4-5': [3_000_000, 15_000_000],
-  'claude-haiku-4-5': [1_000_000, 5_000_000],
-};
-const [IN_PER_MTOK, OUT_PER_MTOK] = PRICES[MODEL] ?? PRICES['claude-sonnet-4-5'];
+// 모델 이름과 값을 재는 자는 lib/ai/usage.ts 한 군데에 둔다.
 
 export type Extracted = {
   title: string;
@@ -40,12 +33,7 @@ export type ExtractResult =
   | { ok: true; value: Extracted; fields: string[]; usage: Usage }
   | { ok: false; message: string; usage?: Usage };
 
-export type Usage = {
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-  costMicroUsd: number;
-};
+export type { Usage };
 
 const SCHEMA = {
   name: 'receipt',
@@ -183,17 +171,7 @@ export async function readReceipt(args: {
     usage?: { input_tokens?: number; output_tokens?: number };
   };
 
-  const inputTokens = body.usage?.input_tokens ?? 0;
-  const outputTokens = body.usage?.output_tokens ?? 0;
-  const usage: Usage = {
-    model: MODEL,
-    inputTokens,
-    outputTokens,
-    // 정수 산술만 쓴다. 돈을 부동소수점으로 세지 않는다는 규칙은 여기에도 적용된다.
-    costMicroUsd: Math.round(
-      (inputTokens * IN_PER_MTOK) / 1_000_000 + (outputTokens * OUT_PER_MTOK) / 1_000_000,
-    ),
-  };
+  const usage = meter(body.usage);
 
   const block = body.content?.find((c) => c.type === 'tool_use' && c.name === 'receipt');
   if (!block?.input) return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.', usage };

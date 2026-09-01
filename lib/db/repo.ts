@@ -79,10 +79,14 @@ export async function insertAdjustment(args: {
   payerId: string;
   reason?: string;
 }): Promise<string> {
+  // 같은 장부의 지출만 보정 대상이 된다. 남의 장부 지출 id를 넣어 그 줄의
+  // 부담 구조·판매처·분류를 우리 장부로 옮겨 오는 길을 여기서 막는다.
+  // (DB 가드에도 같은 규칙이 있다. 두 겹으로 둔다.)
   const { data: target, error } = await db
     .from('expenses')
     .select('*')
     .eq('id', args.targetId)
+    .eq('ledger_id', args.ledgerId)
     .single<ExpenseRow>();
   if (error || !target) throw new Error('보정 대상 지출을 찾을 수 없습니다.');
 
@@ -191,8 +195,18 @@ export async function confirmSettlement(args: {
  * 정산 취소. 송금이 한 건이라도 확인되었으면 DB 트리거가 막는다.
  * 취소되면 그 지출들은 자동으로 미정산으로 돌아가고 다시 수정할 수 있게 된다.
  */
-export async function cancelSettlement(settlementId: string): Promise<void> {
-  const { error } = await db.rpc('cancel_settlement', { p_settlement_id: settlementId });
+/**
+ * 정산 취소.
+ *
+ * 장부 id를 함께 넘긴다. 정산 id 하나만으로 지우면, 그 id를 아는 사람은
+ * 어느 장부의 회원이든 그 정산을 지울 수 있다. 권한을 판정한 장부와 실제로
+ * 건드리는 자원이 같은지는 언제나 따로 확인해야 한다(0010).
+ */
+export async function cancelSettlement(settlementId: string, ledgerId: string): Promise<void> {
+  const { error } = await db.rpc('cancel_settlement', {
+    p_settlement_id: settlementId,
+    p_ledger_id: ledgerId,
+  });
   if (error) throw new Error(error.message);
 }
 
@@ -221,11 +235,18 @@ export async function unmarkSent(transferId: string, memberId: string): Promise<
   if (error) throw new Error(error.message);
 }
 
+/**
+ * 받았다고 확인. 받을 사람 본인만 할 수 있다.
+ *
+ * DB 트리거에도 같은 규칙이 있지만(0004_transfers.sql), 여기서도 조건에 넣는다.
+ * 트리거가 막으면 영어 오류가 올라오고, 여기서 막으면 아무 줄도 바뀌지 않는다.
+ */
 export async function confirmTransfer(transferId: string, memberId: string): Promise<void> {
   const { error } = await db
     .from('transfers')
     .update({ confirmed_at: new Date().toISOString(), confirmed_by_member_id: memberId })
-    .eq('id', transferId);
+    .eq('id', transferId)
+    .eq('to_member_id', memberId);
   if (error) throw new Error(error.message);
 }
 
