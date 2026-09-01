@@ -12,6 +12,17 @@ import { useHelper } from '../helper/HelperContext.tsx';
  *
  * 가입과 로그인을 나누지 않는다. 처음 온 사람이든 다시 온 사람이든 같은 버튼을 누르고,
  * 계정이 없으면 그때 만들어진다. 외울 것은 없다.
+ *
+ * 순서는 **잘 되는 것이 위**다.
+ *
+ * 처음에는 이메일이 위에 있었다. 아무 계정도 요구하지 않는 길이니 그게 맞다고
+ * 보았는데, 실제로는 그 길이 가장 잘 끊긴다. 메일은 스팸함으로 가고, 링크는
+ * 만료되고, 메일 앱이 자기 창에서 열면 또 한 번 걸린다. 구글은 눌러서 돌아오면
+ * 끝이고 중간에 아무것도 없다.
+ *
+ * 화면에서 가장 크고 진한 것은 그 사람이 성공할 확률이 가장 높은 길이어야 한다.
+ * 그래서 구글을 위로, 이메일을 아래로 내렸다. 이메일을 없애지는 않는다 —
+ * 구글도 카카오도 쓰지 않는 사람이 있고, 그 사람에게는 이 길뿐이다.
  */
 
 export default function AuthForm({
@@ -49,23 +60,9 @@ export default function AuthForm({
     <div className="auth">
       <h1 className="auth-title">{title ?? T('signIn')}</h1>
 
-      <form action={submit}>
-        {next && <input type="hidden" name="next" value={next} />}
-        <label className="field">
-          <span className="lab">{T('email')}</span>
-          <input type="email" name="email" required autoComplete="email" />
-        </label>
-        <button className="act primary" type="submit" disabled={busy} style={{ marginTop: 14, width: '100%' }}>
-          {busy ? T('working') : T('withEmail')}
-        </button>
-      </form>
-
-      <div className="auth-or">
-        <span>{T('or')}</span>
-      </div>
-
+      {/* 가장 잘 되는 길이 가장 크다. */}
       <form action={google}>
-        <button className="act" type="submit" style={{ width: '100%' }}>
+        <button className="act primary" type="submit" style={{ width: '100%' }}>
           {T('withGoogle')}
         </button>
       </form>
@@ -73,11 +70,27 @@ export default function AuthForm({
       {/* 카카오는 비즈앱 전환이 끝나야 동작한다. 그전에는 버튼을 두지 않는다. */}
       {kakaoReady && (
         <form action={kakao} style={{ marginTop: 10 }}>
-          <button className="act" type="submit" style={{ width: '100%' }}>
+          <button className="act primary" type="submit" style={{ width: '100%' }}>
             {T('withKakao')}
           </button>
         </form>
       )}
+
+      <div className="auth-or">
+        <span>{T('or')}</span>
+      </div>
+
+      {/* 구글도 카카오도 쓰지 않는 사람의 길. 없애지는 않는다. */}
+      <form action={submit}>
+        {next && <input type="hidden" name="next" value={next} />}
+        <label className="field">
+          <span className="lab">{T('email')}</span>
+          <input type="email" name="email" required autoComplete="email" />
+        </label>
+        <button className="act" type="submit" disabled={busy} style={{ marginTop: 14, width: '100%' }}>
+          {busy ? T('working') : T('withEmail')}
+        </button>
+      </form>
 
       <div className="gate-foot" style={{ marginTop: 34 }}>
         <LangPicker value={locale} />

@@ -105,7 +105,12 @@ export async function sendEmailLink(formData: FormData): Promise<AuthResult> {
   });
 
   if (error) return { ok: false, message: readable(error.message) };
-  return { ok: true, message: `${email} 으로 링크를 보냈습니다. 메일함에서 눌러 주세요.` };
+  // 새 도메인에서 나가는 첫 메일은 스팸함으로 가기 쉽다. 받은편지함만 보고
+  // "안 왔다"고 판단하면 그 사람은 여기서 떨어져 나간다. 미리 알려 준다.
+  return {
+    ok: true,
+    message: `${email} 으로 링크를 보냈습니다. 받은편지함에 없으면 스팸함도 확인해 주세요.`,
+  };
 }
 
 /** 구글·카카오로 로그인. 그쪽 화면으로 넘겼다가 /auth/callback 으로 돌아온다. */
