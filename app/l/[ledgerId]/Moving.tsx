@@ -22,26 +22,52 @@ export type Row = {
   who: string;
   amount: number;
   sent: boolean;
+  /** 보냈다고 표시한 시각. 얼마나 기다렸는지를 적는 데 쓴다. */
+  sentAt?: string | null;
   bank: string;
   accountNo: string;
 };
+
+/**
+ * 기다린 날수 (§16)
+ *
+ * 보낸 사람이 표시하고 받은 사람이 확인하지 않으면 그 송금은 그대로 멈춘다.
+ * 학기가 끝나면 아무도 앱에 안 들어오니 실제로 자주 그렇게 된다.
+ *
+ * 그래도 **닫지는 않는다.** 돈이 오갔다고 판정하는 것은 여전히 받은 사람뿐이다.
+ * 대신 얼마나 기다렸는지를 적는다. 장부는 판정하지 않고 사실만 말한다 —
+ * 그 사실이 누르게 만든다.
+ */
+function daysSince(iso?: string | null): number | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  return Math.max(0, Math.floor((Date.now() - then) / 86400000));
+}
 
 export default function Moving({
   ledgerId,
   toMe,
   fromMe,
+  others = [],
+  owner = false,
   currency,
   lang,
 }: {
   ledgerId: string;
   toMe: Row[];
   fromMe: Row[];
+  /** 나와 상관없는 송금. 소유자에게만 넘어온다. */
+  others?: Row[];
+  owner?: boolean;
   currency: CurrencyCode;
   lang: Locale;
 }) {
   const router = useRouter();
   const T = translator(lang);
   const [busy, setBusy] = useState(false);
+  /** 대신 확인하려고 되묻는 중인 송금. 되돌릴 수 없어서 한 번 더 묻는다. */
+  const [asking, setAsking] = useState<string | null>(null);
   const cash = (n: number) => formatMoney(n, currency, lang);
 
   async function run(fn: () => Promise<{ ok: boolean; message?: string }>) {
@@ -51,7 +77,9 @@ export default function Moving({
     router.refresh();
   }
 
-  if (!toMe.length && !fromMe.length) {
+  const stuck = owner ? others : [];
+
+  if (!toMe.length && !fromMe.length && !stuck.length) {
     return (
       <p className="muted" style={{ marginTop: 16 }}>
         {T('none')}
@@ -74,7 +102,15 @@ export default function Moving({
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {t.sent ? (
                     <>
-                      <span className="muted">{T('sentWaiting')}</span>{' '}
+                      {/* 보낸 쪽에도 기다린 시간을 적는다. 상대가 안 눌러 주고
+                          있다는 것을 알아야 다시 말이라도 걸 수 있다. */}
+                      <span className="muted">
+                        {T('sentWaiting')}
+                        {(() => {
+                          const d = daysSince(t.sentAt);
+                          return d && d > 0 ? ` · ${T('waitedDays', { n: d })}` : '';
+                        })()}
+                      </span>{' '}
                       <button
                         className="plain"
                         disabled={busy}
@@ -107,7 +143,16 @@ export default function Moving({
                   {t.who} → {T('me')}
                 </td>
                 <td className="r money">{cash(t.amount)}</td>
-                <td className="muted">{t.sent ? T('saysSent', { who: t.who }) : ''}</td>
+                <td className="muted">
+                  {t.sent
+                    ? (() => {
+                        const d = daysSince(t.sentAt);
+                        return d === null || d === 0
+                          ? T('saysSent', { who: t.who })
+                          : T('saysSentDays', { who: t.who, n: d });
+                      })()
+                    : ''}
+                </td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   <button
                     className="act small"
@@ -116,6 +161,65 @@ export default function Moving({
                   >
                     {T('gotIt')}
                   </button>
+                </td>
+              </tr>
+            ))}
+            {/*
+              나와 상관없는 송금 (소유자에게만)
+
+              받는 사람이 끝내 확인하지 않으면 그 정산은 영원히 안 닫힌다.
+              학기가 끝나면 아무도 앱에 안 들어오기 때문에 실제로 자주 그렇게
+              된다. 안 닫히는 장부도 틀린 장부라서, 소유자에게만 대신 누를
+              길을 연다.
+
+              눌러도 누가 눌렀는지는 남는다. 이건 판정을 옮기는 것이 아니라,
+              판정할 사람이 사라졌을 때의 마지막 길이다. 그래서 되묻는다.
+            */}
+            {stuck.map((t) => (
+              <tr key={t.transferId} className="left">
+                <td style={{ whiteSpace: 'nowrap' }}>{t.who}</td>
+                <td className="r money">{cash(t.amount)}</td>
+                <td className="muted">
+                  {(() => {
+                    const d = daysSince(t.sentAt);
+                    if (t.sent && d !== null && d > 0) return T('waitedDays', { n: d });
+                    if (t.sent) return T('sentWaiting');
+                    return '';
+                  })()}
+                </td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  {asking === t.transferId ? (
+                    <span className="row" style={{ gap: 12 }}>
+                      <span className="debit">{T('confirmForWarn')}</span>
+                      <button
+                        className="plain danger"
+                        disabled={busy}
+                        onClick={() => {
+                          setAsking(null);
+                          run(() =>
+                            markTransferReceived({
+                              ledgerId,
+                              transferId: t.transferId,
+                              onBehalf: true,
+                            }),
+                          );
+                        }}
+                      >
+                        {T('confirmFor')}
+                      </button>
+                      <button className="plain" onClick={() => setAsking(null)}>
+                        {T('close')}
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      className="plain"
+                      disabled={busy}
+                      onClick={() => setAsking(t.transferId)}
+                    >
+                      {T('confirmFor')}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

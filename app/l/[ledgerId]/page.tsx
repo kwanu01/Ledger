@@ -8,7 +8,7 @@ import { adjustmentLabel, allocationLabel } from '../../../lib/labels.ts';
 import { translator } from '../../../lib/i18n.ts';
 import { formatEntryAmount, formatMoney } from '../../../lib/domain/money.ts';
 import Moving from './Moving.tsx';
-import { teamMembers } from '../../actions/teams.ts';
+import { amOwner, teamMembers } from '../../actions/teams.ts';
 
 /**
  * 장부 홈 (§6, §21.2)
@@ -21,10 +21,11 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
   const pass = await requireLedgerAccess(ledgerId);
   const lang = await getLang();
 
-  const [ledger, open, roster] = await Promise.all([
+  const [ledger, open, roster, owner] = await Promise.all([
     loadLedger(ledgerId),
     openTransfers(ledgerId),
     teamMembers(ledgerId),
+    amOwner(ledgerId),
   ]);
   // 보낼 곳을 바로 보여 주려면 받는 사람의 계좌가 필요하다.
   const acct = new Map(roster.map((m) => [m.id, { bank: m.bank, accountNo: m.accountNo }]));
@@ -38,6 +39,11 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
 
   const toMe = open.filter((t) => t.to_member_id === pass.memberId);
   const fromMe = open.filter((t) => t.from_member_id === pass.memberId);
+  /* 나와 상관없는 송금. 소유자에게만 보인다 — 받는 사람이 끝내 확인하지 않아
+     장부가 안 닫힐 때 대신 눌러 줄 수 있는 사람은 소유자뿐이다. */
+  const others = open.filter(
+    (t) => t.to_member_id !== pass.memberId && t.from_member_id !== pass.memberId,
+  );
   const recent = [...ledger.expenses].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
   const mine = s.pending.balances.find((b) => b.memberId === pass.memberId);
   const net = mine ? mine.netBalance : 0;
@@ -111,6 +117,7 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
               who: nameOf(members, t.from_member_id),
               amount: t.amount,
               sent: Boolean(t.sent_at),
+              sentAt: t.sent_at,
               bank: '',
               accountNo: '',
             }))}
@@ -119,9 +126,20 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
               who: nameOf(members, t.to_member_id),
               amount: t.amount,
               sent: Boolean(t.sent_at),
+              sentAt: t.sent_at,
               bank: acct.get(t.to_member_id)?.bank ?? '',
               accountNo: acct.get(t.to_member_id)?.accountNo ?? '',
             }))}
+            others={others.map((t) => ({
+              transferId: t.transfer_id,
+              who: `${nameOf(members, t.from_member_id)} → ${nameOf(members, t.to_member_id)}`,
+              amount: t.amount,
+              sent: Boolean(t.sent_at),
+              sentAt: t.sent_at,
+              bank: '',
+              accountNo: '',
+            }))}
+            owner={owner}
             currency={currency}
             lang={lang}
           />

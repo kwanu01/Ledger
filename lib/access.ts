@@ -147,6 +147,20 @@ async function ownsTeam(userId: string, teamId: string): Promise<boolean> {
 }
 
 /**
+ * 지금 이 통행증의 주인이 이 팀의 소유자인가.
+ *
+ * 소유자만 할 수 있는 일이 몇 가지 있다 — 초대 링크 만들기·회수, 팀 이름
+ * 바꾸기, 장부 지우기, 그리고 안 닫히는 송금을 대신 확인하기.
+ *
+ * 초대 링크로만 들어온 사람은 소유자가 될 수 없다. 계정이 없으면 '그 사람'을
+ * 가리킬 방법이 브라우저의 쿠키뿐인데, 쿠키는 옮겨 다닌다.
+ */
+export async function isTeamOwner(pass: { teamId: string; userId?: string }): Promise<boolean> {
+  if (!pass.userId) return false;
+  return ownsTeam(pass.userId, pass.teamId);
+}
+
+/**
  * 통행증에 적힌 팀원이 아직 그 팀에 있는지 확인한다.
  *
  * 통행증은 브라우저에 넉 달 남아 있고, 그동안 명단은 바뀐다. 서명이 맞다는 것은

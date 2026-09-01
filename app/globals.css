@@ -345,8 +345,29 @@ table.book .day{font-family:var(--mono);color:var(--ink-2);white-space:nowrap}
    그래서 바탕을 한 단 낮춘다. 마감선(tr.closing)과 같은 톤이라, 정산된
    줄들과 그것을 닫는 마감선이 하나의 덩어리로 읽힌다. 색을 더하는 것이
    아니라 종이의 밝기를 낮추는 쪽이다 — 그 구획은 이미 지나간 자리다. */
-table.book tr.done td{color:var(--ink-2);background:var(--settled)}
-/* 닫힌 구획 안에서는 줄 사이의 선을 지운다. 덩어리가 갈라져 보이지 않게. */
+table.book tr.done td,
+table.book tr.rest td{color:var(--ink-2);background:var(--settled)}
+/*
+   그 안에서는 **아무것도 앞으로 나오지 않는다.**
+
+   바탕만 낮추고 글자를 그대로 뒀더니, 항목 이름과 금액은 여전히 검은색이라
+   지나간 구획에서 그 둘만 튀어나왔다. 마감줄의 이름과 합계도 마찬가지였다.
+   끝난 자리에서 무엇이 더 중요한지를 다시 따질 이유가 없다 — 다 지나갔다.
+
+   도장만 제 색으로 남는다. 그건 글이 아니라 종이 위에 얹힌 물건이고,
+   "끝났다"는 사실 자체를 말하는 유일한 표시다.
+*/
+table.book tr.done td .subject,
+table.book tr.rest td .subject,
+table.book tr.done td .num,
+table.book tr.rest td .num,
+table.book tr.closing td,
+table.book tr.closing td b,
+table.book tr.closing td .num{color:var(--ink-2)}
+table.book tr.done td .subject,
+table.book tr.rest td .subject{text-decoration-color:var(--rule)}
+/* 닫힌 구획 안에서는 줄 사이의 선을 지운다. 덩어리가 갈라져 보이지 않게.
+   '정산 불필요'는 그 정산에 든 줄이 아니므로 여기서 빠진다 — 선을 남긴다. */
 table.book tr.done + tr.done td{border-top:0}
 table.book tbody tr.entry:hover{background:var(--hl)}
 th button.sortbtn{
@@ -488,6 +509,13 @@ label.field > input,label.field > select{width:100%;min-width:0;max-width:100%}
 fieldset{border:0;border-top:1px solid var(--rule);margin:0;padding:18px 0 0}
 /* 괘선 위에 얹힌 이름표. 종이색을 깔아 선이 글자를 관통하지 않게 한다. */
 legend{font-size:13px;color:var(--ink-2);font-weight:700;padding:0 12px 0 0;background:var(--paper)}
+/* 고르는 줄 — 폼에서 라디오·체크박스 한 줄.
+ *
+ * 이름 조심 (§21.6). 장부 표의 '고르는 칸'은 .tick 이지 .pick 이 아니다.
+ * 한때 그 칸에도 .pick 을 줬는데, 이 규칙의 display:flex 가 걸리면서 표의
+ * 칸 하나가 표의 셈에서 빠져나갔다. 그 칸만 바탕이 안 칠해져, 정산된 줄의
+ * 회색 띠가 왼쪽 24px 앞에서 끊겼다. 표 안에서 쓸 이름은 표 밖의 이름과
+ * 겹치지 않게 둔다. */
 .pick{display:flex;align-items:baseline;gap:8px;font-size:14.5px;padding:4px 0}
 .pick-sub{display:flex;flex-wrap:wrap;gap:8px 20px;padding:6px 0 2px 26px}
 /* 항목 이름에 붙는 꼬리표(환불·보정). 이름과 붙으면 이름의 일부처럼 읽힌다. */
@@ -1232,7 +1260,7 @@ footer a:hover{color:var(--ink)}
      이름은 같은 자리로 간다.
 
      고르는 칸과 도장은 함께 나타나지 않으므로 한 자리를 나눠 쓴다. */
-  table.book.entries td.pick,
+  table.book.entries td.tick,
   table.book.entries td.state{grid-area:mark;justify-self:end}
   table.book.entries td.slip{grid-area:slip}
   table.book.entries td.day{grid-area:day}
@@ -1287,15 +1315,19 @@ footer a:hover{color:var(--ink)}
      밀어낸 만큼(22px) 안쪽에서 되돌려 주므로 글의 시작선은 정산되지 않은
      줄과 똑같이 남는다. 달라지는 것은 바탕뿐이다. */
   table.book.entries tr.entry.done,
+  table.book.entries tr.entry.rest,
   table.book.entries tr.unfold,
   table.book.entries tr.closing{
     margin-left:-22px;margin-right:-22px;
     padding-left:22px;padding-right:22px}
-  table.book.entries tr.entry.done{
+  table.book.entries tr.entry.done,
+  table.book.entries tr.entry.rest{
     color:var(--ink-2);background:var(--settled);
     border-bottom-color:var(--rule)}
   table.book.entries tr.entry.done + tr.entry.done{border-top:0}
-  table.book.entries tr.entry.done td.money{font-weight:400}
+  /* 끝난 줄에서는 금액도 앞으로 나오지 않는다. 굵기도 색도 한 단 물러난다. */
+  table.book.entries tr.entry.done td.money,
+  table.book.entries tr.entry.rest td.money{font-weight:400;color:var(--ink-2)}
 
   /* 펼친 자리는 기록 아래에 그대로 이어 붙는다.
 

@@ -90,8 +90,6 @@ export default function ExpenseForm({
      예전에는 지출을 적은 뒤 장부에서 다시 찾아 들어가야만 올릴 수 있었다. */
   const [item, setItem] = useState<File | null>(null);
   const [itemThumb, setItemThumb] = useState<string | null>(null);
-  /** 나머지 칸을 펴 둘지. 넓은 화면에서는 처음부터 편다(아래 useEffect). */
-  const [more, setMore] = useState(false);
   const [read, setRead] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -100,10 +98,6 @@ export default function ExpenseForm({
 
   // 화면을 캡처해서 그대로 붙여넣는 편이 파일로 저장했다 고르는 것보다 빠르다.
   // 사진 받는 단계에 있을 때만 듣는다.
-  /* 넓은 화면에서는 나머지 칸도 처음부터 펴 둔다. 자리가 있으니 접을 이유가 없다. */
-  useEffect(() => {
-    if (window.innerWidth > 640) setMore(true);
-  }, []);
 
   useEffect(() => {
     if (step !== 'photo') return;
@@ -180,11 +174,6 @@ export default function ExpenseForm({
   const foreign = curr !== currency;
 
   const name = (id: string) => members.find((m) => m.id === id)?.name ?? id;
-
-  /* 해외 결제로 읽혔으면 통화 칸이 보여야 한다. 못 보고 지나가면 장부가 틀어진다. */
-  useEffect(() => {
-    if (foreign) setMore(true);
-  }, [foreign]);
 
   // 장부에 적히는 금액은 언제나 장부의 통화다. 해외 결제면 청구액 칸이 그 자리를 대신한다.
   const booked = foreign ? parseMoney(charged, currency) : parseMoney(amount, currency);
@@ -580,59 +569,50 @@ export default function ExpenseForm({
       {/*
         나머지 칸 (§21.5)
 
-        지출 한 줄을 적는 데 꼭 있어야 하는 것은 항목·금액·날짜·결제자·나눌
-        사람 다섯이다. 통화는 대개 장부의 통화 그대로고, 판매처와 분류와 구매
-        링크와 메모는 있으면 좋은 것이지 없으면 못 적는 것이 아니다.
+        한때 이 칸들을 접어 두었다. 지출 한 줄을 적는 데 꼭 있어야 하는 것은
+        항목·금액·날짜·결제자·나눌 사람 다섯이고, 판매처와 카테고리와 구매
+        링크와 메모는 없어도 적을 수 있다 — 그러니 필요한 사람만 펴라는 뜻이었다.
 
-        폰에서는 그 다섯이 이미 한 화면을 다 쓴다. 나머지를 같이 펼쳐 두면
-        스크롤이 길어지고, 꼭 채워야 하는 칸처럼 보인다. 그래서 접어 두고
-        필요한 사람만 편다. 넓은 화면에서는 자리가 있으니 처음부터 펴 둔다.
+        접어 두니 **카테고리가 안 채워졌다.** 카테고리는 나중에 이 장부를
+        다시 읽을 때 제일 쓸모 있는 칸인데, 접혀 있으면 그런 칸이 있다는 것
+        자체를 모른다. 있는 줄 모르는 칸은 없는 칸이다.
 
-        해외 결제일 때는 접지 않는다. 통화를 못 보고 지나가면 장부가 통째로
-        틀어진다.
+        그래서 다 펴 둔다. 채우고 말고는 적는 사람이 정할 일이고, 우리가 할
+        일은 무엇을 적을 수 있는지 보여 주는 것까지다. 빈 칸으로 남는 것은
+        아무 문제가 되지 않는다 — 장부의 칸은 원래 그렇다.
       */}
-      <div className="more" style={{ marginTop: 24 }}>
-        {!more && (
-          <button className="plain" onClick={() => setMore(true)}>
-            {T('moreFields')}
-          </button>
-        )}
-
-        {more && (
-          <div className="fields">
-            <label className="field">
-              <span className="lab">{T('currency')}{fromAI('currency')}</span>
-              <select value={curr} onChange={(e) => setCurr(e.target.value as CurrencyCode)}>
-                {FOREIGN.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span className="lab">{T('vendor')}{fromAI('vendor')}</span>
-              <input type="text" value={vendor} onChange={(e) => setVendor(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="lab">{T('category')}{fromAI('category')}</span>
-              <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="lab">{T('productLink')}</span>
-              <input
-                type="text"
-                value={productLink}
-                onChange={(e) => setProductLink(e.target.value)}
-                placeholder="https://"
-              />
-            </label>
-            <label className="field wide">
-              <span className="lab">{T('noteField')}</span>
-              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} />
-            </label>
-          </div>
-        )}
+      <div className="fields" style={{ marginTop: 24 }}>
+        <label className="field">
+          <span className="lab">{T('category')}{fromAI('category')}</span>
+          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} />
+        </label>
+        <label className="field">
+          <span className="lab">{T('vendor')}{fromAI('vendor')}</span>
+          <input type="text" value={vendor} onChange={(e) => setVendor(e.target.value)} />
+        </label>
+        <label className="field">
+          <span className="lab">{T('currency')}{fromAI('currency')}</span>
+          <select value={curr} onChange={(e) => setCurr(e.target.value as CurrencyCode)}>
+            {FOREIGN.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span className="lab">{T('productLink')}</span>
+          <input
+            type="text"
+            value={productLink}
+            onChange={(e) => setProductLink(e.target.value)}
+            placeholder="https://"
+          />
+        </label>
+        <label className="field wide">
+          <span className="lab">{T('noteField')}</span>
+          <input type="text" value={note} onChange={(e) => setNote(e.target.value)} />
+        </label>
       </div>
 
       {/* 마무리 줄. 폰에서는 화면 아래에 붙어 따라온다 — 다 적고 나서

@@ -1,11 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireLedgerAccess } from '../../lib/access.ts';
+import { requireLedgerAccess, isTeamOwner as isOwner } from '../../lib/access.ts';
 import {
   cancelSettlement,
   confirmSettlement,
   confirmTransfer,
+  confirmTransferAsOwner,
   markSent,
   unmarkSent,
   insertAdjustment,
@@ -322,15 +323,43 @@ export async function markTransferSent(args: {
   }
 }
 
-/** 송금 받았다고 표시. 받은 사람 본인만 가능하다. */
+/**
+ * 송금 받았다고 표시 (§12)
+ *
+ * 원칙은 그대로다 — **돈이 오갔다고 판정하는 것은 받은 사람뿐이다.** 보낸
+ * 사람의 '보냈어요'는 앞선 신호일 뿐 이 판정을 대신하지 못한다. 팀플에서
+ * 제일 흔한 분쟁인 "보냈는데요 / 안 들어왔는데요"가 그래서 안 생긴다.
+ *
+ * 예외가 하나 있다. **장부 소유자**는 대신 확인할 수 있다. 받는 사람이 안
+ * 눌러 주면 그 정산이 영원히 안 닫히기 때문이다 — 학기가 끝나면 아무도 앱에
+ * 안 들어온다. 안 닫히는 장부도 틀린 장부다.
+ *
+ * 대신 눌러도 누가 눌렀는지는 남는다. 권한을 넓히는 것과 기록을 흐리는 것은
+ * 다른 일이다.
+ */
 export async function markTransferReceived(args: {
   ledgerId: string;
   transferId: string;
+  /** 내가 받을 돈이 아닌데 소유자로서 대신 누르는 경우. */
+  onBehalf?: boolean;
 }): Promise<Result> {
   try {
     const pass = await requireLedgerAccess(args.ledgerId);
-    await confirmTransfer(args.transferId, pass.memberId);
-    revalidatePath(`/l/${args.ledgerId}`);
+
+    if (args.onBehalf) {
+      if (!(await isOwner(pass))) {
+        return { ok: false, message: '장부를 만든 사람만 대신 확인할 수 있습니다.' };
+      }
+      await confirmTransferAsOwner({
+        transferId: args.transferId,
+        byMemberId: pass.memberId,
+        ledgerId: args.ledgerId,
+      });
+    } else {
+      await confirmTransfer(args.transferId, pass.memberId);
+    }
+
+    revalidatePath(`/l/${args.ledgerId}`, 'layout');
     return { ok: true };
   } catch (e) {
     return failed(e);

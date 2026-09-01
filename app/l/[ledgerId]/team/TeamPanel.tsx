@@ -6,6 +6,7 @@ import {
   createInvite,
   deleteTeam,
   leaveTeam,
+  handOverOwnership,
   renameMember,
   renameTeam,
   revokeInvite,
@@ -58,6 +59,8 @@ export default function TeamPanel({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [editTeam, setEditTeam] = useState(false);
+  /** 소유권을 넘기려고 되묻는 중인 팀원. 되돌릴 수 없는 일이라 한 번 더 묻는다. */
+  const [handing, setHanding] = useState<string | null>(null);
   const [newTeam, setNewTeam] = useState('');
   const [armed, setArmed] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -132,11 +135,48 @@ export default function TeamPanel({
                     )}
                   </td>
                   <td className="muted" style={{ whiteSpace: 'nowrap' }}>
-                    {m.isMe ? T('me') : m.hasAccount ? '' : T('notLinked')}
+                    {/* 소유자는 이름 옆에 적어 둔다. 누가 초대 링크를 만들고
+                        장부를 지울 수 있는지는 팀원 모두가 알아야 하는 사실이다. */}
+                    {m.isOwner ? (
+                      <span className="tag">{T('ownerTag')}</span>
+                    ) : m.isMe ? (
+                      T('me')
+                    ) : m.hasAccount ? (
+                      ''
+                    ) : (
+                      T('notLinked')
+                    )}
                   </td>
                   <td className="muted">{m.active ? '' : T('gone')}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    {(m.isMe || owner) && (
+                    {/* 소유권 넘기기. 지금 소유자만, 계정 있는 활성 팀원에게만.
+                        초대 링크로만 들어온 사람에게 넘기면 그 장부에 다시
+                        들어올 수 있는 소유자가 없어진다. */}
+                    {owner && !m.isOwner && m.active && m.hasAccount && (
+                      handing === m.id ? (
+                        <span className="row" style={{ gap: 12 }}>
+                          <span className="debit">{T('handOverWarn', { who: m.name })}</span>
+                          <button
+                            className="plain danger"
+                            disabled={busy}
+                            onClick={() => {
+                              setHanding(null);
+                              run(() => handOverOwnership({ ledgerId, memberId: m.id }));
+                            }}
+                          >
+                            {T('handOverDo')}
+                          </button>
+                          <button className="plain" onClick={() => setHanding(null)}>
+                            {T('close')}
+                          </button>
+                        </span>
+                      ) : (
+                        <button className="plain" disabled={busy} onClick={() => setHanding(m.id)}>
+                          {T('handOver')}
+                        </button>
+                      )
+                    )}
+                    {(m.isMe || owner) && handing !== m.id && (
                       <button
                         className="plain"
                         disabled={busy}

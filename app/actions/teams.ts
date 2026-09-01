@@ -9,10 +9,12 @@ import {
   issuePass,
   clearPass,
   teamForInvite,
+  isTeamOwner,
 } from '../../lib/access.ts';
 import { currentUser } from '../../lib/auth-client.ts';
 import { db } from '../../lib/db/client.ts';
 import { dropLedgerImages } from '../../lib/db/images.ts';
+import { setTeamOwner } from '../../lib/db/repo.ts';
 import { CURRENCIES, type CurrencyCode } from '../../lib/domain/money.ts';
 import { failed } from '../../lib/fail.ts';
 
@@ -218,17 +220,23 @@ export type TeamMember = {
   sortOrder: number;
   isMe: boolean;
   hasAccount: boolean;
+  /** 이 장부의 소유자인가. 화면에 표시하고, 넘길 대상에서 제외하는 데 쓴다. */
+  isOwner: boolean;
   bank: string;
   accountNo: string;
 };
 
 export async function teamMembers(ledgerId: string): Promise<TeamMember[]> {
   const pass = await requireLedgerAccess(ledgerId);
-  const { data } = await db
-    .from('members')
-    .select('id, display_name, active, sort_order, user_id, bank, account_no')
-    .eq('team_id', pass.teamId)
-    .order('sort_order');
+  const [{ data }, { data: team }] = await Promise.all([
+    db
+      .from('members')
+      .select('id, display_name, active, sort_order, user_id, bank, account_no')
+      .eq('team_id', pass.teamId)
+      .order('sort_order'),
+    db.from('teams').select('owner_id').eq('id', pass.teamId).maybeSingle(),
+  ]);
+  const ownerId = (team?.owner_id as string | null) ?? null;
 
   return (data ?? []).map((m: Record<string, unknown>) => ({
     id: m.id as string,
@@ -237,17 +245,48 @@ export async function teamMembers(ledgerId: string): Promise<TeamMember[]> {
     sortOrder: m.sort_order as number,
     isMe: (m.id as string) === pass.memberId,
     hasAccount: Boolean(m.user_id),
+    isOwner: Boolean(ownerId) && m.user_id === ownerId,
     bank: (m.bank as string) ?? '',
     accountNo: (m.account_no as string) ?? '',
   }));
 }
 
-/** 이 사람이 장부를 만든 사람인가. 명단 정리는 만든 사람도 할 수 있어야 한다. */
-async function isOwner(pass: { teamId: string; userId?: string }): Promise<boolean> {
-  if (!pass.userId) return false;
-  const { data } = await db.from('teams').select('owner_id').eq('id', pass.teamId).maybeSingle();
-  return Boolean(data && data.owner_id === pass.userId);
+/**
+ * 소유권 넘기기 (§21.9)
+ *
+ * 소유자를 만든 사람으로 못 박아 두면, 그 사람이 학기 중에 빠질 때 장부가
+ * 굳는다. 초대 링크도 못 만들고 이름도 못 바꾸고, 안 닫히는 송금을 대신
+ * 확인할 사람도 없어진다.
+ *
+ * 넘기는 것은 지금 소유자만 할 수 있고, 받는 사람은 **계정이 있는 활성
+ * 팀원**이어야 한다. 초대 링크로만 들어온 사람에게 넘기면 그 장부에는 다시
+ * 들어올 수 있는 소유자가 없어진다 — 되돌릴 방법이 없는 실수라서 막는다.
+ *
+ * 한 번 넘기면 넘긴 사람은 더 이상 소유자가 아니다. 되돌리려면 새 소유자가
+ * 다시 넘겨야 한다. 소유자는 언제나 한 사람이다.
+ */
+export async function handOverOwnership(args: {
+  ledgerId: string;
+  memberId: string;
+}): Promise<Result> {
+  try {
+    const pass = await requireLedgerAccess(args.ledgerId);
+    if (!(await isOwner(pass))) {
+      return { ok: false, message: '소유권은 지금 소유자만 넘길 수 있습니다.' };
+    }
+    if (args.memberId === pass.memberId) {
+      return { ok: false, message: '이미 소유자입니다.' };
+    }
+    await setTeamOwner(pass.teamId, args.memberId);
+    revalidatePath(`/l/${args.ledgerId}`, 'layout');
+    return { ok: true };
+  } catch (e) {
+    return failed(e);
+  }
 }
+
+/** 이 사람이 이 장부의 소유자인가. 판정은 lib/access.ts 한 곳에서만 한다. */
+const isOwner = isTeamOwner;
 
 /** 지금 보고 있는 사람이 이 장부를 만든 사람인지. 화면에서 버튼을 가리는 데 쓴다. */
 export async function amOwner(ledgerId: string): Promise<boolean> {

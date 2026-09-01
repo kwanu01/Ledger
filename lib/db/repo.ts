@@ -359,6 +359,76 @@ export async function confirmTransfer(transferId: string, memberId: string): Pro
   if (error) throw new Error(error.message);
 }
 
+/**
+ * 소유자가 대신 확인 (§12)
+ *
+ * 받는 사람이 안 눌러 주면 그 정산은 영원히 '확인 중'으로 남는다. 학기가
+ * 끝나면 아무도 앱에 안 들어오기 때문에 실제로 자주 생기는 일이다.
+ * 안 닫히는 장부도 틀린 장부라서, 소유자 **한 사람에게만** 길을 연다.
+ *
+ * 누가 눌렀는지는 지우지 않는다. confirmed_by_member_id 에 소유자의 이름이
+ * 남으므로, 이 확인이 받은 사람 본인의 것인지 대신한 것인지 나중에도 구분된다.
+ * 권한을 넓히는 것과 기록을 흐리는 것은 다른 일이다.
+ *
+ * 이 함수를 부르기 전에 부르는 쪽이 소유자인지 확인해야 한다. DB 에도 같은
+ * 규칙이 걸려 있다(0014_owner_and_confirm.sql).
+ */
+export async function confirmTransferAsOwner(args: {
+  transferId: string;
+  byMemberId: string;
+  ledgerId: string;
+}): Promise<void> {
+  // 남의 장부 송금을 지우지 않도록, 이 장부의 것이 맞는지 먼저 본다.
+  const { data: rows } = await db
+    .from('transfers')
+    .select('id, settlement_id, settlements!inner(ledger_id)')
+    .eq('id', args.transferId)
+    .is('confirmed_at', null);
+  const row = (rows ?? [])[0] as
+    | { settlements?: { ledger_id?: string } | { ledger_id?: string }[] }
+    | undefined;
+  const owner = Array.isArray(row?.settlements) ? row?.settlements[0] : row?.settlements;
+  if (!row || owner?.ledger_id !== args.ledgerId) {
+    throw new Error('이 장부의 송금이 아닙니다.');
+  }
+
+  const { error } = await db
+    .from('transfers')
+    .update({
+      confirmed_at: new Date().toISOString(),
+      confirmed_by_member_id: args.byMemberId,
+    })
+    .eq('id', args.transferId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * 소유권 넘기기 (§16)
+ *
+ * 소유자를 팀을 만든 사람으로 못 박아 두면, 그 사람이 학기 중에 빠질 때
+ * 장부가 굳는다. 초대 링크도 못 만들고 이름도 못 바꾸는 상태로 남는다.
+ *
+ * 받는 사람은 **계정이 있는 활성 팀원**이어야 한다. 초대 링크로만 들어온
+ * 사람에게 넘기면, 넘기는 순간 그 장부에는 다시 들어올 수 있는 소유자가
+ * 없어진다. DB 에도 같은 조건이 걸려 있다.
+ */
+export async function setTeamOwner(teamId: string, toMemberId: string): Promise<void> {
+  const { data: m } = await db
+    .from('members')
+    .select('user_id, active, team_id')
+    .eq('id', toMemberId)
+    .maybeSingle();
+
+  if (!m || m.team_id !== teamId) throw new Error('이 팀의 팀원이 아닙니다.');
+  if (!m.active) throw new Error('나간 사람에게는 넘길 수 없습니다.');
+  if (!m.user_id) {
+    throw new Error('계정으로 들어온 팀원에게만 넘길 수 있습니다. 그 사람이 먼저 로그인해야 합니다.');
+  }
+
+  const { error } = await db.from('teams').update({ owner_id: m.user_id }).eq('id', teamId);
+  if (error) throw new Error(error.message);
+}
+
 export type OpenTransfer = {
   transfer_id: string;
   settlement_id: string;

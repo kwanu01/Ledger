@@ -229,9 +229,25 @@ export default function BookTable({
     // 자리마다 무게를 달리 줘서 흩어 놓는다.
     const hash = [...e.id].reduce((a, c, i) => (a * 31 + c.charCodeAt(0) * (i + 7)) >>> 0, 17);
 
+    /*
+     * 'rest' — 손댈 것이 남지 않은 줄.
+     *
+     * 정산에 들어간 줄(done)만 회색으로 두었더니, 자기가 사서 자기가 가져간
+     * 줄('정산 불필요')만 흰 종이 위에 혼자 남았다. 그 줄도 끝난 줄이다.
+     * 정산을 기다리는 것이 아니라 애초에 정산할 것이 없는 것이라, 훑을 때
+     * 걸릴 이유가 없다. 끝난 것끼리 같은 톤으로 둔다.
+     *
+     * 다만 정산 회차의 덩어리에 붙이지는 않는다. 그 줄은 그 정산에 들어간
+     * 것이 아니므로, 줄 사이의 선은 남겨 둔다.
+     */
     rows.push(
-      <tr className={`entry${done ? ' done' : ''}${openRow === e.id ? ' open' : ''}`} key={e.id}>
-        <td className="pick">
+      <tr
+        className={`entry${done ? ' done' : ''}${nothingToSettle ? ' rest' : ''}${
+          openRow === e.id ? ' open' : ''
+        }`}
+        key={e.id}
+      >
+        <td className="tick">
           {!done && !nothingToSettle && (
             <input
               type="checkbox"
