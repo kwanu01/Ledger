@@ -7,6 +7,7 @@ import {
   requireLedgerAccess,
   currentPass,
   issuePass,
+  clearPass,
   teamForInvite,
 } from '../../lib/access.ts';
 import { currentUser } from '../../lib/auth-client.ts';
@@ -537,6 +538,83 @@ export async function renameTeam(args: { ledgerId: string; name: string }): Prom
  *
  * 되돌릴 수 없다. 그래서 화면에서 두 번 눌러야 실행된다.
  */
+/**
+ * 팀에서 나가기 (§21.9)
+ *
+ * 나가는 것과 명단에서 내려가는 것은 다르다.
+ *
+ *   나감(active=false) — 이름은 남는다. 지난 지출의 부담자로 계속 세어야 하므로
+ *                        줄을 지울 수 없다. 이미 돈이 얽힌 사람이다.
+ *   탈퇴(이 함수)      — 줄을 아예 지운다. **한 번도 돈에 얽히지 않은 사람만**
+ *                        할 수 있다. 잘못 들어왔거나, 들어와 놓고 쓰지 않은 경우다.
+ *
+ * 지출 한 줄에라도 이름이 들어 있으면 지울 수 없다. 결제자로든, 부담자로든,
+ * 기록 시점 명단으로든 마찬가지다. 그 이름이 빠지면 그 지출의 계산이 성립하지
+ * 않는다. 그때는 명단에서 내려가는 쪽(setMemberActive)을 쓴다.
+ *
+ * 장부를 만든 사람은 나갈 수 없다. 팀의 주인이 없어지면 초대도 이름 변경도
+ * 아무도 못 하게 된다. 그 사람에게는 장부를 지우는 길이 따로 있다.
+ */
+export async function leaveTeam(args: { ledgerId: string }): Promise<Result> {
+  try {
+    const pass = await requireLedgerAccess(args.ledgerId);
+
+    if (await isOwner(pass)) {
+      return {
+        ok: false,
+        message: '장부를 만든 사람은 나갈 수 없습니다. 장부를 지우는 것으로 정리해 주세요.',
+      };
+    }
+
+    // 이 팀의 장부 전부에서 이 사람을 찾는다. 한 팀에 장부가 여럿일 수 있다.
+    const { data: ledgers } = await db.from('ledgers').select('id').eq('team_id', pass.teamId);
+    const ids = (ledgers ?? []).map((l) => l.id as string);
+
+    if (ids.length) {
+      const me = pass.memberId;
+
+      // 세 갈래로 나눠 센다. 배열 안에 들었는지 묻는 조건은 한 문장에 섞어
+      // 쓰면 따옴표가 꼬이기 쉬워서, 각각 제 방식으로 묻는다.
+      //   기록 시점 명단 — 그때 팀에 있었다면 공동 지출의 부담자다
+      //   결제자·귀속자 — 그 지출이 이 사람을 가리킨다
+      const [roster, part, paid] = await Promise.all([
+        db.from('expenses').select('id', { count: 'exact', head: true })
+          .in('ledger_id', ids).contains('team_member_ids', [me]),
+        db.from('expenses').select('id', { count: 'exact', head: true })
+          .in('ledger_id', ids).contains('participant_member_ids', [me]),
+        db.from('expenses').select('id', { count: 'exact', head: true })
+          .in('ledger_id', ids).or(`payer_member_id.eq.${me},owner_member_id.eq.${me}`),
+      ]);
+      const err = roster.error ?? part.error ?? paid.error;
+      if (err) throw new Error(err.message);
+
+      const touched = (roster.count ?? 0) + (part.count ?? 0) + (paid.count ?? 0);
+      if (touched > 0) {
+        return {
+          ok: false,
+          message:
+            '이미 지출에 이름이 들어 있어 나갈 수 없습니다. 팀 화면에서 명단만 내려 주세요.',
+        };
+      }
+    }
+
+    const { error } = await db
+      .from('members')
+      .delete()
+      .eq('id', pass.memberId)
+      .eq('team_id', pass.teamId);
+    if (error) throw new Error(error.message);
+
+    // 통행증에 적힌 사람이 이제 없다. 남겨 두면 없는 팀원으로 계속 들어온다.
+    await clearPass();
+
+    revalidatePath('/teams');
+    return { ok: true };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
 export async function deleteTeam(args: { ledgerId: string }): Promise<Result> {
   try {
     const pass = await requireLedgerAccess(args.ledgerId);

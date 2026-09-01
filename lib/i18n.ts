@@ -48,6 +48,8 @@ export type Key =
   | 'inviteDead' | 'inviteDeadWhy' | 'openBook'
   // 로그인 링크가 안 통했을 때
   | 'linkExpired' | 'linkOtherBrowser' | 'linkFailed'
+  | 'leaveTeam' | 'leaveWarn' | 'leaveForReal'
+  | 'deleteEntry' | 'deleteEntryWarn'
   // 탭
   | 'tabHome' | 'tabBook' | 'tabGoods' | 'tabSettle' | 'tabArchive' | 'tabTeam' | 'addExpense'
   // 홈
@@ -120,6 +122,11 @@ const ko: Record<Key, string> = {
   linkExpired: '링크가 만료되었습니다. 아래에서 다시 보내 주세요.',
   linkOtherBrowser: '이 링크는 메일을 요청한 브라우저에서 열어야 합니다. 주소를 길게 눌러 복사한 뒤 사파리나 크롬에 붙여넣거나, 아래에서 다시 보내 주세요.',
   linkFailed: '들어오지 못했습니다. 아래에서 다시 시도해 주세요.',
+  leaveTeam: '팀에서 나가기',
+  leaveWarn: '이 팀에서 내 이름이 지워집니다. 되돌릴 수 없습니다.',
+  leaveForReal: '나가기',
+  deleteEntry: '이 줄 지우기',
+  deleteEntryWarn: '‘{title}’을(를) 지웁니다. 되돌릴 수 없습니다.',
 
   tabHome: '홈', tabBook: '장부', tabGoods: '품목', tabSettle: '정산 내역',
   tabArchive: '아카이브', tabTeam: '팀', addExpense: '＋ 지출 기입',
@@ -199,7 +206,7 @@ const ko: Record<Key, string> = {
   settleEndsWhen: '정산은 글을 보냈다고 끝나지 않습니다. 보낸 사람이 ‘보냈어요’를, 받은 사람이 ‘받았어요’를 눌러 송금이 전부 확인되면 그때 도장이 찍힙니다.',
   waitingN: '송금 {n}건 확인 중',
   askHint: 'Enter로 묻고, Esc로 닫아요.',
-  chat: '저는 수증이예요. 영수증이라 바람에는 좀 약해요.\n저 위의 점을 누르시면 제가 할 수 있는 일이 나와요.\n구겨져도 적힌 건 안 없어져요.\n계산은 제가 하는 게 아니라 장부가 해요. 저는 읽어 드릴 뿐이에요.\n저를 끌어서 아무 데나 놓으셔도 돼요.\n돈 얘기는 미루면 더 어려워지더라고요.\n영수증은 버리면 끝이지만, 장부는 남아요.\n가끔은 접혀서 자고 싶어요.\n천천히 보셔도 돼요. 저는 여기 있을게요.\n잉크가 마르면 글씨가 흐려져요. 저희는 원래 그래요.\n누가 얼마 냈는지는 제가 안 잊어요.\n숫자가 안 맞으면 제가 먼저 놀랄 거예요.',
+  chat: '저는 수증이예요. 영수증이라 바람에는 좀 약해요.\n저 위의 점을 누르시면 제가 할 수 있는 일이 나와요.\n구겨져도 적힌 건 안 없어져요.\n계산은 제가 하는 게 아니라 장부가 해요. 저는 읽어 드릴 뿐이에요.\n저를 끌어서 아무 데나 놓으셔도 돼요.\n돈 얘기는 미루면 더 어려워지더라고요.\n영수증은 버리면 끝이지만, 장부는 남아요.\n가끔은 접혀서 자고 싶어요.\n천천히 보셔도 돼요. 저는 여기 있을게요.\n잉크가 마르면 글씨가 흐려져요. 저희는 원래 그래요.\n누가 얼마 냈는지는 제가 안 잊어요.\n숫자가 안 맞으면 제가 먼저 놀랄 거예요.\n…나는 영수증 유령이다.',
   tipLanding: '안녕하세요, 저는 수증이예요. 여기는 팀이 함께 쓴 돈을 적어 두는 곳이에요.\n팀플 하다 보면 누가 뭘 샀는지 흩어지잖아요. 그걸 한 장부에 모아 둬요.\n정산할 때가 되면 누가 누구에게 얼마를 보낼지 제가 계산해 드려요.\n카카오톡으로 보내면 팀원들이 각자 확인하고요.\n가입 없이 한 번만 나눠 볼 수도 있어요. ‘바로 나누기’를 눌러 보세요.\n학기가 끝나도 장부는 남아요. 그게 이 서비스가 하는 일이에요.',
   tipHome: '전체 지출이랑 당신의 몫이 맨 위에 있어요.\n보내셨으면 ‘보냈어요’를 눌러 주세요.\n궁금한 건 AI인 저에게 물어보셔도 돼요.',
   tipBook: '줄을 눌러 보시면 어떻게 갈라졌는지 펼쳐져요.\n왼쪽 칸을 고르면 그것만 정산할 수 있어요.\n사진을 누르면 영수증이 크게 열려요.',
@@ -241,6 +248,11 @@ const en: Record<Key, string> = {
   linkExpired: 'That link has expired. Send a new one below.',
   linkOtherBrowser: 'This link has to open in the browser that asked for the email. Copy the address and paste it into Safari or Chrome, or send a new one below.',
   linkFailed: 'Sign-in did not go through. Try again below.',
+  leaveTeam: 'Leave this team',
+  leaveWarn: 'Your name will be removed from this team. This cannot be undone.',
+  leaveForReal: 'Leave',
+  deleteEntry: 'Delete this entry',
+  deleteEntryWarn: '“{title}” will be deleted. This cannot be undone.',
 
   tabHome: 'Home', tabBook: 'Ledger', tabGoods: 'Items', tabSettle: 'Settlements',
   tabArchive: 'Archive', tabTeam: 'Team', addExpense: '＋ Add expense',
@@ -321,7 +333,7 @@ const en: Record<Key, string> = {
   settleEndsWhen: 'Sending the message does not close it. The stamp goes on once every transfer is confirmed — the sender taps “I sent it”, the receiver taps “Got it”.',
   waitingN: '{n} transfers pending',
   askHint: 'Enter to ask, Esc to close.',
-  chat: 'I am Sujeungi. Paper, so not great with wind.\nTap the dot above me to see what I can do.\nCrumple me and the writing still stays.\nThe ledger does the arithmetic, not me. I just read it out.\nYou can drag me anywhere you like.\nMoney talk only gets harder the longer you leave it.\nA receipt ends when you throw it away. A ledger stays.\nSometimes I would like to fold up and nap.\nTake your time. I will be here.\nWhen the ink dries we go faint. That is just how receipts are.\nI do not forget who paid what.\nIf the numbers stop adding up, I will be startled first.',
+  chat: 'I am Sujeungi. Paper, so not great with wind.\nTap the dot above me to see what I can do.\nCrumple me and the writing still stays.\nThe ledger does the arithmetic, not me. I just read it out.\nYou can drag me anywhere you like.\nMoney talk only gets harder the longer you leave it.\nA receipt ends when you throw it away. A ledger stays.\nSometimes I would like to fold up and nap.\nTake your time. I will be here.\nWhen the ink dries we go faint. That is just how receipts are.\nI do not forget who paid what.\nIf the numbers stop adding up, I will be startled first.\n…I am the ghost of a receipt.',
   tipLanding: 'Hello, I am Sujeungi. This is where a team writes down what it spent together.\nOn group projects it scatters — who bought what, who owes whom.\nWhen it is time to settle, I work out who sends what to whom.\nSend it over KakaoTalk and everyone confirms their part.\nYou can also split once without signing up. Try “Quick split”.\nThe ledger stays after the term ends. That is the point of this.',
   tipHome: 'Your total and your share are up top.\nSent money? Tap “I sent it”.\nAsk me anything — I am the AI here.',
   tipBook: 'Tap a row to see how it was split.\nTick the boxes to settle only those.\nTap a photo for the receipt.',
@@ -362,6 +374,11 @@ const ja: Record<Key, string> = {
   linkExpired: 'リンクの有効期限が切れています。下からもう一度送ってください。',
   linkOtherBrowser: 'このリンクはメールを申し込んだブラウザで開く必要があります。アドレスをコピーして Safari や Chrome に貼るか、下からもう一度送ってください。',
   linkFailed: '入れませんでした。下からもう一度お試しください。',
+  leaveTeam: 'チームから抜ける',
+  leaveWarn: 'このチームから名前が消えます。元に戻せません。',
+  leaveForReal: '抜ける',
+  deleteEntry: 'この行を削除',
+  deleteEntryWarn: '「{title}」を削除します。元に戻せません。',
 
   tabHome: 'ホーム', tabBook: '帳簿', tabGoods: '品目', tabSettle: '精算履歴',
   tabArchive: 'アーカイブ', tabTeam: 'チーム', addExpense: '＋ 支出を記入',
@@ -441,7 +458,7 @@ const ja: Record<Key, string> = {
   settleEndsWhen: '送っただけでは終わりません。送った人が「送りました」、受け取った人が「受け取りました」を押して、すべての送金が確認されたときに判が押されます。',
   waitingN: '送金 {n}件 確認中',
   askHint: 'Enterで質問、Escで閉じます。',
-  chat: '紙なので、風には少し弱いんです。\n上の点を押すと、わたしにできることが出ます。\nくしゃくしゃになっても、書かれたものは消えません。\n計算はわたしではなく帳簿がします。わたしは読むだけです。\nわたしをどこへでも引っ張って置いていいですよ。\nお金の話は、後回しにするほど難しくなります。\nレシートは捨てたら終わりですが、帳簿は残ります。\nたまには折りたたんで眠りたいです。\nゆっくりで大丈夫です。ここにいますから。\nインクが乾くと薄くなります。レシートはそういうものです。\n誰がいくら出したかは忘れません。\n数が合わなかったら、わたしが先に驚きます。',
+  chat: '紙なので、風には少し弱いんです。\n上の点を押すと、わたしにできることが出ます。\nくしゃくしゃになっても、書かれたものは消えません。\n計算はわたしではなく帳簿がします。わたしは読むだけです。\nわたしをどこへでも引っ張って置いていいですよ。\nお金の話は、後回しにするほど難しくなります。\nレシートは捨てたら終わりですが、帳簿は残ります。\nたまには折りたたんで眠りたいです。\nゆっくりで大丈夫です。ここにいますから。\nインクが乾くと薄くなります。レシートはそういうものです。\n誰がいくら出したかは忘れません。\n数が合わなかったら、わたしが先に驚きます。\n…わたしはレシートの幽霊だ。',
   tipLanding: 'こんにちは、スジュンイです。ここはチームで使ったお金を書き留める場所です。\n共同作業だと誰が何を買ったか散らばりますよね。それを一冊にまとめます。\n精算のときは、誰が誰にいくら送るかをわたしが計算します。\n登録なしで一度だけ割ることもできます。\n学期が終わっても帳簿は残ります。それがこのサービスです。',
   tipHome: '全体の支出とあなたの分が上にあります。\n送ったら「送りました」を押してくださいね。\n気になることはAIのわたしに聞いてください。',
   tipBook: '行を押すとどう割れたか開きます。\n左の欄を選べばそれだけ精算できます。\n写真を押すとレシートが大きく開きます。',
@@ -482,6 +499,11 @@ const zh: Record<Key, string> = {
   linkExpired: '链接已过期，请在下方重新发送。',
   linkOtherBrowser: '此链接需要在申请邮件的那个浏览器中打开。请复制地址粘贴到 Safari 或 Chrome，或在下方重新发送。',
   linkFailed: '未能登录，请在下方重试。',
+  leaveTeam: '退出这个团队',
+  leaveWarn: '你的名字会从这个团队中移除，无法撤销。',
+  leaveForReal: '退出',
+  deleteEntry: '删除这一行',
+  deleteEntryWarn: '将删除“{title}”，无法撤销。',
 
   tabHome: '首页', tabBook: '账本', tabGoods: '品项', tabSettle: '结算记录',
   tabArchive: '归档', tabTeam: '团队', addExpense: '＋ 记一笔',
@@ -561,7 +583,7 @@ const zh: Record<Key, string> = {
   settleEndsWhen: '发出去并不算结束。付款方点“已转账”、收款方点“已收到”，所有转账都确认之后才会盖章。',
   waitingN: '{n} 笔转账待确认',
   askHint: '按 Enter 提问，Esc 关闭。',
-  chat: '我是纸做的，怕风。\n按一下我头上的点，就能看到我会做什么。\n就算被揉皱了，写下的东西也不会消失。\n算数是账本做的，不是我。我只负责读给你听。\n你可以把我拖到任何地方。\n钱的事，越往后拖越难说。\n收据扔了就没了，账本会留下来。\n偶尔也想折起来睡一觉。\n慢慢看就好，我在这儿。\n墨干了字就淡了。收据本来就这样。\n谁付了多少，我不会忘。\n要是数字对不上，我会先吓一跳。',
+  chat: '我是纸做的，怕风。\n按一下我头上的点，就能看到我会做什么。\n就算被揉皱了，写下的东西也不会消失。\n算数是账本做的，不是我。我只负责读给你听。\n你可以把我拖到任何地方。\n钱的事，越往后拖越难说。\n收据扔了就没了，账本会留下来。\n偶尔也想折起来睡一觉。\n慢慢看就好，我在这儿。\n墨干了字就淡了。收据本来就这样。\n谁付了多少，我不会忘。\n要是数字对不上，我会先吓一跳。\n…我是收据的幽灵。',
   tipLanding: '你好，我是收证儿。这里是把团队一起花的钱记下来的地方。\n做小组作业时，谁买了什么很容易散掉。我们把它收在一本账里。\n该结算的时候，谁该给谁多少，我来算。\n不注册也可以只分一次账。\n学期结束后账本还留着。这就是这个服务做的事。',
   tipHome: '总支出和你的份额都在上面。\n转出了就点“已转账”。\n有不明白的，问我这个 AI 就好。',
   tipBook: '点一行就能看到怎么分摊的。\n勾左边的方框可以只结算那几笔。\n点照片会放大看收据。',
@@ -605,6 +627,11 @@ const es: Record<Key, string> = {
   linkExpired: 'El enlace ha caducado. Envía otro abajo.',
   linkOtherBrowser: 'Este enlace debe abrirse en el navegador desde el que pediste el correo. Copia la dirección y pégala en Safari o Chrome, o envía otro abajo.',
   linkFailed: 'No se pudo entrar. Inténtalo de nuevo abajo.',
+  leaveTeam: 'Salir del equipo',
+  leaveWarn: 'Tu nombre se borrará de este equipo. No se puede deshacer.',
+  leaveForReal: 'Salir',
+  deleteEntry: 'Borrar esta línea',
+  deleteEntryWarn: 'Se borrará «{title}». No se puede deshacer.',
 
   tabHome: 'Inicio', tabBook: 'Libro', tabGoods: 'Artículos', tabSettle: 'Liquidaciones',
   tabArchive: 'Archivo', tabTeam: 'Equipo', addExpense: '＋ Añadir gasto',
@@ -686,7 +713,7 @@ const es: Record<Key, string> = {
   settleEndsWhen: 'Enviar el mensaje no lo cierra. El sello llega cuando cada envío queda confirmado: quien paga marca «Lo envié» y quien recibe marca «Recibido».',
   waitingN: '{n} envíos pendientes',
   askHint: 'Enter para preguntar, Esc para cerrar.',
-  chat: 'Soy de papel, el viento no me sienta bien.\nToca el punto de arriba para ver lo que sé hacer.\nAunque me arrugues, lo escrito sigue ahí.\nLas cuentas las hace el libro, no yo. Yo solo las leo.\nPuedes arrastrarme a donde quieras.\nHablar de dinero solo se pone más difícil cuanto más se deja.\nUn recibo se acaba al tirarlo; un libro se queda.\nA veces me gustaría doblarme y dormir un rato.\nTómate tu tiempo. Aquí estaré.\nCuando la tinta se seca nos volvemos pálidos. Es lo que hay.\nNo olvido quién puso cuánto.\nSi los números dejan de cuadrar, me asustaré yo primero.',
+  chat: 'Soy de papel, el viento no me sienta bien.\nToca el punto de arriba para ver lo que sé hacer.\nAunque me arrugues, lo escrito sigue ahí.\nLas cuentas las hace el libro, no yo. Yo solo las leo.\nPuedes arrastrarme a donde quieras.\nHablar de dinero solo se pone más difícil cuanto más se deja.\nUn recibo se acaba al tirarlo; un libro se queda.\nA veces me gustaría doblarme y dormir un rato.\nTómate tu tiempo. Aquí estaré.\nCuando la tinta se seca nos volvemos pálidos. Es lo que hay.\nNo olvido quién puso cuánto.\nSi los números dejan de cuadrar, me asustaré yo primero.\n…soy el fantasma de un recibo.',
   tipLanding: 'Hola, soy Sujeungi. Aquí un equipo anota lo que gastó junto.\nEn los trabajos en grupo se dispersa: quién compró qué, quién debe a quién.\nCuando toca ajustar cuentas, yo calculo quién envía qué a quién.\nTambién puedes dividir una vez sin registrarte.\nEl libro queda cuando acaba el curso. De eso se trata.',
   tipHome: 'El total y tu parte están arriba.\n¿Enviaste dinero? Toca «Lo envié».\nPregúntame lo que sea: la IA soy yo.',
   tipBook: 'Toca una fila para ver el reparto.\nMarca las casillas para liquidar solo esas.\nToca una foto para ver el recibo.',
@@ -728,6 +755,11 @@ const vi: Record<Key, string> = {
   linkExpired: 'Liên kết đã hết hạn. Hãy gửi lại bên dưới.',
   linkOtherBrowser: 'Liên kết này phải mở trong trình duyệt đã yêu cầu email. Hãy sao chép địa chỉ và dán vào Safari hoặc Chrome, hoặc gửi lại bên dưới.',
   linkFailed: 'Chưa đăng nhập được. Hãy thử lại bên dưới.',
+  leaveTeam: 'Rời nhóm',
+  leaveWarn: 'Tên bạn sẽ bị xóa khỏi nhóm này. Không thể hoàn tác.',
+  leaveForReal: 'Rời',
+  deleteEntry: 'Xóa dòng này',
+  deleteEntryWarn: 'Sẽ xóa “{title}”. Không thể hoàn tác.',
 
   tabHome: 'Trang chính', tabBook: 'Sổ', tabGoods: 'Món đồ', tabSettle: 'Lịch sử chia',
   tabArchive: 'Lưu trữ', tabTeam: 'Nhóm', addExpense: '＋ Ghi chi tiêu',
@@ -808,7 +840,7 @@ const vi: Record<Key, string> = {
   settleEndsWhen: 'Gửi tin nhắn chưa phải là xong. Dấu chỉ đóng khi mọi khoản chuyển đều được xác nhận — người gửi bấm “Đã gửi”, người nhận bấm “Đã nhận”.',
   waitingN: 'Còn {n} khoản chờ xác nhận',
   askHint: 'Enter để hỏi, Esc để đóng.',
-  chat: 'Mình bằng giấy nên hơi sợ gió.\nBấm vào chấm phía trên là thấy mình làm được gì.\nCó nhàu đi thì chữ vẫn còn.\nTính toán là do sổ làm, không phải mình. Mình chỉ đọc lại thôi.\nBạn kéo mình đi đâu cũng được.\nChuyện tiền nong càng để lâu càng khó nói.\nHóa đơn vứt đi là hết, còn sổ thì ở lại.\nThỉnh thoảng mình cũng muốn gấp lại ngủ một giấc.\nCứ từ từ, mình vẫn ở đây.\nMực khô là chữ nhạt đi. Hóa đơn vốn vậy.\nAi trả bao nhiêu, mình không quên đâu.\nNếu các con số không khớp, mình sẽ giật mình trước.',
+  chat: 'Mình bằng giấy nên hơi sợ gió.\nBấm vào chấm phía trên là thấy mình làm được gì.\nCó nhàu đi thì chữ vẫn còn.\nTính toán là do sổ làm, không phải mình. Mình chỉ đọc lại thôi.\nBạn kéo mình đi đâu cũng được.\nChuyện tiền nong càng để lâu càng khó nói.\nHóa đơn vứt đi là hết, còn sổ thì ở lại.\nThỉnh thoảng mình cũng muốn gấp lại ngủ một giấc.\nCứ từ từ, mình vẫn ở đây.\nMực khô là chữ nhạt đi. Hóa đơn vốn vậy.\nAi trả bao nhiêu, mình không quên đâu.\nNếu các con số không khớp, mình sẽ giật mình trước.\n…ta là hồn ma của một tờ hóa đơn.',
   tipLanding: 'Xin chào, mình là Sujeungi. Đây là nơi cả nhóm ghi lại tiền đã tiêu chung.\nLàm bài nhóm thì ai mua gì hay bị tản mát. Mình gom hết vào một cuốn sổ.\nĐến lúc chia tiền, mình tính ai gửi cho ai bao nhiêu.\nBạn cũng có thể chia một lần mà không cần đăng ký.\nHết học kỳ sổ vẫn còn. Dịch vụ này làm việc đó.',
   tipHome: 'Tổng chi và phần của bạn ở trên cùng.\nGửi tiền rồi thì bấm “Đã gửi”.\nThắc mắc gì cứ hỏi mình — mình là AI.',
   tipBook: 'Bấm một dòng để xem chia thế nào.\nTick ô bên trái để chỉ chia những khoản ấy.\nBấm ảnh sẽ mở to hóa đơn.',

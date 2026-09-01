@@ -21,6 +21,7 @@ import {
 import type { Ledger } from '../../../../lib/domain/types.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
 import ImageField from '../../../ImageField.tsx';
+import DeleteExpense from './DeleteExpense.tsx';
 
 /**
  * 장부 (§21.3)
@@ -336,13 +337,31 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
                 </div>
               </div>
 
-              {e.productLink && (
-                <div className="row" style={{ marginTop: 18 }}>
+              <div className="row" style={{ marginTop: 18, gap: 20 }}>
+                {e.productLink && (
                   <a href={e.productLink} target="_blank" rel="noopener">
                     {T('seeStore')}
                   </a>
-                </div>
-              )}
+                )}
+
+                {/*
+                  잘못 적은 줄을 지운다.
+
+                  정산에 들어간 줄에는 이 단추를 두지 않는다. 확정된 정산의
+                  숫자가 나중에 흔들리면 안 되기 때문이다. 그때는 보정 항목을
+                  새로 적는 길이 따로 있다 — 서버와 데이터베이스도 같이 막는다.
+
+                  되돌릴 수 없어서 한 번 더 묻는다. 창을 띄우지는 않는다.
+                */}
+                {!settled.has(e.id) && (
+                  <DeleteExpense
+                    ledgerId={ledger.id}
+                    expenseId={e.id}
+                    title={e.title}
+                    lang={lang}
+                  />
+                )}
+              </div>
             </div>
           </td>
         </tr>,

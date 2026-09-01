@@ -17,6 +17,7 @@ import {
   type Locale,
 } from '../../../../lib/domain/money.ts';
 import type { Allocation, Member } from '../../../../lib/domain/types.ts';
+import { shrinkImage } from '../../../../lib/shrink.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
 
 /**
@@ -93,11 +94,23 @@ export default function ExpenseForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  async function analyze(file: File) {
+  async function analyze(original: File) {
     say('');
-    setPhoto(file);
-    setThumb(URL.createObjectURL(file));
+    setThumb(URL.createObjectURL(original));
     setStep('reading');
+
+    /*
+     * 올리기 전에 줄인다.
+     *
+     * 폰 사진은 4000픽셀에 4MB다. 그대로 보내면 올라가는 데, 실어 보내는 데,
+     * 읽는 데 각각 시간이 붙어 20초를 넘긴다. 영수증 글자를 읽는 데 그만한
+     * 해상도는 필요 없다(lib/shrink.ts).
+     *
+     * 남길 사진도 줄인 쪽으로 둔다. 장부에서 다시 볼 때도 이 크기면 충분하고,
+     * 저장소도 덜 쓴다.
+     */
+    const file = await shrinkImage(original);
+    setPhoto(file);
 
     const fd = new FormData();
     fd.set('ledgerId', ledgerId);
@@ -274,6 +287,14 @@ export default function ExpenseForm({
         <p className="muted" style={{ marginTop: 20 }}>
           {T('reading')}
         </p>
+        {/* 막다른 골목을 두지 않는다. 오래 걸린다 싶으면 손으로 적으면 된다.
+            읽기가 끝나면 그때 채워지는 것이 아니라, 여기서 나간 사람은 그냥
+            빈 폼을 쓴다. 기다림이 강제가 되어서는 안 된다. */}
+        <p style={{ marginTop: 16 }}>
+          <button className="plain" onClick={() => setStep('form')}>
+            {T('writeManually')}
+          </button>
+        </p>
       </section>
     );
   }
@@ -305,7 +326,7 @@ export default function ExpenseForm({
       )}
 
       <div className="fields" style={{ marginTop: 22 }}>
-        <label className="field" style={{ gridColumn: 'span 2' }}>
+        <label className="field wide">
           <span className="lab">{T('itemName')}{fromAI('title')}</span>
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>

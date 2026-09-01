@@ -5,6 +5,16 @@ import { requireLedgerAccess } from '../../../../lib/access.ts';
 import { loadLedger } from '../../../../lib/db/repo.ts';
 import { currentRoster } from '../../../../lib/domain/settlement.ts';
 
+/**
+ * 영수증 읽기가 이 화면에서 일어난다.
+ *
+ * 기본 실행 시간 제한(10초)은 모델이 사진을 읽고 대답하기에 빠듯하다. 제한에
+ * 먼저 걸리면 대답도 오류도 없이 끊기고 화면에는 '읽는 중'만 남는다. 여유를
+ * 두어, 우리가 정한 시각(lib/ai/receipt.ts)에 우리가 먼저 끊고 사람 말로
+ * 알려 줄 수 있게 한다.
+ */
+export const maxDuration = 30;
+
 /** 지출 기입 화면. 폼 자체는 손이 많이 가서 클라이언트 컴포넌트로 뺐다. */
 export default async function AddExpense({ params }: { params: Promise<{ ledgerId: string }> }) {
   const { ledgerId } = await params;

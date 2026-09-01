@@ -20,6 +20,13 @@ import { ENDPOINT, MODEL, meter, type Usage } from './usage.ts';
  */
 // 모델 이름과 값을 재는 자는 lib/ai/usage.ts 한 군데에 둔다.
 
+/**
+ * 여기서 끊는다. 배포 환경의 함수 실행 시간 제한(대개 10초)보다 짧아야
+ * 우리가 먼저 끊고 사람 말로 알려 줄 수 있다. 제한에 먼저 걸리면 아무 말도
+ * 못 하고 끊긴다.
+ */
+const TIMEOUT_MS = Number(process.env.LEDGER_AI_TIMEOUT_MS ?? 9000);
+
 export type Extracted = {
   title: string;
   amount: number; // 해당 통화의 최소 단위 정수
@@ -127,10 +134,23 @@ export async function readReceipt(args: {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return { ok: false, message: '영수증 분석이 아직 설정되지 않았습니다. 직접 적어 주세요.' };
 
+  /*
+   * 기다림에 끝을 둔다.
+   *
+   * 끝이 없으면 화면에는 '읽는 중'만 남는다. 사람은 그게 오래 걸리는 것인지
+   * 영영 안 오는 것인지 알 수 없어서 계속 기다린다. 그러다 서버 쪽 시간 제한에
+   * 먼저 걸리면 대답도 오류도 없이 끊긴다 — 가장 나쁜 끝이다.
+   *
+   * 그래서 우리가 먼저 끊고, 끊었다고 말한다. 손으로 적는 길은 언제나 열려 있다.
+   */
+  const stop = new AbortController();
+  const bell = setTimeout(() => stop.abort(), TIMEOUT_MS);
+
   let res: Response;
   try {
     res = await fetch(ENDPOINT, {
       method: 'POST',
+      signal: stop.signal,
       headers: {
         'content-type': 'application/json',
         'x-api-key': key,
@@ -152,8 +172,16 @@ export async function readReceipt(args: {
         ],
       }),
     });
-  } catch {
-    return { ok: false, message: '분석 서버에 닿지 못했습니다. 직접 적어 주세요.' };
+  } catch (e) {
+    const timedOut = e instanceof Error && e.name === 'AbortError';
+    return {
+      ok: false,
+      message: timedOut
+        ? '읽는 데 너무 오래 걸립니다. 직접 적어 주세요.'
+        : '분석 서버에 닿지 못했습니다. 직접 적어 주세요.',
+    };
+  } finally {
+    clearTimeout(bell);
   }
 
   if (!res.ok) {

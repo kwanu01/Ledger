@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   createInvite,
   deleteTeam,
+  leaveTeam,
   renameMember,
   renameTeam,
   revokeInvite,
@@ -59,6 +60,7 @@ export default function TeamPanel({
   const [editTeam, setEditTeam] = useState(false);
   const [newTeam, setNewTeam] = useState('');
   const [armed, setArmed] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   async function run(fn: () => Promise<{ ok: boolean; message?: string }>) {
         setBusy(true);
@@ -304,6 +306,40 @@ export default function TeamPanel({
             </button>
           )}
         </div>
+
+        {/*
+          팀에서 나가기.
+
+          만든 사람에게는 위의 '장부 지우기'가 있으므로 여기는 나머지 팀원의
+          자리다. 지출에 이름이 한 번이라도 들어갔으면 서버가 막고, 그때는
+          명단에서 내려가는 쪽을 쓰라고 알려 준다.
+        */}
+        {!owner && (
+          <div className="row" style={{ marginTop: 26 }}>
+            {leaving ? (
+              <>
+                <span className="debit">{T('leaveWarn')}</span>
+                <button
+                  className="act small danger"
+                  disabled={busy}
+                  onClick={async () => {
+                    const r = await run(() => leaveTeam({ ledgerId }));
+                    if (r?.ok) router.push('/teams');
+                  }}
+                >
+                  {T('leaveForReal')}
+                </button>
+                <button className="plain" onClick={() => setLeaving(false)}>
+                  {T('close')}
+                </button>
+              </>
+            ) : (
+              <button className="plain" onClick={() => setLeaving(true)}>
+                {T('leaveTeam')}
+              </button>
+            )}
+          </div>
+        )}
       </section>
     </>
   );

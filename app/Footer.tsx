@@ -1,6 +1,7 @@
 import { translator } from '../lib/i18n.ts';
 import type { Locale } from '../lib/domain/money.ts';
 import Link from 'next/link';
+import Contact from './Contact.tsx';
 import { MADE_ON } from './Logo.tsx';
 
 /**
@@ -31,7 +32,9 @@ export default function Footer({ lang }: { lang: Locale }) {
       {MAIL && (
         <>
           <span className="foot-sep" aria-hidden="true" />
-          <a href={`mailto:${MAIL}`}>{T('contact')}</a>
+          {/* 링크가 아니라 단추다. 메일 앱이 없는 폰에서 mailto: 는
+              눌러도 아무 일이 없다 — 주소를 화면에 띄우는 편이 확실하다. */}
+          <Contact mail={MAIL} lang={lang} />
         </>
       )}
     </footer>

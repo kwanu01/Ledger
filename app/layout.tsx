@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import { getLang } from '../lib/lang.ts';
+import { getTheme } from '../lib/theme.ts';
+import ThemeToggle from './ThemeToggle.tsx';
 import { HelperProvider } from './helper/HelperContext.tsx';
 import Helper from './helper/Helper.tsx';
 import Footer from './Footer.tsx';
@@ -74,11 +76,22 @@ export const metadata: Metadata = {
  * 그 자리가 모든 화면에 있어야 한다.
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const lang = await getLang();
+  const [lang, theme] = await Promise.all([getLang(), getTheme()]);
   return (
-    <html lang={lang} className={`${courier.variable} ${hanSerif.variable}`}>
+    /*
+     * 고른 색을 여기서 미리 박아 둔다. 브라우저에서 고쳐 넣으면 그림이 다
+     * 그려진 뒤에 색이 바뀌어, 어두운 화면을 쓰는 사람에게 흰 화면이 한 번
+     * 번쩍인다. 아무것도 고르지 않았으면 아무것도 적지 않는다 — 그때는
+     * CSS가 기기 설정을 따른다.
+     */
+    <html
+      lang={lang}
+      data-theme={theme ?? undefined}
+      className={`${courier.variable} ${hanSerif.variable}`}
+    >
       <body>
         <HelperProvider>
+          <ThemeToggle value={theme} />
           <div className="wrap">
             {children}
             <Footer lang={lang} />
