@@ -53,15 +53,24 @@ export default async function LedgerShell({
     <header>
       <div className="topbar">
         <Logo />
+        {/*
+          오른쪽 위의 차례. **계정이 먼저, 언어가 그 다음이다.**
+
+          이 자리에서 계정 이름은 '지금 누구로 들어와 있는가'라는 사실이고,
+          언어는 그저 고르는 값이다. 사실이 먼저 오고 설정이 뒤에 온다.
+          누르는 횟수로 봐도 그렇다 — 언어는 한 번 고르면 그만이고, 계정은
+          로그아웃하러 다시 찾는 자리다. 자주 찾는 것을 끝에 두면 매번
+          눈으로 훑어야 한다.
+        */}
         <span className="who">
           {/* 팀에서의 내 이름. 좁은 화면에서는 계정 이름과 겹쳐 보여서 접는다. */}
           <span className="who-name">{who}</span>
-          <LangPicker value={lang} />
           {me && (
             <Account me={me} lang={lang}>
               <SignOut lang={lang} />
             </Account>
           )}
+          <LangPicker value={lang} />
         </span>
       </div>
 

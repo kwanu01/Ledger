@@ -58,6 +58,7 @@ export type Key =
   | 'spentAll' | 'entries' | 'notSettled' | 'countN' | 'myShare' | 'evenNothing'
   | 'willReceive' | 'willSend' | 'sharedCost' | 'personalCost'
   | 'moneyMoving' | 'none' | 'gotIt' | 'recent' | 'seeWholeBook'
+  | 'bookEmpty' | 'bookEmptyHow'
   // 장부
   | 'colNo' | 'colDate' | 'colItem' | 'colPayer' | 'colAmount' | 'colBears' | 'colState'
   | 'doneStamp' | 'settledStamp' | 'closing' | 'eachBears' | 'vendor' | 'category'
@@ -147,6 +148,8 @@ const ko: Record<Key, string> = {
   sharedCost: '공동 부담 지출', personalCost: '별도 개인 지출',
   moneyMoving: '주고받을 돈', none: '없음', gotIt: '받았어요',
   recent: '최근 기입', seeWholeBook: '장부 전체 보기',
+  bookEmpty: '아직 기입된 지출이 없습니다.',
+  bookEmptyHow: '무엇을 샀는지 한 줄 적으면 여기에 쌓입니다.',
 
   colNo: '번호', colDate: '날짜', colItem: '항목', colPayer: '결제', colAmount: '금액',
   colBears: '부담', colState: '상태',
@@ -185,7 +188,7 @@ const ko: Record<Key, string> = {
   uploaded: '올린 사진',
 
   membersN: '팀원 {n}명', me: '나',
-  gone: '나감', markGone: '나감으로 표시', bringBack: '다시 넣기',
+  gone: '나감', markGone: '탈퇴', bringBack: '다시 넣기',
   inviteLinks: '초대 링크', until: '{date}까지', noExpiry: '기한 없음',
   copy: '복사', copied: '복사했습니다', revoke: '회수', makeInvite: '초대 링크 만들기',
   renameHint: '이름을 바꿔도 이미 기입된 계산은 그대로입니다. 나간 사람도 지난 지출에는 남습니다.',
@@ -281,6 +284,8 @@ const en: Record<Key, string> = {
   sharedCost: 'Shared expenses', personalCost: 'Personal expenses',
   moneyMoving: 'Money to move', none: 'None', gotIt: 'Received',
   recent: 'Recent entries', seeWholeBook: 'See the whole ledger',
+  bookEmpty: 'No entries yet.',
+  bookEmptyHow: 'Write down what you bought and it will collect here.',
 
   colNo: 'No.', colDate: 'Date', colItem: 'Item', colPayer: 'Paid by', colAmount: 'Amount',
   colBears: 'Split', colState: 'State',
@@ -320,7 +325,7 @@ const en: Record<Key, string> = {
   uploaded: 'uploaded photo',
 
   membersN: '{n} members', me: 'you',
-  gone: 'left', markGone: 'Mark as left', bringBack: 'Bring back',
+  gone: 'left', markGone: 'Leave', bringBack: 'Bring back',
   inviteLinks: 'Invite links', until: 'until {date}', noExpiry: 'no expiry',
   copy: 'Copy', copied: 'Copied', revoke: 'Revoke', makeInvite: 'Create invite link',
   renameHint: 'Renaming leaves recorded entries untouched. Someone who left stays on past expenses.',
@@ -415,6 +420,8 @@ const ja: Record<Key, string> = {
   sharedCost: '共同負担の支出', personalCost: '個人別の支出',
   moneyMoving: 'やり取りする金額', none: 'なし', gotIt: '受け取りました',
   recent: '最近の記入', seeWholeBook: '帳簿をすべて見る',
+  bookEmpty: 'まだ記入がありません。',
+  bookEmptyHow: '何を買ったか一行書けば、ここに溜まります。',
 
   colNo: '番号', colDate: '日付', colItem: '項目', colPayer: '支払', colAmount: '金額',
   colBears: '負担', colState: '状態',
@@ -453,7 +460,7 @@ const ja: Record<Key, string> = {
   uploaded: 'アップロードした写真',
 
   membersN: 'メンバー {n}人', me: '自分',
-  gone: '離脱', markGone: '離脱として記録', bringBack: '戻す',
+  gone: '離脱', markGone: '離脱', bringBack: '戻す',
   inviteLinks: '招待リンク', until: '{date}まで', noExpiry: '期限なし',
   copy: 'コピー', copied: 'コピーしました', revoke: '取り消す', makeInvite: '招待リンクを作る',
   renameHint: '名前を変えても記入済みの計算は変わりません。離脱した人も過去の支出には残ります。',
@@ -548,6 +555,8 @@ const zh: Record<Key, string> = {
   sharedCost: '共同承担的支出', personalCost: '个人单独的支出',
   moneyMoving: '待转金额', none: '无', gotIt: '已收到',
   recent: '最近记录', seeWholeBook: '查看整本账',
+  bookEmpty: '还没有记录。',
+  bookEmptyHow: '写下买了什么，就会积累在这里。',
 
   colNo: '编号', colDate: '日期', colItem: '项目', colPayer: '付款', colAmount: '金额',
   colBears: '分担', colState: '状态',
@@ -586,7 +595,7 @@ const zh: Record<Key, string> = {
   uploaded: '上传的照片',
 
   membersN: '成员 {n}人', me: '我',
-  gone: '已退出', markGone: '标记为退出', bringBack: '重新加入',
+  gone: '已退出', markGone: '退出', bringBack: '重新加入',
   inviteLinks: '邀请链接', until: '有效至 {date}', noExpiry: '无期限',
   copy: '复制', copied: '已复制', revoke: '撤回', makeInvite: '生成邀请链接',
   renameHint: '改名不会改变已记录的计算。已退出的人仍保留在过去的支出中。',
@@ -684,6 +693,8 @@ const es: Record<Key, string> = {
   sharedCost: 'Gastos compartidos', personalCost: 'Gastos personales aparte',
   moneyMoving: 'Dinero por mover', none: 'Nada', gotIt: 'Recibido',
   recent: 'Apuntes recientes', seeWholeBook: 'Ver el libro entero',
+  bookEmpty: 'Aún no hay apuntes.',
+  bookEmptyHow: 'Anota qué compraste y se irá acumulando aquí.',
 
   colNo: 'N.º', colDate: 'Fecha', colItem: 'Concepto', colPayer: 'Pagó', colAmount: 'Importe',
   colBears: 'Reparto', colState: 'Estado',
@@ -724,7 +735,7 @@ const es: Record<Key, string> = {
   uploaded: 'foto subida',
 
   membersN: '{n} integrantes', me: 'tú',
-  gone: 'salió', markGone: 'Marcar como salido', bringBack: 'Volver a añadir',
+  gone: 'salió', markGone: 'Salir', bringBack: 'Volver a añadir',
   inviteLinks: 'Enlaces de invitación', until: 'hasta {date}', noExpiry: 'sin caducidad',
   copy: 'Copiar', copied: 'Copiado', revoke: 'Revocar', makeInvite: 'Crear enlace de invitación',
   renameHint: 'Cambiar el nombre no altera los apuntes ya registrados. Quien sale permanece en los gastos pasados.',
@@ -820,6 +831,8 @@ const vi: Record<Key, string> = {
   sharedCost: 'Chi chung', personalCost: 'Chi riêng từng người',
   moneyMoving: 'Tiền cần chuyển', none: 'Không có', gotIt: 'Đã nhận',
   recent: 'Ghi gần đây', seeWholeBook: 'Xem toàn bộ sổ',
+  bookEmpty: 'Chưa có ghi chép nào.',
+  bookEmptyHow: 'Ghi lại bạn đã mua gì, mọi thứ sẽ dồn về đây.',
 
   colNo: 'Số', colDate: 'Ngày', colItem: 'Khoản', colPayer: 'Người trả', colAmount: 'Số tiền',
   colBears: 'Chia', colState: 'Trạng thái',
@@ -859,7 +872,7 @@ const vi: Record<Key, string> = {
   uploaded: 'ảnh đã tải lên',
 
   membersN: '{n} thành viên', me: 'tôi',
-  gone: 'đã rời', markGone: 'Đánh dấu đã rời', bringBack: 'Thêm lại',
+  gone: 'đã rời', markGone: 'Rời đi', bringBack: 'Thêm lại',
   inviteLinks: 'Liên kết mời', until: 'đến {date}', noExpiry: 'không hết hạn',
   copy: 'Sao chép', copied: 'Đã sao chép', revoke: 'Thu hồi', makeInvite: 'Tạo liên kết mời',
   renameHint: 'Đổi tên không làm thay đổi các khoản đã ghi. Người đã rời vẫn còn trong các khoản chi cũ.',

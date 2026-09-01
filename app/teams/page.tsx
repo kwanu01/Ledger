@@ -75,10 +75,10 @@ export default async function Teams() {
         <div className="topbar">
           <Logo />
           <span className="who">
-            <LangPicker value={lang} />
             <Account me={user!} lang={lang}>
               <SignOut lang={lang} />
             </Account>
+            <LangPicker value={lang} />
           </span>
         </div>
       </header>

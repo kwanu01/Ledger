@@ -47,12 +47,12 @@ export default async function NewLedger({
         <div className="topbar">
           <Logo />
           <span className="who">
-            <LangPicker value={lang} />
             {user && (
               <Account me={user} lang={lang}>
                 <SignOut lang={lang} />
               </Account>
             )}
+            <LangPicker value={lang} />
           </span>
         </div>
       </header>

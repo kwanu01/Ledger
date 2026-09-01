@@ -126,13 +126,23 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
     .filter((e) => selection.has(e.id))
     .reduce((a, e) => a + e.amount, 0);
 
+  /**
+   * 빈 장부.
+   *
+   * 여기에 '지출 기입' 단추를 한 번 더 두었었다. 그런데 그 단추는 바로 위
+   * 차례표에 늘 붙어 있고, 폰에서는 화면 폭을 다 쓰는 검은 띠라 눈에 제일
+   * 먼저 들어온다. 같은 단추가 한 화면에 둘이면 두 개가 다른 일을 하는 줄
+   * 알고 한 번 멈춰 읽게 된다.
+   *
+   * 그래서 여기서는 단추를 지우고, 이 자리가 무엇을 담는 자리인지만 적는다.
+   * 할 일은 위에 있고, 여기는 아직 비어 있다는 사실을 말하는 자리다.
+   */
   if (ledger.expenses.length === 0) {
     return (
       <section>
         <div className="empty">
-          <a href={`/l/${ledger.id}/add`} className="act primary">
-            {T('addExpense')}
-          </a>
+          <p className="empty-say">{T('bookEmpty')}</p>
+          <p className="empty-how">{T('bookEmptyHow')}</p>
         </div>
       </section>
     );
@@ -186,7 +196,7 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
 
     rows.push(
       <tr className={`entry${done ? ' done' : ''}${openRow === e.id ? ' open' : ''}`} key={e.id}>
-        <td>
+        <td className="pick">
           {!done && !nothingToSettle && (
             <input
               type="checkbox"
@@ -200,17 +210,17 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
         </td>
         <td className="slip">{slips.get(e.id)}</td>
         <td className="day">{e.date.slice(5).replace('-', '.')}</td>
-        <td>
+        <td className="item">
           <button className="subject" onClick={() => setOpenRow(openRow === e.id ? null : e.id)}>
             {e.title}
           </button>
           {e.adjustment && <span className="tag">{adjustmentLabel(e, lang)}</span>}
         </td>
-        <td className="muted">{who(e.payerId)}</td>
+        <td className="muted whom">{who(e.payerId)}</td>
         {/* 빼는 금액은 괄호로 적는다. 빨간 마이너스는 반대로 읽힌다(money.ts). */}
         <td className="r money">{entry(e.amount)}</td>
-        <td className="muted">{allocationLabel(e, ledger.members, lang)}</td>
-        <td>
+        <td className="muted bears">{allocationLabel(e, ledger.members, lang)}</td>
+        <td className="state">
           {nothingToSettle && <span className="muted">{T('noSettleNeeded')}</span>}
           {done && (
             <span
@@ -238,7 +248,7 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
       const eff = effectiveAmount(ledger.expenses, e);
 
       rows.push(
-        <tr key={`${e.id}-open`}>
+        <tr className={`unfold${done ? ' done' : ''}`} key={`${e.id}-open`}>
           <td className="opened" colSpan={8}>
             <div style={{ padding: '18px 14px 22px' }}>
               <div className="fields" style={{ gap: 30 }}>

@@ -137,9 +137,9 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
 
         {ledger.expenses.length === 0 ? (
           <div className="empty">
-            <Link href={`/l/${ledgerId}/add`} className="act primary">
-              {T('addExpense')}
-            </Link>
+            {/* 단추는 차례표에 늘 있다. 여기서 한 번 더 내밀지 않는다. */}
+            <p className="empty-say">{T('bookEmpty')}</p>
+            <p className="empty-how">{T('bookEmptyHow')}</p>
           </div>
         ) : (
         <div className="scroll">
@@ -152,13 +152,13 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
                 <tr key={e.id} className="entry">
                   <td className="slip">{slips.get(e.id)}</td>
                   <td className="day">{e.date.slice(5).replace('-', '.')}</td>
-                  <td>
+                  <td className="item">
                     {e.title}
                     {e.adjustment && <span className="tag">{adjustmentLabel(e, lang)}</span>}
                   </td>
-                  <td className="muted">{nameOf(members, e.payerId)}</td>
+                  <td className="muted whom">{nameOf(members, e.payerId)}</td>
                   <td className="r money">{entry(e.amount)}</td>
-                  <td className="muted">{allocationLabel(e, members, lang)}</td>
+                  <td className="muted bears">{allocationLabel(e, members, lang)}</td>
                 </tr>
               ))}
             </tbody>

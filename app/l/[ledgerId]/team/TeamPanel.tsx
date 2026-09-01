@@ -103,7 +103,7 @@ export default function TeamPanel({
             <tbody>
               {members.map((m) => (
                 <tr key={m.id} className={m.active ? undefined : 'left'}>
-                  <td style={{ width: '45%' }}>
+                  <td className="nameCell">
                     {editing === m.id ? (
                       <input
                         type="text"

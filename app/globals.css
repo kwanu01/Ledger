@@ -259,7 +259,12 @@ section:last-of-type{border-bottom:0}
 @media (max-width:640px){
   .summary{grid-template-columns:1fr}
   .summary > div{border-left:0;border-top:1px solid var(--rule);padding:14px 0}
-  .summary > div:first-child{border-top:0;padding-top:0}
+  /* 세 칸이 세로로 쌓이면 위아래를 닫는 굵은 선과 글이 맞닿는다.
+     넓은 화면에서는 칸이 옆으로 놓여서 18px 안쪽 여백이 그 자리를 메웠는데,
+     쌓이면서 첫 칸의 위쪽과 끝 칸의 아래쪽이 0이 되어 버렸다. 굵은 선은
+     가는 선보다 무거우니 오히려 더 떨어져 있어야 한다. */
+  .summary > div:first-child{border-top:0;padding-top:19px}
+  .summary > div:last-child{padding-bottom:19px}
 }
 
 /* ── 라벨/값 표 ──────────────────────────────────────────────────── */
@@ -295,6 +300,16 @@ table.book td.money,table.book th.money{
 table tbody tr:last-child > td{border-bottom:0}
 table tbody tr.closing:last-child > td{border-bottom:3px double var(--rule-hard)}
 table.book .slip{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);width:40px}
+/* 팀원 명단.
+
+   장부의 표는 화면을 다 써야 한다 — 칸이 여덟이고 숫자를 오른쪽에 세워야
+   하니까. 명단은 다르다. 한 사람에 이름과 딸린 말 한둘, 단추 하나가 전부다.
+   그걸 1000픽셀에 늘려 놓으면 이름과 그 사람의 단추가 화면 양끝으로 갈라져,
+   어느 단추가 누구 것인지 눈으로 이어야 한다. 폭을 읽기 좋은 만큼만 준다.
+   그러면 이름 바로 오른쪽에 그 사람에게 할 수 있는 일이 온다. */
+table.book.members{max-width:520px}
+table.book.members td.nameCell{width:40%}
+table.book.members td:last-child{text-align:right}
 table.book .day{font-family:var(--mono);color:var(--ink-2);white-space:nowrap}
 /* 정산이 끝난 줄 (§12)
 
@@ -534,7 +549,16 @@ dialog{
 dialog::backdrop{background:rgba(0,0,0,.45)}
 
 /* ── 빈 상태 ─────────────────────────────────────────────────────── */
-.empty{border:1px dashed var(--rule);padding:40px 24px;text-align:center;color:var(--ink-2)}
+/* 빈 자리 (§12)
+
+   아직 아무것도 없다는 것도 장부가 말해 주어야 하는 사실이다. 다만 여기서
+   할 일을 다시 내밀지는 않는다 — '지출 기입'은 차례표에 늘 붙어 있고,
+   폰에서는 화면 폭을 다 쓰는 검은 띠라 이미 눈에 들어와 있다. 같은 단추를
+   한 화면에 둘 두면 둘이 다른 일을 하는 줄 알고 한 번 멈추게 된다. */
+.empty{border:1px dashed var(--rule);padding:36px 24px;text-align:center;color:var(--ink-2)}
+.empty p{margin:0}
+.empty-say{font-size:15px;color:var(--ink)}
+.empty-how{margin-top:7px !important;font-size:13px;color:var(--ink-3)}
 
 /* ── 기타 ────────────────────────────────────────────────────────── */
 .drop{border:1px dashed var(--ink-3);padding:40px 24px;text-align:center}
@@ -947,16 +971,73 @@ footer a:hover{color:var(--ink)}
 @media (max-width:640px){
   body{padding:0 22px}
 
-  /* 머리글 — 로고와 계정만. 팀에서의 내 이름은 팀 화면에 있다. */
-  .topbar{gap:10px}
-  .who-name{display:none}
-  .acct-card{min-width:0;width:calc(100vw - 32px);max-width:320px}
+  /* ────────────────────────────────────────────────────────────────
+     머리를 다시 짠다.
 
-  /* 탭은 두 줄까지 접히고, 지출 기입은 아래에 한 줄로 눕는다.
-     엄지로 누르는 단추는 넓을수록 좋다. */
-  nav{gap:2px 18px;font-size:15px}
+     넓은 화면에서 맨 윗줄은 왼쪽에 로고, 오른쪽에 계정과 언어다. 양끝이
+     잡혀 있으니 줄이 선다. 폰에서는 그 줄이 두 덩어리로 갈라져, 로고는
+     왼쪽에 계정은 오른쪽에 매달린 채 가운데가 비어 버린다. 게다가 폰에서
+     제일 좋은 자리를 **한 번 고르고 마는 것**들이 차지하고 있다 — 언어는
+     처음에 한 번, 계정은 로그아웃할 때나 찾는다.
+
+     그래서 폰에서는 이렇게 둔다.
+
+         맨 위        로고 (가운데)
+         그 아래      팀 · 장부 이름, 탭, 그리고 장부
+         맨 아래      계정 · 언어
+
+     로고가 가운데 오면 그 아래의 팀 이름과 탭도 같은 축에 선다. 머리가
+     하나의 축으로 정리되고, 자주 안 쓰는 것들은 발치로 내려간다.
+
+     자리를 옮기는 방법: header 와 .topbar 의 상자를 없애면(display:contents)
+     그 안의 로고와 계정 묶음이 바깥 세로 흐름(.wrap)의 한 칸씩이 된다.
+     그러면 order 하나로 계정 묶음만 맨 아래로 보낼 수 있다. 화면마다 마크업을
+     따로 두지 않아도 되고, 넓은 화면은 손대지 않은 그대로 남는다.
+     ──────────────────────────────────────────────────────────────── */
+  header, header > .topbar{display:contents}
+
+  header > .topbar > .logo{align-self:center;margin-top:42px}
+
+  /* 팀에서의 내 이름. 좁은 화면에서는 계정 이름과 겹쳐 보여서 접는다. */
+  .who-name{display:none}
+
+  /* 계정과 언어. 맨 아래로 내리고(order), 남는 세로 공간을 위로 밀어(margin-top:auto)
+     맨 아래 한 줄 바로 위에 붙인다. 둘은 한 덩어리라 선 하나를 같이 쓴다. */
+  header > .topbar > .who{
+    order:1;margin:auto 0 0;justify-content:center;gap:6px 16px;
+    padding-top:20px;border-top:1px solid var(--rule-2)}
+  .wrap:has(header > .topbar > .who) > footer{
+    order:2;margin-top:13px;padding-top:0;border-top:0}
+
+  /* 계정 카드는 이제 화면 아래쪽에서 열린다. 여는 자리에 맞춰 띄우면
+     화면 밖으로 나가므로, 화면에 대고 붙인다. */
+  .acct-card{
+    position:fixed;top:auto;bottom:14px;left:16px;right:16px;
+    width:auto;min-width:0;max-width:none;z-index:80}
+
+  /* ────────────────────────────────────────────────────────────────
+     머리는 가운데로 모은다.
+
+     넓은 화면에서 탭 줄은 왼쪽에서 시작해 오른쪽 끝의 '지출 기입'까지
+     닿는다. 양끝이 다 잡혀 있으니 줄이 서 있다. 폰에서는 그 단추가 아래로
+     내려가면서 오른쪽 끝을 잡아 주던 것이 사라진다. 남은 탭들은 왼쪽에만
+     붙고 오른쪽에는 들쭉날쭉한 빈자리가 생긴다 — 여백이 한쪽에만 있으면
+     화면이 기울어 보인다.
+
+     그래서 좁은 화면에서는 머리글을 가운데로 모은다. 영수증의 머리가 원래
+     가운데 정렬인 것과 같은 이유다. 폭이 좁을수록 가운데가 안정적이다.
+
+     다만 **본문은 그대로 왼쪽에서 시작한다.** 기록과 숫자는 같은 시작선에
+     서 있어야 훑을 수 있다. 가운데로 모으는 것은 읽는 것이 아니라 자리를
+     알려 주는 것들 — 머리글, 탭, 맨 아래 한 줄 — 뿐이다.
+     ──────────────────────────────────────────────────────────────── */
+  .masthead{justify-content:center;text-align:center;gap:2px 12px}
+
+  nav{gap:2px 18px;font-size:15px;justify-content:center}
   nav .spacer{display:none}
   nav .act.primary{width:100%;margin-top:12px;text-align:center;padding:11px 18px}
+
+  footer{justify-content:center;text-align:center}
 
   table.book{font-size:14px}
   table.book th,table.book td{padding:8px 7px}
@@ -1026,16 +1107,23 @@ footer a:hover{color:var(--ink)}
   table.book.entries tr.entry:last-child{border-bottom:0}
   table.book.entries tr.entry > td{border:0;padding:0;white-space:normal}
 
-  /* 어느 칸이 어디로 가는지. 표의 순서 그대로다.
-     고르는 칸(1)과 도장(8)은 함께 나타나지 않으므로 한 자리를 나눠 쓴다. */
-  table.book.entries td:nth-child(1),
-  table.book.entries td:nth-child(8){grid-area:mark;justify-self:end}
-  table.book.entries td:nth-child(2){grid-area:slip}
-  table.book.entries td:nth-child(3){grid-area:day}
-  table.book.entries td:nth-child(4){grid-area:title}
-  table.book.entries td:nth-child(5){grid-area:who;white-space:nowrap}
-  table.book.entries td:nth-child(6){grid-area:amount}
-  table.book.entries td:nth-child(7){grid-area:bears}
+  /* 어느 칸이 어디로 가는지.
+
+     처음에는 순서(nth-child)로 짚었다. 그런데 같은 모양을 쓰는 표가 둘이다 —
+     장부는 여덟 칸이고 첫 화면의 '최근 기입'은 여섯 칸이다. 순서로 짚으면
+     칸이 하나씩 밀려, 첫 화면에서는 날짜가 전표 자리에, 항목이 날짜 자리에
+     앉았다. 자리를 순서가 아니라 **이름**으로 정한다. 칸 수가 달라도 같은
+     이름은 같은 자리로 간다.
+
+     고르는 칸과 도장은 함께 나타나지 않으므로 한 자리를 나눠 쓴다. */
+  table.book.entries td.pick,
+  table.book.entries td.state{grid-area:mark;justify-self:end}
+  table.book.entries td.slip{grid-area:slip}
+  table.book.entries td.day{grid-area:day}
+  table.book.entries td.item{grid-area:title}
+  table.book.entries td.whom{grid-area:who;white-space:nowrap}
+  table.book.entries td.money{grid-area:amount}
+  table.book.entries td.bears{grid-area:bears}
 
   /* 첫 줄 — 전표 번호와 날짜. 기록의 머리다. 작고 흐리게 둔다. */
   table.book.entries td.slip,
@@ -1044,7 +1132,7 @@ footer a:hover{color:var(--ink)}
   table.book.entries td.day{justify-self:end}
 
   /* 가운데 줄 — 무엇을 샀는지. 이 기록에서 가장 먼저 읽혀야 하는 것이다. */
-  table.book.entries td:nth-child(4){
+  table.book.entries td.item{
     font-size:16px;line-height:1.45;margin:1px 0 2px}
   table.book.entries .subject{font-size:inherit}
 
@@ -1054,12 +1142,12 @@ footer a:hover{color:var(--ink)}
      짧은 말은 절대 세로로 쪼개지지 않게 한다. 이름 석 자가 한 글자씩 줄바꿈
      되면 읽는 것이 아니라 더듬게 된다. 자리가 모자라면 줄을 넘길 것이 아니라
      칸이 좁은 것이므로, 넘치지 않도록 폭을 나눠 준다. */
-  table.book.entries td:nth-child(5),
-  table.book.entries td:nth-child(7){
+  table.book.entries td.whom,
+  table.book.entries td.bears{
     font-size:12.5px;color:var(--ink-2);white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis;min-width:0}
   /* '서민영'과 '개인' 사이의 가운뎃점. 두 칸을 한 덩어리로 읽히게 한다. */
-  table.book.entries td:nth-child(7)::before{content:"· ";color:var(--ink-3)}
+  table.book.entries td.bears:not(:empty)::before{content:"· ";color:var(--ink-3)}
   table.book.entries td.money{
     font-size:16.5px;font-weight:700;justify-self:end;
     border-left:0;border-right:0;text-align:right}
@@ -1083,6 +1171,7 @@ footer a:hover{color:var(--ink)}
      밀어낸 만큼(22px) 안쪽에서 되돌려 주므로 글의 시작선은 정산되지 않은
      줄과 똑같이 남는다. 달라지는 것은 바탕뿐이다. */
   table.book.entries tr.entry.done,
+  table.book.entries tr.unfold,
   table.book.entries tr.closing{
     margin-left:-22px;margin-right:-22px;
     padding-left:22px;padding-right:22px}
@@ -1092,9 +1181,18 @@ footer a:hover{color:var(--ink)}
   table.book.entries tr.entry.done + tr.entry.done{border-top:0}
   table.book.entries tr.entry.done td.money{font-weight:400}
 
-  /* 펼친 자리는 기록 아래에 그대로 이어 붙는다. */
+  /* 펼친 자리는 기록 아래에 그대로 이어 붙는다.
+
+     바탕은 줄이 지고 칸은 글만 담는다. 칸에 바탕을 두면 밀어내지 않은
+     칸의 폭만큼만 칠해져, 화면 끝까지 나간 줄 옆으로 흰 띠가 두 줄 남았다.
+     펼친 자리는 그 줄에서 이어지는 자리이므로 같은 폭으로 칠해져야 한다. */
+  table.book.entries tr.unfold{display:block;background:var(--hl)}
+  table.book.entries tr.unfold.done{background:var(--settled)}
   table.book.entries td.opened{
-    padding:0 0 18px;border-bottom:1px solid var(--rule-2)}
+    display:block;width:100%;box-sizing:border-box;
+    background:none;padding:0 0 18px;border-bottom:1px solid var(--rule-2)}
+  /* 안쪽 여백은 줄이 이미 22px 물고 있다. 두 번 주면 글이 가운데로 몰린다. */
+  table.book.entries td.opened > div{padding-left:0 !important;padding-right:0 !important}
 
   /* 마감선 — 구획을 닫는 자리다. 폰에서는 화면 폭을 다 쓴다.
 
@@ -1198,11 +1296,30 @@ footer a:hover{color:var(--ink)}
   table.book.invites td:nth-child(n+3){display:inline-flex;margin:6px 20px 0 0}
 
   /* 팀원 줄도 쌓는다. 이름 · 계좌 · 단추가 한 줄에 들어가지 않는다. */
-  table.book.members, table.book.members tbody, table.book.members tr,
+  /* 팀원 — 한 사람이 한 줄이다.
+
+     칸을 하나씩 쌓았더니 이름 아래에 '나'가 있고 그 아래에 단추가 있었다.
+     세 줄을 읽어야 한 사람을 아는 셈이다. 사람의 이름과 그 사람에게 할 수
+     있는 일은 같은 줄에 있어야 짝으로 읽힌다. 이름은 왼쪽, 딸린 말은 그
+     옆에, 단추는 줄 끝에 세운다. */
+  table.book.members, table.book.members tbody,
   table.book.members td{display:block;width:auto}
-  table.book.members tr{padding:14px 0;border-bottom:1px solid var(--rule-2)}
+  table.book.members tr{
+    display:grid;
+    grid-template-columns:minmax(0,auto) auto 1fr auto;
+    align-items:baseline;column-gap:9px;
+    padding:13px 0;border-bottom:1px solid var(--rule-2)}
   table.book.members tr:last-child{border-bottom:0}
-  table.book.members td{border:0;padding:3px 0;white-space:normal}
+  table.book.members td,
+  table.book.members td.nameCell{
+    border:0;padding:0;width:auto;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;min-width:0}
+  /* 이름에 딸린 말('나', '미연결', '나감')은 이름보다 뒤로 물린다. */
+  table.book.members td:nth-child(2):not(:empty)::before,
+  table.book.members td:nth-child(3):not(:empty)::before{content:"· ";color:var(--ink-3)}
+  table.book.members td:nth-child(4){justify-self:end}
+  /* 이름을 고칠 때 들어서는 입력칸도 제 칸 안에 머문다. */
+  table.book.members td input{width:100%;box-sizing:border-box}
   /* 수증이 — 폰에서는 화면을 많이 가린다. 작게 두고, 옆에 적는 말도
      남은 자리에 맞춘다. 42vw는 320픽셀 화면에서 134픽셀이라 글자가
      세로로 한 줄씩 떨어진다. */
