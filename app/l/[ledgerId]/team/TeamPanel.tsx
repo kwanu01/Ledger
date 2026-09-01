@@ -151,8 +151,6 @@ export default function TeamPanel({
           {T('membersJoinByLink')}
           <br />
           {T('renameHint')}
-          <br />
-          {T('accountHint')}
         </p>
 
       </section>
