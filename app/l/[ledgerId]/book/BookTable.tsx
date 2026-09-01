@@ -206,7 +206,7 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
                   transform: `rotate(${-17 + (hash % 35)}deg) translate(${
                     -3 + ((hash >> 5) % 7)
                   }px, ${-2 + ((hash >> 9) % 5)}px)`,
-                  '--ink': (0.62 + ((hash >> 3) % 30) / 100).toFixed(2),
+                  '--press': (0.62 + ((hash >> 3) % 30) / 100).toFixed(2),
                   '--blot': `${(hash >> 7) % 90}px ${(hash >> 11) % 90}px`,
                 } as React.CSSProperties
               }
@@ -339,7 +339,7 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
     <section>
 
       <div className="scroll" style={{ marginTop: 14 }}>
-        <table className="book">
+        <table className="book entries">
           <thead>
             <tr>
               <th style={{ width: 24 }} />

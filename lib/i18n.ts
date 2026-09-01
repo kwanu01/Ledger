@@ -42,7 +42,7 @@ export type Key =
   | 'signIn' | 'email' | 'or' | 'withKakao' | 'withGoogle' | 'withEmail' | 'working'
   | 'signOut'
   // 장부 고르기 · 만들기
-  | 'newBook' | 'teamName' | 'bookName' | 'currency' | 'myName' | 'otherMembers'
+  | 'teamName' | 'bookName' | 'currency' | 'myName'
   | 'currencyLocked' | 'create' | 'back'
   // 초대
   | 'inviteDead' | 'inviteDeadWhy' | 'openBook'
@@ -51,7 +51,7 @@ export type Key =
   // 홈
   | 'spentAll' | 'entries' | 'notSettled' | 'countN' | 'myShare' | 'evenNothing'
   | 'willReceive' | 'willSend' | 'sharedCost' | 'personalCost'
-  | 'moneyMoving' | 'none' | 'gotIt' | 'waitingConfirm' | 'recent' | 'seeWholeBook'
+  | 'moneyMoving' | 'none' | 'gotIt' | 'recent' | 'seeWholeBook'
   // 장부
   | 'colNo' | 'colDate' | 'colItem' | 'colPayer' | 'colAmount' | 'colBears' | 'colState'
   | 'doneStamp' | 'settledStamp' | 'closing' | 'eachBears' | 'vendor' | 'category'
@@ -61,8 +61,8 @@ export type Key =
   // 품목
   | 'firstPaid' | 'buyLink' | 'boughtTwice'
   // 정산
-  | 'openCount' | 'targetAmount' | 'colMember' | 'colNet' | 'toReceive' | 'toPay'
-  | 'doSettle' | 'nothingToSettle' | 'confirmedOn' | 'transfers' | 'sendAgain'
+  | 'openCount' | 'targetAmount' | 'colMember' | 'toReceive' | 'toPay'
+  | 'doSettle' | 'nothingToSettle' | 'confirmedOn' | 'transfers'
   // 아카이브
   | 'archiveTitle' | 'period' | 'days' | 'timesN' | 'settleCount' | 'whatOn' | 'settleHistory'
   // 지출 기입
@@ -73,23 +73,23 @@ export type Key =
   | 'photoReads' | 'photoReadsV' | 'photoKinds' | 'photoKindsV' | 'photoHow' | 'photoHowV'
   | 'photoSentTo' | 'chargedIn' | 'paidIn' | 'foreignNote' | 'uploaded'
   // 팀
-  | 'membersN' | 'me' | 'linkedAccount' | 'viaInvite' | 'gone' | 'markGone' | 'bringBack'
-  | 'newMemberName' | 'addMember' | 'inviteLinks' | 'until' | 'noExpiry' | 'copy' | 'copied'
+  | 'membersN' | 'me' | 'gone' | 'markGone' | 'bringBack'
+  | 'inviteLinks' | 'until' | 'noExpiry' | 'copy' | 'copied'
   | 'revoke' | 'makeInvite' | 'renameHint' | 'inviteHint' | 'bookSection'
   // 부담 방식 · 보정
   | 'allocAll' | 'allocPartial' | 'allocPersonal' | 'refund' | 'correction'
   | 'needTitle' | 'needAmount' | 'needCharged' | 'needBearers'
-  | 'membersJoinByLink' | 'yourNameHere' | 'joinAs' | 'sampleBook' | 'making'
-  | 'newBookPlus' | 'sampleSub'
+  | 'membersJoinByLink' | 'yourNameHere' | 'joinAs' | 'newBookPlus'
   | 'sumRow' | 'result' | 'youReceiveLead' | 'youSendLead' | 'youEven' | 'yourTransfers'
   | 'allSettled' | 'openN' | 'close'
-  | 'deleteBook' | 'deleteWarn' | 'deleteForReal' | 'gotAll' | 'pastSettlements'
+  | 'deleteBook' | 'deleteWarn' | 'deleteForReal' | 'gotAll'
   | 'noAccount' | 'copyAccount' | 'openToss' | 'bank' | 'accountNo' | 'accountHint'
   | 'iSent' | 'undoSent' | 'sentWaiting' | 'saysSent' | 'simpleSplit'
-  | 'notLinked' | 'mineOnly' | 'save'
+  | 'notLinked' | 'save'
+  | 'contact' | 'privacy' | 'sendOneByOne'
   | 'helperTitle' | 'helperAsk' | 'helperAskWhat' | 'helperAskGo' | 'helperReading'
-  | 'helperCoffee' | 'helperHide' | 'helperShow'
-  | 'sortBy' | 'etc' | 'tossMissing' | 'coffeeThanks' | 'coffeePage' | 'askHint' | 'chat' | 'settledNow' | 'sendItNow' | 'later' | 'settleEndsWhen' | 'waitingN'
+  | 'helperHide' | 'helperShow'
+  | 'sortBy' | 'etc' | 'tossMissing'  | 'askHint' | 'chat' | 'settledNow' | 'sendItNow' | 'settleEndsWhen' | 'waitingN'
   | 'tipHome' | 'tipBook' | 'tipGoods' | 'tipSettle' | 'tipArchive' | 'tipTeam'
   | 'tipAdd' | 'tipTeams' | 'tipLogin'
   | 'accountTitle' | 'accountName' | 'accountEmail' | 'accountNoEmail'
@@ -108,10 +108,8 @@ const ko: Record<Key, string> = {
 
   signIn: '로그인', email: '이메일', or: '또는',
   withKakao: '카카오로 계속하기', withGoogle: 'Google로 계속하기', withEmail: '이메일로 계속하기',
-  working: '잠시만', signOut: '로그아웃',
-
-  newBook: '새 장부', teamName: '팀 이름', bookName: '장부 이름', currency: '통화',
-  myName: '본인 이름', otherMembers: '나머지 팀원',
+  working: '잠시만', signOut: '로그아웃', teamName: '팀 이름', bookName: '장부 이름', currency: '통화',
+  myName: '본인 이름',
   currencyLocked: '통화는 만든 뒤 바꿀 수 없습니다.', create: '만들기', back: '돌아가기',
 
   inviteDead: '이 초대 링크는 더 이상 쓸 수 없습니다',
@@ -126,7 +124,6 @@ const ko: Record<Key, string> = {
   willReceive: '받을 예정', willSend: '보낼 예정',
   sharedCost: '공동 부담 지출', personalCost: '별도 개인 지출',
   moneyMoving: '주고받을 돈', none: '없음', gotIt: '받았어요',
-  waitingConfirm: '{who}님이 확인하면 닫힙니다',
   recent: '최근 기입', seeWholeBook: '장부 전체 보기',
 
   colNo: '번호', colDate: '날짜', colItem: '항목', colPayer: '결제', colAmount: '금액',
@@ -142,9 +139,9 @@ const ko: Record<Key, string> = {
   firstPaid: '처음 결제 {amount}', buyLink: '구매 링크', boughtTwice: '두 번 구매',
 
   openCount: '아직 정산하지 않은 {n}건', targetAmount: '대상 금액',
-  colMember: '팀원', colNet: '차액', toReceive: '받을 돈', toPay: '보낼 돈',
+  colMember: '팀원', toReceive: '받을 돈', toPay: '보낼 돈',
   doSettle: '정산하기', nothingToSettle: '정산할 것이 없습니다',
-  confirmedOn: '{date} 확정 · {n}건 · {amount}', transfers: '송금', sendAgain: '카카오톡으로 보내기',
+  confirmedOn: '{date} 확정 · {n}건 · {amount}', transfers: '송금',
 
   archiveTitle: '프로젝트 아카이브', period: '기간', days: '{n}일',
   timesN: '{n}회', settleCount: '정산', whatOn: '무엇에 썼나', settleHistory: '정산 이력',
@@ -165,9 +162,8 @@ const ko: Record<Key, string> = {
   foreignNote: '{from}로 결제했지만 장부에는 {to} 청구액이 적힙니다.',
   uploaded: '올린 사진',
 
-  membersN: '팀원 {n}명', me: '나', linkedAccount: '계정 연결됨', viaInvite: '초대 링크',
+  membersN: '팀원 {n}명', me: '나',
   gone: '나감', markGone: '나감으로 표시', bringBack: '다시 넣기',
-  newMemberName: '새 팀원 이름', addMember: '팀원 추가',
   inviteLinks: '초대 링크', until: '{date}까지', noExpiry: '기한 없음',
   copy: '복사', copied: '복사했습니다', revoke: '회수', makeInvite: '초대 링크 만들기',
   renameHint: '이름을 바꿔도 이미 기입된 계산은 그대로입니다. 나간 사람도 지난 지출에는 남습니다.',
@@ -180,25 +176,22 @@ const ko: Record<Key, string> = {
   needCharged: '{code} 청구액을 적어 주세요.', needBearers: '나눠 낼 사람을 골라 주세요.',
   membersJoinByLink: '팀원은 초대 링크로 들어옵니다.',
   yourNameHere: '이름', joinAs: '들어가기',
-  sampleBook: '＋ 샘플 장부', making: '만드는 중',
-  newBookPlus: '＋ 새 장부', sampleSub: '지어낸 데이터',
+  newBookPlus: '＋ 새 장부',
   sumRow: '합계', result: '결과',
   youReceiveLead: '받을 돈', youSendLead: '보낼 돈', youEven: '주고받을 것 없음',
   yourTransfers: '내 송금',
   allSettled: '정산 완료', openN: '미정산 {n}건', close: '닫기',
   deleteBook: '이 장부 지우기', deleteWarn: '지출과 정산 기록이 모두 사라집니다. 되돌릴 수 없습니다.',
-  deleteForReal: '지웁니다', gotAll: '{n}건 전부 받았어요', pastSettlements: '지난 정산',
+  deleteForReal: '지웁니다', gotAll: '{n}건 전부 받았어요',
   noAccount: '계좌 없음', copyAccount: '계좌 복사', openToss: '토스로 보내기',
   bank: '은행', accountNo: '계좌번호',
   accountHint: '계좌는 본인만 적습니다. 적어 두면 정산할 때 보낼 곳이 바로 뜹니다.',
-  notLinked: '계정 연결 전', mineOnly: '본인만', save: '적기',
-
+  notLinked: '계정 연결 전', save: '적기', contact: '문의', privacy: '개인정보 처리방침', sendOneByOne: '한 사람씩 보내기',
   helperTitle: '길잡이', helperAsk: '장부에 대해 묻기', helperAskWhat: '무엇이 궁금한가요',
-  helperAskGo: '묻기', helperReading: '읽는 중',  helperCoffee: '개발자에게 커피 사주기', helperHide: '버리기', helperShow: '길잡이',
+  helperAskGo: '묻기', helperReading: '읽는 중', helperHide: '버리기', helperShow: '길잡이',
   sortBy: '순서', etc: '기타',
   tossMissing: '토스가 열리지 않아 계좌를 복사했습니다. 쓰던 은행 앱에 붙여 넣으세요.',
-  coffeeThanks: '눌러서 복사해 주세요. 정말 고맙습니다.', coffeePage: '후원 페이지 열기',
-  settledNow: '정산했습니다', sendItNow: '이 글을 팀에게 보내세요.', later: '나중에',
+  settledNow: '정산했습니다', sendItNow: '이 글을 팀에게 보내세요.',
   settleEndsWhen: '정산은 글을 보냈다고 끝나지 않습니다. 보낸 사람이 ‘보냈어요’를, 받은 사람이 ‘받았어요’를 눌러 송금이 전부 확인되면 그때 도장이 찍힙니다.',
   waitingN: '송금 {n}건 확인 중',
   askHint: 'Enter로 묻고, Esc로 닫아요.',
@@ -210,7 +203,7 @@ const ko: Record<Key, string> = {
   tipArchive: '프로젝트가 끝나면 이 한 장이 남아요.\n얼마 동안, 무엇에 썼는지가 여기 모여요.',
   tipTeam: '팀원이랑 초대 링크가 있는 곳이에요.\n계좌는 본인만 적을 수 있어요.\n저도 남의 계좌는 못 만져요.',
   tipAdd: '영수증 사진을 올려 주시면 제가 읽어 볼게요.\n항목이랑 금액을 뽑아 드려요.\n맞는지는 다음 화면에서 꼭 봐 주세요.',
-  tipTeams: '여기가 장부 목록이에요.\n＋ 새 장부로 하나 만들어 보세요.\n샘플 장부를 먼저 눌러 보셔도 좋고요.',
+  tipTeams: '여기가 장부 목록이에요.\n＋ 새 장부로 하나 만들어 보세요.\n수업이 둘이면 장부도 둘이에요.',
   tipLogin: '안녕하세요, 저는 영수증이에요.\n로그인하시면 이 장부가 계정에 남아요.\n다른 기기로 들어오셔도 그대로예요.',
   accountTitle: '내 계정', accountName: '이름', accountEmail: '이메일',
   accountNoEmail: '받지 못했습니다', accountHow: '로그인 방법',
@@ -232,10 +225,8 @@ const en: Record<Key, string> = {
 
   signIn: 'Sign in', email: 'Email', or: 'or',
   withKakao: 'Continue with Kakao', withGoogle: 'Continue with Google', withEmail: 'Continue with Email',
-  working: 'Working', signOut: 'Sign out',
-
-  newBook: 'New ledger', teamName: 'Team name', bookName: 'Ledger name', currency: 'Currency',
-  myName: 'Your name', otherMembers: 'Other members',
+  working: 'Working', signOut: 'Sign out', teamName: 'Team name', bookName: 'Ledger name', currency: 'Currency',
+  myName: 'Your name',
   currencyLocked: 'The currency cannot be changed once the ledger is created.',
   create: 'Create', back: 'Back',
 
@@ -251,7 +242,6 @@ const en: Record<Key, string> = {
   willReceive: 'to receive', willSend: 'to send',
   sharedCost: 'Shared expenses', personalCost: 'Personal expenses',
   moneyMoving: 'Money to move', none: 'None', gotIt: 'Received',
-  waitingConfirm: 'closes when {who} confirms',
   recent: 'Recent entries', seeWholeBook: 'See the whole ledger',
 
   colNo: 'No.', colDate: 'Date', colItem: 'Item', colPayer: 'Paid by', colAmount: 'Amount',
@@ -267,10 +257,10 @@ const en: Record<Key, string> = {
   firstPaid: 'first paid {amount}', buyLink: 'Purchase link', boughtTwice: 'bought twice',
 
   openCount: '{n} entries not settled', targetAmount: 'Amount covered',
-  colMember: 'Member', colNet: 'Net', toReceive: 'receives', toPay: 'pays',
+  colMember: 'Member', toReceive: 'receives', toPay: 'pays',
   doSettle: 'Settle', nothingToSettle: 'Nothing to settle',
   confirmedOn: 'confirmed {date} · {n} entries · {amount}',
-  transfers: 'Transfers', sendAgain: 'Send via KakaoTalk',
+  transfers: 'Transfers',
 
   archiveTitle: 'Project archive', period: 'Span', days: '{n} days',
   timesN: '{n}', settleCount: 'Settlements', whatOn: 'What it went on', settleHistory: 'Settlement history',
@@ -291,9 +281,8 @@ const en: Record<Key, string> = {
   foreignNote: 'Paid in {from}, but the ledger records the {to} charge.',
   uploaded: 'uploaded photo',
 
-  membersN: '{n} members', me: 'you', linkedAccount: 'account linked', viaInvite: 'invite link',
+  membersN: '{n} members', me: 'you',
   gone: 'left', markGone: 'Mark as left', bringBack: 'Bring back',
-  newMemberName: 'New member name', addMember: 'Add member',
   inviteLinks: 'Invite links', until: 'until {date}', noExpiry: 'no expiry',
   copy: 'Copy', copied: 'Copied', revoke: 'Revoke', makeInvite: 'Create invite link',
   renameHint: 'Renaming leaves recorded entries untouched. Someone who left stays on past expenses.',
@@ -306,25 +295,22 @@ const en: Record<Key, string> = {
   needCharged: 'Enter the {code} charge.', needBearers: 'Pick who splits it.',
   membersJoinByLink: 'Teammates join through the invite link.',
   yourNameHere: 'Name', joinAs: 'Enter',
-  sampleBook: '＋ Sample ledger', making: 'Creating',
-  newBookPlus: '＋ New ledger', sampleSub: 'made-up data',
+  newBookPlus: '＋ New ledger',
   sumRow: 'Total', result: 'Result',
   youReceiveLead: 'You receive', youSendLead: 'You send', youEven: 'Nothing to move',
   yourTransfers: 'yours',
   allSettled: 'settled', openN: '{n} open', close: 'Close',
   deleteBook: 'Delete this ledger', deleteWarn: 'Every expense and settlement goes with it. This cannot be undone.',
-  deleteForReal: 'Delete', gotAll: 'Received all {n}', pastSettlements: 'Past settlements',
+  deleteForReal: 'Delete', gotAll: 'Received all {n}',
   noAccount: 'no account on file', copyAccount: 'Copy account', openToss: 'Open in Toss',
   bank: 'Bank', accountNo: 'Account number',
   accountHint: 'Only you can write your own account. With it on file, settlements show where to send.',
-  notLinked: 'not linked yet', mineOnly: 'yours only', save: 'Save',
-
+  notLinked: 'not linked yet', save: 'Save', contact: 'Contact', privacy: 'Privacy', sendOneByOne: 'Send one by one',
   helperTitle: 'Helper', helperAsk: 'Ask about this ledger', helperAskWhat: 'What would you like to know',
-  helperAskGo: 'Ask', helperReading: 'Reading',  helperCoffee: 'Buy the developer a coffee', helperHide: 'Throw away', helperShow: 'Helper',
+  helperAskGo: 'Ask', helperReading: 'Reading', helperHide: 'Throw away', helperShow: 'Helper',
   sortBy: 'Order', etc: 'Other',
   tossMissing: 'Toss did not open, so the account is copied. Paste it into your bank app.',
-  coffeeThanks: 'Tap to copy. Thank you.', coffeePage: 'Open the sponsor page',
-  settledNow: 'Settled', sendItNow: 'Send this to the team.', later: 'Later',
+  settledNow: 'Settled', sendItNow: 'Send this to the team.',
   settleEndsWhen: 'Sending the message does not close it. The stamp goes on once every transfer is confirmed — the sender taps “I sent it”, the receiver taps “Got it”.',
   waitingN: '{n} transfers pending',
   askHint: 'Enter to ask, Esc to close.',
@@ -336,7 +322,7 @@ const en: Record<Key, string> = {
   tipArchive: 'When the project ends, this page stays.\nHow long, and what it went on.',
   tipTeam: 'Members and invite links live here.\nOnly you can write your own account.\nNot even I can touch anyone else’s.',
   tipAdd: 'Upload a receipt photo and I will read it.\nI pull out the item and the amount.\nPlease check me on the next screen.',
-  tipTeams: 'These are your ledgers.\nMake one with ＋ New ledger.\nOr open the sample first.',
+  tipTeams: 'These are your ledgers.\nMake one with ＋ New ledger.\nTwo classes, two ledgers.',
   tipLogin: 'Hello, I am a receipt.\nSign in and this ledger stays with your account.\nSame on any device.',
   accountTitle: 'My account', accountName: 'Name', accountEmail: 'Email',
   accountNoEmail: 'Not provided', accountHow: 'Signed in with',
@@ -358,10 +344,8 @@ const ja: Record<Key, string> = {
 
   signIn: 'ログイン', email: 'メールアドレス', or: 'または',
   withKakao: 'カカオで続ける', withGoogle: 'Googleで続ける', withEmail: 'メールで続ける',
-  working: 'しばらくお待ちください', signOut: 'ログアウト',
-
-  newBook: '新しい帳簿', teamName: 'チーム名', bookName: '帳簿名', currency: '通貨',
-  myName: '自分の名前', otherMembers: '他のメンバー',
+  working: 'しばらくお待ちください', signOut: 'ログアウト', teamName: 'チーム名', bookName: '帳簿名', currency: '通貨',
+  myName: '自分の名前',
   currencyLocked: '通貨は作成後に変更できません。', create: '作成', back: '戻る',
 
   inviteDead: 'この招待リンクはもう使えません',
@@ -376,7 +360,6 @@ const ja: Record<Key, string> = {
   willReceive: '受け取り予定', willSend: '送金予定',
   sharedCost: '共同負担の支出', personalCost: '個人別の支出',
   moneyMoving: 'やり取りする金額', none: 'なし', gotIt: '受け取りました',
-  waitingConfirm: '{who}さんが確認すると閉じます',
   recent: '最近の記入', seeWholeBook: '帳簿をすべて見る',
 
   colNo: '番号', colDate: '日付', colItem: '項目', colPayer: '支払', colAmount: '金額',
@@ -392,9 +375,9 @@ const ja: Record<Key, string> = {
   firstPaid: '当初 {amount}', buyLink: '購入リンク', boughtTwice: '二回購入',
 
   openCount: '未精算 {n}件', targetAmount: '対象金額',
-  colMember: 'メンバー', colNet: '差額', toReceive: '受け取り', toPay: '支払い',
+  colMember: 'メンバー', toReceive: '受け取り', toPay: '支払い',
   doSettle: '精算する', nothingToSettle: '精算するものがありません',
-  confirmedOn: '{date} 確定 · {n}件 · {amount}', transfers: '送金', sendAgain: 'カカオトークで送る',
+  confirmedOn: '{date} 確定 · {n}件 · {amount}', transfers: '送金',
 
   archiveTitle: 'プロジェクトのアーカイブ', period: '期間', days: '{n}日',
   timesN: '{n}回', settleCount: '精算', whatOn: '何に使ったか', settleHistory: '精算の履歴',
@@ -415,9 +398,8 @@ const ja: Record<Key, string> = {
   foreignNote: '{from}で決済しましたが、帳簿には{to}の請求額が記録されます。',
   uploaded: 'アップロードした写真',
 
-  membersN: 'メンバー {n}人', me: '自分', linkedAccount: 'アカウント連携済み', viaInvite: '招待リンク',
+  membersN: 'メンバー {n}人', me: '自分',
   gone: '離脱', markGone: '離脱として記録', bringBack: '戻す',
-  newMemberName: '新しいメンバー名', addMember: 'メンバーを追加',
   inviteLinks: '招待リンク', until: '{date}まで', noExpiry: '期限なし',
   copy: 'コピー', copied: 'コピーしました', revoke: '取り消す', makeInvite: '招待リンクを作る',
   renameHint: '名前を変えても記入済みの計算は変わりません。離脱した人も過去の支出には残ります。',
@@ -430,25 +412,22 @@ const ja: Record<Key, string> = {
   needCharged: '{code} の請求額を入力してください。', needBearers: '分けて払う人を選んでください。',
   membersJoinByLink: 'メンバーは招待リンクから入ります。',
   yourNameHere: '名前', joinAs: '入る',
-  sampleBook: '＋ サンプル帳簿', making: '作成中',
-  newBookPlus: '＋ 新しい帳簿', sampleSub: '架空のデータ',
+  newBookPlus: '＋ 新しい帳簿',
   sumRow: '合計', result: '結果',
   youReceiveLead: '受け取る金額', youSendLead: '送る金額', youEven: 'やり取りなし',
   yourTransfers: '自分の送金',
   allSettled: '精算完了', openN: '未精算 {n}件', close: '閉じる',
   deleteBook: 'この帳簿を削除', deleteWarn: '支出と精算の記録がすべて消えます。元に戻せません。',
-  deleteForReal: '削除する', gotAll: '{n}件すべて受け取りました', pastSettlements: '過去の精算',
+  deleteForReal: '削除する', gotAll: '{n}件すべて受け取りました',
   noAccount: '口座なし', copyAccount: '口座をコピー', openToss: 'Tossで送る',
   bank: '銀行', accountNo: '口座番号',
   accountHint: '口座は本人だけが書けます。書いておくと精算のときに送り先がすぐ出ます。',
-  notLinked: 'アカウント未連携', mineOnly: '本人のみ', save: '書く',
-
+  notLinked: 'アカウント未連携', save: '書く', contact: 'お問い合わせ', privacy: 'プライバシー', sendOneByOne: '一人ずつ送る',
   helperTitle: '案内役', helperAsk: '帳簿について聞く', helperAskWhat: '何が知りたいですか',
-  helperAskGo: '聞く', helperReading: '読み中',  helperCoffee: '開発者にコーヒーを', helperHide: '捨てる', helperShow: '案内役',
+  helperAskGo: '聞く', helperReading: '読み中', helperHide: '捨てる', helperShow: '案内役',
   sortBy: '順序', etc: 'その他',
   tossMissing: 'Tossが開かなかったので口座をコピーしました。銀行アプリに貼り付けてください。',
-  coffeeThanks: '押すとコピーされます。ありがとうございます。', coffeePage: '支援ページを開く',
-  settledNow: '精算しました', sendItNow: 'この文をチームに送ってください。', later: 'あとで',
+  settledNow: '精算しました', sendItNow: 'この文をチームに送ってください。',
   settleEndsWhen: '送っただけでは終わりません。送った人が「送りました」、受け取った人が「受け取りました」を押して、すべての送金が確認されたときに判が押されます。',
   waitingN: '送金 {n}件 確認中',
   askHint: 'Enterで質問、Escで閉じます。',
@@ -460,7 +439,7 @@ const ja: Record<Key, string> = {
   tipArchive: 'プロジェクトが終わるとこの一枚が残ります。\nどれくらいの間、何に使ったか。',
   tipTeam: 'メンバーと招待リンクの場所です。\n口座はご本人だけが書けます。\nわたしも他人の口座は触れません。',
   tipAdd: 'レシートの写真を上げてくだされば読んでみます。\n品名と金額を取り出します。\n合っているかは次の画面で見てくださいね。',
-  tipTeams: 'ここが帳簿の一覧です。\n＋ 新しい帳簿で作ってみてください。\nサンプルを先に開いてもいいですよ。',
+  tipTeams: 'ここが帳簿の一覧です。\n＋ 新しい帳簿で作ってみてください。\n授業が二つなら帳簿も二つです。',
   tipLogin: 'こんにちは、わたしはレシートです。\nログインするとこの帳簿がアカウントに残ります。\nどの端末から来ても同じです。',
   accountTitle: 'マイアカウント', accountName: '名前', accountEmail: 'メール',
   accountNoEmail: '受け取っていません', accountHow: 'ログイン方法',
@@ -482,10 +461,8 @@ const zh: Record<Key, string> = {
 
   signIn: '登录', email: '邮箱', or: '或',
   withKakao: '使用 Kakao 继续', withGoogle: '使用 Google 继续', withEmail: '使用邮箱继续',
-  working: '请稍候', signOut: '退出登录',
-
-  newBook: '新建账本', teamName: '团队名称', bookName: '账本名称', currency: '币种',
-  myName: '本人姓名', otherMembers: '其他成员',
+  working: '请稍候', signOut: '退出登录', teamName: '团队名称', bookName: '账本名称', currency: '币种',
+  myName: '本人姓名',
   currencyLocked: '账本创建后币种无法更改。', create: '创建', back: '返回',
 
   inviteDead: '该邀请链接已失效',
@@ -500,7 +477,6 @@ const zh: Record<Key, string> = {
   willReceive: '待收', willSend: '待付',
   sharedCost: '共同承担的支出', personalCost: '个人单独的支出',
   moneyMoving: '待转金额', none: '无', gotIt: '已收到',
-  waitingConfirm: '{who}确认后关闭',
   recent: '最近记录', seeWholeBook: '查看整本账',
 
   colNo: '编号', colDate: '日期', colItem: '项目', colPayer: '付款', colAmount: '金额',
@@ -516,9 +492,9 @@ const zh: Record<Key, string> = {
   firstPaid: '原付 {amount}', buyLink: '购买链接', boughtTwice: '买过两次',
 
   openCount: '尚未结算 {n}笔', targetAmount: '涉及金额',
-  colMember: '成员', colNet: '差额', toReceive: '应收', toPay: '应付',
+  colMember: '成员', toReceive: '应收', toPay: '应付',
   doSettle: '结算', nothingToSettle: '没有需要结算的内容',
-  confirmedOn: '{date} 确认 · {n}笔 · {amount}', transfers: '转账', sendAgain: '通过 KakaoTalk 发送',
+  confirmedOn: '{date} 确认 · {n}笔 · {amount}', transfers: '转账',
 
   archiveTitle: '项目归档', period: '周期', days: '{n}天',
   timesN: '{n}次', settleCount: '结算', whatOn: '钱花在哪', settleHistory: '结算历史',
@@ -539,9 +515,8 @@ const zh: Record<Key, string> = {
   foreignNote: '以{from}支付，但账本记录的是{to}扣款金额。',
   uploaded: '上传的照片',
 
-  membersN: '成员 {n}人', me: '我', linkedAccount: '已关联账户', viaInvite: '邀请链接',
+  membersN: '成员 {n}人', me: '我',
   gone: '已退出', markGone: '标记为退出', bringBack: '重新加入',
-  newMemberName: '新成员姓名', addMember: '添加成员',
   inviteLinks: '邀请链接', until: '有效至 {date}', noExpiry: '无期限',
   copy: '复制', copied: '已复制', revoke: '撤回', makeInvite: '生成邀请链接',
   renameHint: '改名不会改变已记录的计算。已退出的人仍保留在过去的支出中。',
@@ -554,25 +529,22 @@ const zh: Record<Key, string> = {
   needCharged: '请填写 {code} 扣款金额。', needBearers: '请选择由谁分担。',
   membersJoinByLink: '成员通过邀请链接加入。',
   yourNameHere: '姓名', joinAs: '进入',
-  sampleBook: '＋ 示例账本', making: '创建中',
-  newBookPlus: '＋ 新建账本', sampleSub: '虚构数据',
+  newBookPlus: '＋ 新建账本',
   sumRow: '合计', result: '结果',
   youReceiveLead: '你应收', youSendLead: '你应付', youEven: '无需往来',
   yourTransfers: '我的转账',
   allSettled: '已结算', openN: '未结算 {n}笔', close: '收起',
   deleteBook: '删除此账本', deleteWarn: '所有支出与结算记录都会一并消失，且无法恢复。',
-  deleteForReal: '确认删除', gotAll: '{n}笔全部已收到', pastSettlements: '过往结算',
+  deleteForReal: '确认删除', gotAll: '{n}笔全部已收到',
   noAccount: '未填账户', copyAccount: '复制账户', openToss: '用 Toss 转账',
   bank: '银行', accountNo: '账号',
   accountHint: '账户只能本人填写。填好后，结算时会直接显示转账去向。',
-  notLinked: '尚未关联账号', mineOnly: '仅本人', save: '保存',
-
+  notLinked: '尚未关联账号', save: '保存', contact: '联系', privacy: '隐私政策', sendOneByOne: '逐个发送',
   helperTitle: '助手', helperAsk: '询问这本账本', helperAskWhat: '想知道什么',
-  helperAskGo: '问', helperReading: '读取中',  helperCoffee: '请开发者喝杯咖啡', helperHide: '丢掉', helperShow: '助手',
+  helperAskGo: '问', helperReading: '读取中', helperHide: '丢掉', helperShow: '助手',
   sortBy: '排序', etc: '其他',
   tossMissing: 'Toss 未能打开，已复制账户。请粘贴到银行 App。',
-  coffeeThanks: '点击复制。谢谢。', coffeePage: '打开赞助页面',
-  settledNow: '已结算', sendItNow: '把这段发给团队。', later: '稍后',
+  settledNow: '已结算', sendItNow: '把这段发给团队。',
   settleEndsWhen: '发出去并不算结束。付款方点“已转账”、收款方点“已收到”，所有转账都确认之后才会盖章。',
   waitingN: '{n} 笔转账待确认',
   askHint: '按 Enter 提问，Esc 关闭。',
@@ -584,7 +556,7 @@ const zh: Record<Key, string> = {
   tipArchive: '项目结束后留下的就是这一页。\n花了多久、花在哪里。',
   tipTeam: '成员和邀请链接在这里。\n账户只能本人填写。\n连我也碰不了别人的账户。',
   tipAdd: '上传收据照片，我来读读看。\n我会取出品名和金额。\n对不对请在下一屏确认。',
-  tipTeams: '这是你的账本列表。\n用 ＋ 新账本创建一个吧。\n也可以先打开示例账本。',
+  tipTeams: '这是你的账本列表。\n用 ＋ 新账本创建一个吧。\n两门课就有两本账。',
   tipLogin: '你好，我是一张收据。\n登录后这本账本会留在你的账号里。\n换设备也一样。',
   accountTitle: '我的账号', accountName: '姓名', accountEmail: '邮箱',
   accountNoEmail: '未提供', accountHow: '登录方式',
@@ -608,10 +580,8 @@ const es: Record<Key, string> = {
   signIn: 'Iniciar sesión', email: 'Correo', or: 'o',
   withKakao: 'Continuar con Kakao', withGoogle: 'Continuar con Google',
   withEmail: 'Continuar con correo',
-  working: 'Un momento', signOut: 'Cerrar sesión',
-
-  newBook: 'Nuevo libro', teamName: 'Nombre del equipo', bookName: 'Nombre del libro',
-  currency: 'Moneda', myName: 'Tu nombre', otherMembers: 'Otros integrantes',
+  working: 'Un momento', signOut: 'Cerrar sesión', teamName: 'Nombre del equipo', bookName: 'Nombre del libro',
+  currency: 'Moneda', myName: 'Tu nombre',
   currencyLocked: 'La moneda no se puede cambiar una vez creado el libro.',
   create: 'Crear', back: 'Volver',
 
@@ -627,7 +597,6 @@ const es: Record<Key, string> = {
   willReceive: 'a recibir', willSend: 'a enviar',
   sharedCost: 'Gastos compartidos', personalCost: 'Gastos personales aparte',
   moneyMoving: 'Dinero por mover', none: 'Nada', gotIt: 'Recibido',
-  waitingConfirm: 'se cierra cuando {who} lo confirme',
   recent: 'Apuntes recientes', seeWholeBook: 'Ver el libro entero',
 
   colNo: 'N.º', colDate: 'Fecha', colItem: 'Concepto', colPayer: 'Pagó', colAmount: 'Importe',
@@ -643,10 +612,10 @@ const es: Record<Key, string> = {
   firstPaid: 'pagado {amount}', buyLink: 'Enlace de compra', boughtTwice: 'comprado dos veces',
 
   openCount: '{n} apuntes sin liquidar', targetAmount: 'Importe incluido',
-  colMember: 'Integrante', colNet: 'Diferencia', toReceive: 'recibe', toPay: 'paga',
+  colMember: 'Integrante', toReceive: 'recibe', toPay: 'paga',
   doSettle: 'Liquidar', nothingToSettle: 'No hay nada que liquidar',
   confirmedOn: 'confirmado {date} · {n} apuntes · {amount}',
-  transfers: 'Transferencias', sendAgain: 'Enviar por KakaoTalk',
+  transfers: 'Transferencias',
 
   archiveTitle: 'Archivo del proyecto', period: 'Duración', days: '{n} días',
   timesN: '{n}', settleCount: 'Liquidaciones', whatOn: 'En qué se fue',
@@ -668,9 +637,8 @@ const es: Record<Key, string> = {
   foreignNote: 'Pagado en {from}, pero el libro registra el cargo en {to}.',
   uploaded: 'foto subida',
 
-  membersN: '{n} integrantes', me: 'tú', linkedAccount: 'cuenta vinculada', viaInvite: 'enlace de invitación',
+  membersN: '{n} integrantes', me: 'tú',
   gone: 'salió', markGone: 'Marcar como salido', bringBack: 'Volver a añadir',
-  newMemberName: 'Nombre del nuevo integrante', addMember: 'Añadir integrante',
   inviteLinks: 'Enlaces de invitación', until: 'hasta {date}', noExpiry: 'sin caducidad',
   copy: 'Copiar', copied: 'Copiado', revoke: 'Revocar', makeInvite: 'Crear enlace de invitación',
   renameHint: 'Cambiar el nombre no altera los apuntes ya registrados. Quien sale permanece en los gastos pasados.',
@@ -683,25 +651,22 @@ const es: Record<Key, string> = {
   needCharged: 'Introduce el cargo en {code}.', needBearers: 'Elige quién lo reparte.',
   membersJoinByLink: 'Los integrantes entran por el enlace de invitación.',
   yourNameHere: 'Nombre', joinAs: 'Entrar',
-  sampleBook: '＋ Libro de ejemplo', making: 'Creando',
-  newBookPlus: '＋ Nuevo libro', sampleSub: 'datos inventados',
+  newBookPlus: '＋ Nuevo libro',
   sumRow: 'Total', result: 'Resultado',
   youReceiveLead: 'Recibes', youSendLead: 'Envías', youEven: 'Nada que mover',
   yourTransfers: 'tuyo',
   allSettled: 'liquidado', openN: '{n} sin liquidar', close: 'Cerrar',
   deleteBook: 'Eliminar este libro', deleteWarn: 'Se van con él todos los gastos y liquidaciones. No se puede deshacer.',
-  deleteForReal: 'Eliminar', gotAll: 'Recibí las {n}', pastSettlements: 'Liquidaciones anteriores',
+  deleteForReal: 'Eliminar', gotAll: 'Recibí las {n}',
   noAccount: 'sin cuenta', copyAccount: 'Copiar cuenta', openToss: 'Abrir en Toss',
   bank: 'Banco', accountNo: 'Número de cuenta',
   accountHint: 'Solo tú puedes escribir tu cuenta. Guardada, la liquidación muestra a dónde enviar.',
-  notLinked: 'sin cuenta vinculada', mineOnly: 'solo tuyo', save: 'Guardar',
-
+  notLinked: 'sin cuenta vinculada', save: 'Guardar', contact: 'Contacto', privacy: 'Privacidad', sendOneByOne: 'Enviar uno por uno',
   helperTitle: 'Ayudante', helperAsk: 'Preguntar sobre el libro', helperAskWhat: 'Qué quieres saber',
-  helperAskGo: 'Preguntar', helperReading: 'Leyendo',  helperCoffee: 'Invitar un café al desarrollador', helperHide: 'Tirar', helperShow: 'Ayudante',
+  helperAskGo: 'Preguntar', helperReading: 'Leyendo', helperHide: 'Tirar', helperShow: 'Ayudante',
   sortBy: 'Orden', etc: 'Otros',
   tossMissing: 'Toss no se abrió; la cuenta está copiada. Pégala en tu app bancaria.',
-  coffeeThanks: 'Toca para copiar. Gracias.', coffeePage: 'Abrir la página de apoyo',
-  settledNow: 'Liquidado', sendItNow: 'Envía esto al equipo.', later: 'Más tarde',
+  settledNow: 'Liquidado', sendItNow: 'Envía esto al equipo.',
   settleEndsWhen: 'Enviar el mensaje no lo cierra. El sello llega cuando cada envío queda confirmado: quien paga marca «Lo envié» y quien recibe marca «Recibido».',
   waitingN: '{n} envíos pendientes',
   askHint: 'Enter para preguntar, Esc para cerrar.',
@@ -713,7 +678,7 @@ const es: Record<Key, string> = {
   tipArchive: 'Al terminar el proyecto queda esta página.\nCuánto duró y en qué se gastó.',
   tipTeam: 'Aquí viven integrantes y enlaces de invitación.\nSolo tú escribes tu cuenta.\nNi yo toco las ajenas.',
   tipAdd: 'Súbeme la foto de un recibo y la leo.\nSaco el concepto y el importe.\nRevísame en la pantalla siguiente.',
-  tipTeams: 'Estos son tus libros.\nCrea uno con ＋ Libro nuevo.\nO abre antes el de ejemplo.',
+  tipTeams: 'Estos son tus libros.\nCrea uno con ＋ Libro nuevo.\nDos clases, dos libros.',
   tipLogin: 'Hola, soy un recibo.\nInicia sesión y este libro queda en tu cuenta.\nIgual en cualquier dispositivo.',
   accountTitle: 'Mi cuenta', accountName: 'Nombre', accountEmail: 'Correo',
   accountNoEmail: 'No recibido', accountHow: 'Iniciaste sesión con',
@@ -736,10 +701,8 @@ const vi: Record<Key, string> = {
 
   signIn: 'Đăng nhập', email: 'Email', or: 'hoặc',
   withKakao: 'Tiếp tục với Kakao', withGoogle: 'Tiếp tục với Google', withEmail: 'Tiếp tục với email',
-  working: 'Đang xử lý', signOut: 'Đăng xuất',
-
-  newBook: 'Sổ mới', teamName: 'Tên nhóm', bookName: 'Tên sổ', currency: 'Tiền tệ',
-  myName: 'Tên của bạn', otherMembers: 'Các thành viên khác',
+  working: 'Đang xử lý', signOut: 'Đăng xuất', teamName: 'Tên nhóm', bookName: 'Tên sổ', currency: 'Tiền tệ',
+  myName: 'Tên của bạn',
   currencyLocked: 'Không thể đổi tiền tệ sau khi tạo sổ.', create: 'Tạo', back: 'Quay lại',
 
   inviteDead: 'Liên kết mời này không còn dùng được',
@@ -754,7 +717,6 @@ const vi: Record<Key, string> = {
   willReceive: 'sẽ nhận', willSend: 'sẽ chuyển',
   sharedCost: 'Chi chung', personalCost: 'Chi riêng từng người',
   moneyMoving: 'Tiền cần chuyển', none: 'Không có', gotIt: 'Đã nhận',
-  waitingConfirm: 'đóng lại khi {who} xác nhận',
   recent: 'Ghi gần đây', seeWholeBook: 'Xem toàn bộ sổ',
 
   colNo: 'Số', colDate: 'Ngày', colItem: 'Khoản', colPayer: 'Người trả', colAmount: 'Số tiền',
@@ -770,10 +732,9 @@ const vi: Record<Key, string> = {
   firstPaid: 'ban đầu {amount}', buyLink: 'Liên kết mua', boughtTwice: 'mua hai lần',
 
   openCount: 'Chưa chia {n} khoản', targetAmount: 'Số tiền tính',
-  colMember: 'Thành viên', colNet: 'Chênh lệch', toReceive: 'sẽ nhận', toPay: 'phải trả',
+  colMember: 'Thành viên', toReceive: 'sẽ nhận', toPay: 'phải trả',
   doSettle: 'Chia tiền', nothingToSettle: 'Không có gì để chia',
   confirmedOn: 'chốt {date} · {n} khoản · {amount}', transfers: 'Chuyển khoản',
-  sendAgain: 'Gửi qua KakaoTalk',
 
   archiveTitle: 'Lưu trữ dự án', period: 'Khoảng thời gian', days: '{n} ngày',
   timesN: '{n} lần', settleCount: 'Số lần chia', whatOn: 'Tiêu vào đâu',
@@ -795,10 +756,8 @@ const vi: Record<Key, string> = {
   foreignNote: 'Trả bằng {from}, nhưng sổ ghi số tiền tính bằng {to}.',
   uploaded: 'ảnh đã tải lên',
 
-  membersN: '{n} thành viên', me: 'tôi', linkedAccount: 'đã liên kết tài khoản',
-  viaInvite: 'liên kết mời',
+  membersN: '{n} thành viên', me: 'tôi',
   gone: 'đã rời', markGone: 'Đánh dấu đã rời', bringBack: 'Thêm lại',
-  newMemberName: 'Tên thành viên mới', addMember: 'Thêm thành viên',
   inviteLinks: 'Liên kết mời', until: 'đến {date}', noExpiry: 'không hết hạn',
   copy: 'Sao chép', copied: 'Đã sao chép', revoke: 'Thu hồi', makeInvite: 'Tạo liên kết mời',
   renameHint: 'Đổi tên không làm thay đổi các khoản đã ghi. Người đã rời vẫn còn trong các khoản chi cũ.',
@@ -811,25 +770,22 @@ const vi: Record<Key, string> = {
   needCharged: 'Hãy nhập số tiền tính bằng {code}.', needBearers: 'Hãy chọn ai cùng chia.',
   membersJoinByLink: 'Thành viên vào bằng liên kết mời.',
   yourNameHere: 'Tên', joinAs: 'Vào',
-  sampleBook: '＋ Sổ mẫu', making: 'Đang tạo',
-  newBookPlus: '＋ Sổ mới', sampleSub: 'dữ liệu giả lập',
+  newBookPlus: '＋ Sổ mới',
   sumRow: 'Tổng', result: 'Kết quả',
   youReceiveLead: 'Bạn nhận', youSendLead: 'Bạn chuyển', youEven: 'Không cần chuyển gì',
   yourTransfers: 'của tôi',
   allSettled: 'đã chia xong', openN: 'chưa chia {n}', close: 'Đóng',
   deleteBook: 'Xoá sổ này', deleteWarn: 'Mọi khoản chi và lần chia tiền sẽ mất theo. Không thể hoàn tác.',
-  deleteForReal: 'Xoá', gotAll: 'Đã nhận cả {n} khoản', pastSettlements: 'Các lần chia trước',
+  deleteForReal: 'Xoá', gotAll: 'Đã nhận cả {n} khoản',
   noAccount: 'chưa có tài khoản', copyAccount: 'Chép số tài khoản', openToss: 'Mở bằng Toss',
   bank: 'Ngân hàng', accountNo: 'Số tài khoản',
   accountHint: 'Chỉ chính chủ ghi được tài khoản của mình. Ghi sẵn thì khi chia tiền sẽ hiện ngay nơi cần chuyển.',
-  notLinked: 'chưa liên kết', mineOnly: 'chỉ mình bạn', save: 'Lưu',
-
+  notLinked: 'chưa liên kết', save: 'Lưu', contact: 'Liên hệ', privacy: 'Quyền riêng tư', sendOneByOne: 'Gửi từng người',
   helperTitle: 'Trợ lý', helperAsk: 'Hỏi về sổ này', helperAskWhat: 'Bạn muốn biết gì',
-  helperAskGo: 'Hỏi', helperReading: 'Đang đọc',  helperCoffee: 'Mời nhà phát triển một ly cà phê', helperHide: 'Vứt đi', helperShow: 'Trợ lý',
+  helperAskGo: 'Hỏi', helperReading: 'Đang đọc', helperHide: 'Vứt đi', helperShow: 'Trợ lý',
   sortBy: 'Thứ tự', etc: 'Khác',
   tossMissing: 'Toss không mở được nên đã sao chép tài khoản. Dán vào app ngân hàng.',
-  coffeeThanks: 'Nhấn để sao chép. Cảm ơn bạn.', coffeePage: 'Mở trang ủng hộ',
-  settledNow: 'Đã chia xong', sendItNow: 'Gửi đoạn này cho nhóm.', later: 'Để sau',
+  settledNow: 'Đã chia xong', sendItNow: 'Gửi đoạn này cho nhóm.',
   settleEndsWhen: 'Gửi tin nhắn chưa phải là xong. Dấu chỉ đóng khi mọi khoản chuyển đều được xác nhận — người gửi bấm “Đã gửi”, người nhận bấm “Đã nhận”.',
   waitingN: 'Còn {n} khoản chờ xác nhận',
   askHint: 'Enter để hỏi, Esc để đóng.',
@@ -841,7 +797,7 @@ const vi: Record<Key, string> = {
   tipArchive: 'Dự án xong thì còn lại trang này.\nBao lâu, và tiêu vào đâu.',
   tipTeam: 'Thành viên và liên kết mời ở đây.\nChỉ chính chủ ghi được tài khoản của mình.\nMình cũng không đụng vào của người khác.',
   tipAdd: 'Tải ảnh hóa đơn lên, mình đọc thử nhé.\nMình lấy ra tên khoản và số tiền.\nĐúng hay không thì xem giúp ở màn hình sau.',
-  tipTeams: 'Đây là danh sách sổ của bạn.\nTạo một sổ bằng ＋ Sổ mới nhé.\nHoặc mở sổ mẫu xem trước.',
+  tipTeams: 'Đây là danh sách sổ của bạn.\nTạo một sổ bằng ＋ Sổ mới nhé.\nHai lớp thì hai sổ.',
   tipLogin: 'Xin chào, mình là một tờ hóa đơn.\nĐăng nhập thì sổ này ở lại với tài khoản của bạn.\nMáy nào cũng vậy.',
   accountTitle: 'Tài khoản của tôi', accountName: 'Tên', accountEmail: 'Email',
   accountNoEmail: 'Không nhận được', accountHow: 'Đăng nhập bằng',

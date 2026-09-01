@@ -131,7 +131,7 @@ export async function confirmSettlement(args: {
   expenseIds?: string[];
   isFinal?: boolean;
   createdBy?: string;
-  /** 마감 날짜. 기본은 오늘. 샘플 장부처럼 과거를 재현할 때만 넘긴다. */
+  /** 마감 날짜. 기본은 오늘. 지난 날짜로 마감을 재현할 때만 넘긴다. */
   settledOn?: string;
 }): Promise<{ settlementId: string; transferCount: number }> {
   const ledger = await loadLedger(args.ledgerId);

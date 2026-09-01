@@ -54,7 +54,8 @@ export default async function LedgerShell({
       <div className="topbar">
         <Logo />
         <span className="who">
-          {who}
+          {/* 팀에서의 내 이름. 좁은 화면에서는 계정 이름과 겹쳐 보여서 접는다. */}
+          <span className="who-name">{who}</span>
           <LangPicker value={lang} />
           {me && (
             <Account me={me} lang={lang}>

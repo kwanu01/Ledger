@@ -68,9 +68,13 @@
 body{
   background:var(--paper); color:var(--ink);
   font-family:var(--sans); font-size:15.5px; line-height:1.62;
-  -webkit-font-smoothing:antialiased; margin:0; padding:0 20px 120px;
+  -webkit-font-smoothing:antialiased; margin:0; padding:0 20px;
 }
-.wrap{max-width:900px;margin:0 auto}
+/* 화면 높이를 다 쓰되 넘기지는 않는다. 내용이 짧으면 맨 아래 줄이 바닥으로
+   내려가 앉고, 길면 자연스럽게 늘어난다. 이래야 볼 것도 없는 화면에서
+   오른쪽에 스크롤바가 생기지 않는다. */
+.wrap{max-width:900px;margin:0 auto;min-height:100svh;display:flex;flex-direction:column}
+.wrap > footer{margin-top:auto}
 
 a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
 a:visited{color:var(--link-v)}
@@ -96,36 +100,53 @@ hr{border:0;border-top:1px solid var(--rule);margin:0}
 .logo-word{
   display:block;font-family:var(--script);font-weight:400;font-size:52px;
   line-height:.86;letter-spacing:0}
+/* 인장 — 로고의 오른쪽 아래에 걸치듯 찍힌다. 종이 도장은 글자를 피해
+   찍히지 않는다. 조금 물려야 나중에 찍은 것으로 보인다. */
 .logo-stamp{
-  position:absolute;left:1%;top:auto;bottom:-3px;
-  transform:rotate(-7deg);transform-origin:left center;
-  font-family:var(--serif);font-size:10.5px;font-weight:700;letter-spacing:.19em;
-  line-height:1;white-space:nowrap;padding:4px 9px 3px;
-  color:var(--stamp);border:1.5px solid currentColor;border-radius:1px;
-  /* 고무도장은 고르게 찍히지 않는다. 아주 살짝 흐리게 두어 인쇄가 아니라
-     눌러 찍은 것처럼 보이게 한다. */
-  opacity:.88;mix-blend-mode:multiply;
-  transition:color .18s ease,transform .18s ease}
-/* 마우스를 올리면 잉크가 바뀐다. 도장을 다시 찍은 것처럼 각도도 조금 달라진다. */
-.logo:hover .logo-stamp{color:var(--link);transform:rotate(-4deg) translateY(-1px)}
-.logo:hover .logo-word{opacity:.62}
+  position:absolute;right:-26px;bottom:-14px;width:60px;height:60px;
+  color:var(--stamp);pointer-events:none;
+  /* 기본은 안 찍혀 있다. 도장은 누가 찍어야 찍히는 것이다. */
+  opacity:0;transform:rotate(-24deg) scale(1.45);
+  /* 고무도장은 고르게 묻지 않는다. 잉크가 덜 묻은 자리를 만든다. */
+  -webkit-mask-image:var(--ink-blot);mask-image:var(--ink-blot);
+  -webkit-mask-size:190px 190px;mask-size:190px 190px;mask-mode:alpha;
+  mix-blend-mode:multiply}
+.seal{display:block;width:100%;height:100%;overflow:visible}
+.seal-rim-text{
+  font-family:var(--sans);font-size:9.6px;font-weight:700;letter-spacing:.16em}
+/* 아래쪽 글자는 호의 안쪽에 붙는다. dy 로 테 쪽으로 밀어 놓는다(Stamp.tsx). */
+
+/* 마우스를 올리면 도장이 내려와 찍힌다. 비스듬히 들고 와서 한 번 누르고,
+   떼면서 아주 조금 튄다. 색은 언제나 도장 잉크색이다 — 파랑은 링크의 색이지
+   도장의 색이 아니다. */
+.logo:hover .logo-stamp,.logo:focus-visible .logo-stamp{
+  animation:stamp-press .38s cubic-bezier(.2,.86,.3,1) both}
+.logo:hover .logo-word,.logo:focus-visible .logo-word{opacity:.8}
+@keyframes stamp-press{
+  0%{opacity:0;transform:rotate(-24deg) scale(1.45)}
+  52%{opacity:1;transform:rotate(-9deg) scale(.94)}   /* 눌리는 순간 */
+  74%{opacity:.9;transform:rotate(-13deg) scale(1.05)} /* 떼면서 튐 */
+  100%{opacity:.94;transform:rotate(-11deg) scale(1)}
+}
+@media (prefers-reduced-motion:reduce){
+  .logo:hover .logo-stamp,.logo:focus-visible .logo-stamp{
+    animation:none;opacity:.94;transform:rotate(-11deg) scale(1)}
+}
 /* 어두운 종이에서는 곱하기 합성이 잉크를 먹어 버린다. */
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .logo-stamp{mix-blend-mode:normal;opacity:1}
+  :root:not([data-theme="light"]) .logo-stamp{mix-blend-mode:normal}
 }
-:root[data-theme="dark"] .logo-stamp{mix-blend-mode:normal;opacity:1}
+:root[data-theme="dark"] .logo-stamp{mix-blend-mode:normal}
 
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:34px 0 0}
 .prefs{display:inline-flex;gap:8px;margin-left:14px}
 .prefs select{font-size:12.5px;padding:3px 5px;color:var(--ink-2)}
-/* 장부의 통화는 고를 수 있는 것이 아니라 그 장부의 사실이다 */
-.fixed-cur{font-size:12.5px;color:var(--ink-3);letter-spacing:.06em;padding:3px 2px}
 
 /* ── 첫 화면 ─────────────────────────────────────────────────────── */
 /* 갈림길을 장부의 두 줄처럼 놓는다. 위아래는 굵은 선, 사이는 가는 선. */
 /* 첫 화면은 화면 한가운데 놓는다. 이 화면에는 이것 말고 볼 것이 없기 때문이다. */
 .landing{
-  min-height:100svh;display:flex;flex-direction:column;
+  flex:1;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:8px;padding:48px 0}
 .landing > .logo{margin-bottom:8px}
 .gate{width:100%;max-width:520px;margin:0 auto;padding:64px 0 0}
@@ -139,7 +160,6 @@ hr{border:0;border-top:1px solid var(--rule);margin:0}
 .auth-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:26px}
 .auth-or{display:flex;align-items:center;gap:14px;margin:22px 0;color:var(--ink-3);font-size:13px}
 .auth-or::before,.auth-or::after{content:"";flex:1;border-top:1px solid var(--rule-2)}
-.auth-foot{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;margin-top:26px;font-size:13.5px}
 .choices{margin-top:52px}
 .choice{
   display:flex;align-items:baseline;justify-content:space-between;gap:20px;
@@ -284,9 +304,6 @@ tr.closing td{
 .close-line .total{margin-left:auto;white-space:nowrap}
 /* 이 도장만은 자리를 차지한다. 겹쳐 찍으면 합계를 가린다. */
 .close-line .mark{position:static;flex:none}
-.stamp{
-  display:inline-block;border:1px solid var(--ink-2);color:var(--ink-2);
-  font-size:11px;letter-spacing:.08em;padding:1px 6px;white-space:nowrap}
 
 /* ── 완료 도장 ───────────────────────────────────────────────────── */
 /* 고무도장은 반듯하게 찍히지 않는다. 살짝 비뚤고, 잉크가 고르게 묻지 않는다.
@@ -318,7 +335,7 @@ tr.closing td{
   display:inline-block;color:var(--stamp);white-space:nowrap;
   font-family:var(--sans);font-weight:800;font-size:11px;letter-spacing:.15em;
   padding:1px 3px;
-  opacity:var(--ink,.82);
+  opacity:var(--press,.82);
   -webkit-mask-image:var(--ink-blot);mask-image:var(--ink-blot);
   -webkit-mask-size:90px 90px;mask-size:90px 90px;mask-mode:alpha;
   -webkit-mask-position:var(--blot,0 0);mask-position:var(--blot,0 0)}
@@ -423,22 +440,8 @@ table.balances tr.checksum td{
 .remit .tag{margin-left:9px;vertical-align:middle}
 
 /* ── 보낼 곳 ─────────────────────────────────────────────────────── */
-.remit-to{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;font-size:13.5px}
 /* 계좌 자체가 복사 버튼이다. 옆에 버튼을 따로 세우지 않는다. */
-.remit-to .acct{
-  appearance:none;background:none;border:0;padding:2px 0;font:inherit;
-  font-family:var(--figures);font-variant-numeric:tabular-nums;
-  color:var(--ink-2);white-space:nowrap;cursor:copy;
-  text-decoration:underline;text-decoration-style:dotted;
-  text-decoration-color:var(--rule);text-underline-offset:4px}
-.remit-to .acct:hover{color:var(--ink);text-decoration-color:var(--ink)}
-.acct-done{color:var(--ink-3);font-size:12px;white-space:nowrap}
 /* 계좌 한 줄은 통째로 한 줄이어야 한다. 숫자가 갈라지면 계좌가 아니게 된다. */
-.remit-to{white-space:nowrap}
-.acct-fields{display:flex;flex-wrap:wrap;gap:8px}
-.acct-fields input{font-size:13.5px;padding:5px 8px}
-.acct-fields input.bank{width:96px}
-.acct-fields input.no{width:190px}
 .proof-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:30px}
 .tally{width:100%;border-collapse:collapse;
   font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14.5px}
@@ -449,14 +452,6 @@ table.balances tr.checksum td{
 .tally tr.close td.l{color:var(--ink)}
 .tally tr.hit td.v{font-weight:700}
 .tally tr.hit td.l{color:var(--ink)}
-.converge{margin-top:20px;height:34px;position:relative}
-.converge .track{position:absolute;left:0;right:0;top:22px;border-top:1px dotted var(--rule)}
-.converge .bar{position:absolute;top:20px;height:0;border-top:3px solid var(--ink);left:0;
-  transition:width .9s cubic-bezier(.2,.7,.2,1)}
-.converge .mark{position:absolute;top:15px;height:15px;border-left:1px solid var(--ink-2)}
-.converge .cap{position:absolute;top:0;font-size:11.5px;color:var(--ink-3);
-  transform:translateX(-50%);white-space:nowrap}
-@media (prefers-reduced-motion:reduce){.converge .bar{transition:none}}
 
 /* ── 물건 ────────────────────────────────────────────────────────── */
 .goods{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:32px 26px}
@@ -495,8 +490,6 @@ dialog{
   background:var(--paper);color:var(--ink);
   width:min(560px,calc(100% - 32px));max-height:86vh;overflow:auto}
 dialog::backdrop{background:rgba(0,0,0,.45)}
-.sheet{padding:26px 26px 30px}
-.sheet-top{display:flex;align-items:baseline;justify-content:space-between;gap:18px}
 
 /* ── 빈 상태 ─────────────────────────────────────────────────────── */
 .empty{border:1px dashed var(--rule);padding:40px 24px;text-align:center;color:var(--ink-2)}
@@ -510,12 +503,35 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 tr.left td{color:var(--ink-3)}
 tr.left .subject{color:var(--ink-3)}
 .aside{font-size:13.5px;color:var(--ink-2);border-left:3px solid var(--rule-hard);padding-left:12px}
-.notice{font-size:14px;border-left:3px solid var(--rule-hard);padding:8px 0 8px 12px;background:var(--hl)}
 pre.msg{font-family:var(--mono);font-size:13.5px;line-height:1.75;white-space:pre-wrap;
   border:1px solid var(--rule);padding:16px;margin:0;background:var(--field);overflow-x:auto}
 .ai-mark{font-size:11px;font-weight:400;color:var(--ink-2);border:1px solid var(--rule);padding:0 5px}
 .scroll{overflow-x:auto}
-footer{padding:30px 0;font-size:13px;color:var(--ink-3);border-top:1px solid var(--rule)}
+/* 만든 사람 — 화면 맨 아래 한 줄. 본문과 섞이지 않게 선 하나로 끊는다. */
+footer{
+  margin-top:56px;padding:22px 0 30px;font-size:12.5px;color:var(--ink-3);
+  border-top:1px solid var(--rule-2);
+  display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px}
+footer a,footer a:visited{color:var(--ink-3);text-decoration-color:var(--rule)}
+footer a:hover{color:var(--ink)}
+.foot-sep{width:1px;height:11px;background:var(--rule)}
+
+/* ── 읽는 문서 (개인정보 처리방침 같은 것) ───────────────────────
+   장부가 아니라 글이다. 한 줄이 길면 다음 줄로 눈이 못 넘어가고, 줄이 붙어
+   있으면 어디까지 읽었는지 잃는다. 글의 줄 간격은 표보다 넉넉해야 한다. */
+.doc{max-width:600px;margin:0 auto;padding:34px 0 20px;font-size:15px}
+.doc h1{font-size:26px;font-weight:700;margin-bottom:8px;line-height:1.4}
+.doc h2{
+  font-size:15px;font-weight:700;margin:44px 0 14px;padding-bottom:7px;
+  border-bottom:1px solid var(--rule-hard)}
+.doc p{margin:20px 0;line-height:2.05;word-break:keep-all}
+.doc .facts{width:100%;margin:14px 0 6px}
+.doc .facts td{vertical-align:top;padding:12px 0;line-height:1.95}
+.doc .facts td.k{white-space:nowrap;padding-right:22px;font-family:var(--mono);font-size:13px}
+@media (max-width:640px){
+  .doc{padding-top:26px}
+  .doc .facts td.k{white-space:normal}
+}
 
 /* ── 광고 슬롯 ───────────────────────────────────────────────────── */
 /* 품목·아카이브 화면 아래에만 들어간다. 장부·정산 화면에는 넣지 않는다.
@@ -578,7 +594,6 @@ footer{padding:30px 0;font-size:13px;color:var(--ink-3);border-top:1px solid var
 .helper.held .helper-body{cursor:grabbing}
 /* 자리를 잡기 전에는 보이지 않는다. */
 .helper.placed{visibility:visible}
-.helper-body.flip{scale:-1 1}
 .helper-body img{
   display:block;width:156px;height:156px;pointer-events:none;
   image-rendering:pixelated}
@@ -605,10 +620,8 @@ footer{padding:30px 0;font-size:13px;color:var(--ink-3);border-top:1px solid var
    전부 발밑을 축으로 돈다. 예비 동작(웅크림)과 착지 눌림이 있어야
    뛰어오른 것으로 보인다. 그냥 올렸다 내리면 떠오른 것으로 보인다. */
 .helper-body.t-hop{animation:hop .76s cubic-bezier(.28,.9,.35,1)}
-.helper-body.t-stumble{animation:stumble 1.15s ease-in-out}
 .helper-body.t-nod{animation:nod .62s ease-out}
 .helper-body.t-wiggle{animation:wiggle .82s ease-in-out}
-.helper-body.t-turn{animation:turn .9s ease-in-out}
 
 /* ── 버리기 ──────────────────────────────────────────────────────
    종이를 버릴 때는 그냥 없어지지 않는다. 한 번 구겨지고, 작아진 덩어리가
@@ -650,13 +663,6 @@ footer{padding:30px 0;font-size:13px;color:var(--ink-3);border-top:1px solid var
   82%{transform:translateY(0) scale(1.06,.94)}
   100%{transform:translateY(0) scale(1,1)}
 }
-@keyframes stumble{
-  0%,100%{transform:rotate(0) translateX(0)}
-  24%{transform:rotate(-6deg) translateX(-3px)}
-  42%{transform:rotate(-7deg) translateX(-4px)}
-  62%{transform:rotate(4deg) translateX(3px)}
-  80%{transform:rotate(-1.5deg)}
-}
 @keyframes nod{
   0%,100%{transform:scaleY(1) skewX(0deg)}
   38%{transform:scaleY(.955) skewX(1.6deg)}
@@ -666,13 +672,6 @@ footer{padding:30px 0;font-size:13px;color:var(--ink-3);border-top:1px solid var
   0%,100%{transform:rotate(0)}
   20%{transform:rotate(-3.5deg)} 44%{transform:rotate(3deg)}
   68%{transform:rotate(-2deg)} 86%{transform:rotate(1deg)}
-}
-@keyframes turn{
-  0%{transform:scaleX(1)}
-  26%{transform:scaleX(.82)}
-  50%{transform:scaleX(.1)}
-  74%{transform:scaleX(.86)}
-  100%{transform:scaleX(1)}
 }
 @media (prefers-reduced-motion:reduce){
   .helper-body{animation:none!important}
@@ -832,3 +831,106 @@ footer{padding:30px 0;font-size:13px;color:var(--ink-3);border-top:1px solid var
 .waiting{
   flex:none;font-size:12px;letter-spacing:.06em;color:var(--ink-2);
   border:1px dashed var(--rule);padding:5px 10px;white-space:nowrap}
+
+/* ══════════════════════════════════════════════════════════════════
+   좁은 화면 (§21.12)
+
+   이 서비스는 폰에서 가장 많이 열린다. 정산 링크가 카카오톡으로 오가고,
+   받은 사람은 대개 폰으로 누르기 때문이다. 그런데 장부는 원래 넓은 종이다.
+   여덟 칸을 350픽셀에 밀어 넣으면 글자가 세로로 접혀 "현/우"가 된다.
+
+   그래서 좁은 화면에서는 장부를 좁히는 대신 **덜 급한 칸을 접는다.**
+   날짜·항목·금액만 남기고, 전표 번호와 결제한 사람과 부담은 줄을 눌렀을 때
+   펴지는 자리로 보낸다. 표는 표로 남고, 읽을 것만 남는다.
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width:640px){
+  body{padding:0 16px}
+
+  /* 머리글 — 로고와 계정만. 팀에서의 내 이름은 팀 화면에 있다. */
+  .topbar{gap:10px}
+  .who-name{display:none}
+  .acct-card{min-width:0;width:calc(100vw - 32px);max-width:320px}
+
+  /* 탭은 두 줄까지 접히고, 지출 기입은 아래에 한 줄로 눕는다.
+     엄지로 누르는 단추는 넓을수록 좋다. */
+  nav{gap:2px 18px;font-size:15px}
+  nav .spacer{display:none}
+  nav .act.primary{width:100%;margin-top:12px;text-align:center;padding:11px 18px}
+
+  /* 장부 — 세 칸만 남긴다. 나머지는 줄을 누르면 펴진다.
+     .entries 에만 건다. 같은 book 표를 팀·정산·초대 화면도 쓰는데,
+     거기서 둘째 칸을 접으면 엉뚱한 것이 사라진다. */
+  table.book{font-size:14px}
+  table.book.entries th:nth-child(2), table.book.entries td:nth-child(2),  /* 전표 */
+  table.book.entries th:nth-child(5), table.book.entries td:nth-child(5),  /* 결제 */
+  table.book.entries th:nth-child(7), table.book.entries td:nth-child(7){  /* 부담 */
+    display:none}
+  table.book th,table.book td{padding:8px 7px}
+  table.book th:first-child,table.book td:first-child{padding-left:0}
+  table.book.entries th:first-child,table.book.entries td:first-child{width:20px}
+  .subject{text-align:left}
+
+  /* 마감줄 — 도장이 밖으로 나가지 않게 아래로 내린다. */
+  tr.closing td{padding:11px 8px}
+  .close-line{gap:6px 12px}
+  .close-line .total{margin-left:auto}
+  .close-line .mark.sm{margin-left:0}
+
+  /* 품목 — 한 칸씩. 사진이 화면을 다 먹지 않도록 조금 낮춘다. */
+  .goods{grid-template-columns:1fr;gap:26px}
+  .good .plate{aspect-ratio:3/2}
+
+  /* 손가락으로 누르는 것들은 작으면 안 된다. */
+  .act{padding:10px 18px}
+  nav .tab{padding:5px 0 8px}
+
+  /* 검산 표 — 결제와 부담은 접는다. 폰에서 알고 싶은 것은 결과다.
+     자세한 숫자는 같은 화면 아래 지출 목록에 다 있다. */
+  table.book.balances th:nth-child(2), table.book.balances td:nth-child(2),
+  table.book.balances th:nth-child(3), table.book.balances td:nth-child(3){display:none}
+
+  /* 송금 줄과 초대 링크 줄은 표를 접어 세로로 쌓는다.
+     칸을 옆으로 늘어놓으면 계좌가 화면 밖으로 나가고, 그 뒤의 '보냈어요'가
+     같이 밀려 나간다. 폰에서 제일 많이 누르는 단추가 안 보이면 안 된다. */
+  table.book.transfers, table.book.transfers tbody, table.book.transfers tr,
+  table.book.transfers td,
+  table.book.invites, table.book.invites tbody, table.book.invites tr,
+  table.book.invites td{display:block;width:auto}
+  table.book.transfers tr, table.book.invites tr{
+    padding:14px 0;border-bottom:1px solid var(--rule-2)}
+  table.book.transfers tr:last-child, table.book.invites tr:last-child{border-bottom:0}
+  table.book.transfers td, table.book.invites td{
+    border:0;padding:3px 0;white-space:normal}
+  /* 세로 괘선은 칸을 감쌀 때 뜻이 있다. 쌓아 놓은 줄에서는 지운다. */
+  table.book.transfers td.money{
+    border-left:0;border-right:0;text-align:left;font-size:17px}
+  table.book.invites td{word-break:break-all}
+  /* 쌓인 줄에서는 단추가 나란히 서야 두 번 누르지 않는다. */
+  table.book.transfers td:last-child{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px}
+  table.book.invites td:nth-child(n+3){display:inline-flex;margin:6px 20px 0 0}
+
+  /* 팀원 줄도 쌓는다. 이름 · 계좌 · 단추가 한 줄에 들어가지 않는다. */
+  table.book.members, table.book.members tbody, table.book.members tr,
+  table.book.members td{display:block;width:auto}
+  table.book.members tr{padding:14px 0;border-bottom:1px solid var(--rule-2)}
+  table.book.members tr:last-child{border-bottom:0}
+  table.book.members td{border:0;padding:3px 0;white-space:normal}
+  /* 길잡이 — 폰에서는 화면을 많이 가린다. 작게 두고, 옆에 적는 말도
+     남은 자리에 맞춘다. 42vw는 320픽셀 화면에서 134픽셀이라 글자가
+     세로로 한 줄씩 떨어진다. */
+  .helper{transform:scale(.72);transform-origin:100% 100%}
+  .helper-say{max-width:calc(100vw - 150px);font-size:12.5px}
+  .helper-bubble{max-width:calc(100vw - 60px)}
+  /* 묻는 창 — 자판이 올라오면 화면의 절반이 사라진다. 위를 덜 비운다. */
+  .ask-over{padding:6vh 14px 14px}
+  .ask-log{max-height:38vh}
+}
+
+/* iOS는 글자가 16px보다 작은 입력칸에 손을 대면 화면을 확대한다.
+   확대되면 그 뒤로 모든 것이 어긋나 보인다. 그래서 폰에서는 16px로 둔다.
+   (600px가 아니라 화면 종류로 가른다. 태블릿에서도 같은 일이 일어난다.) */
+@media (pointer:coarse){
+  select,input[type=text],input[type=email],input[type=password],input[type=date],
+  input[type=number],input[type=search],textarea{font-size:16px}
+  .ask-line{font-size:16px}
+}

@@ -628,11 +628,31 @@ https://www.teamledger.net/auth/callback</pre>
       <span class="path">카카오 Redirect URI는 그대로 둡니다 (Supabase 주소라서 안 바뀝니다)</span>
     </div></li>
     <li><span class="sn">08-4</span><input type="checkbox" class="tick"><div class="body">
-      <b>광고를 붙일 거라면</b> 애드센스 심사를 신청합니다. 실제 도메인에 내용이 있어야 통과합니다.
-      <span class="path">승인 후 → <span class="slot">NEXT_PUBLIC_ADSENSE_CLIENT</span> <span class="slot">NEXT_PUBLIC_ADSENSE_SLOT</span></span>
+      <b>광고를 붙일 거라면</b> 순서가 있습니다. 코드는 이미 다 되어 있고, 남은 것은
+      구글 쪽 절차입니다.
+      <p class="note">
+        <b>먼저 배포가 끝나 있어야 합니다.</b> 애드센스는 실제로 열리는 사이트에
+        내용이 있어야 심사를 받아 줍니다.
+      </p>
+      <span class="path">1 · adsense.google.com 에서 사이트 등록 → <span class="slot">teamledger.net</span></span>
+      <span class="path">2 · 심사 통과 후 광고 단위(디스플레이 광고)를 하나 만든다</span>
+      <span class="path">3 · 게시자 ID와 광고 단위 ID를 환경변수에 넣고 다시 배포한다</span>
+      <pre>NEXT_PUBLIC_ADSENSE_CLIENT=ca-pub-0000000000000000
+NEXT_PUBLIC_ADSENSE_SLOT=0000000000</pre>
+      <p class="note">
+        <code>ads.txt</code> 는 따로 만들 것이 없습니다. 위의 게시자 ID를 넣으면
+        <code>teamledger.net/ads.txt</code> 가 그 값으로 자동으로 만들어집니다.
+        애드센스가 "ads.txt 문제"라고 알려 오면 대개 <b>환경변수를 넣고 다시 배포하지
+        않은</b> 것입니다.
+      </p>
       <p class="note alert">
-        개인정보 처리방침 페이지가 필요합니다(애드센스 요구사항).
-        광고는 <b>품목·아카이브 화면에만</b> 들어가고 장부·정산 화면에는 넣지 않습니다.
+        <b>자동 광고(Auto ads)는 반드시 꺼 두세요.</b> 켜면 구글이 화면을 골라 광고를
+        끼워 넣습니다. 그러면 정산 금액 옆에도 광고가 붙습니다. 이 서비스에서 광고는
+        <b>품목·아카이브 화면에만</b> 들어갑니다.
+      </p>
+      <p class="note">
+        개인정보 처리방침은 <code>/privacy</code> 에 이미 있습니다. 화면 맨 아래 줄에서
+        열립니다. 애드센스 심사에서 요구하는 문서입니다.
       </p>
     </div></li>
   </ol>

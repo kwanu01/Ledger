@@ -7,7 +7,6 @@ import {
   deleteTeam,
   renameMember,
   revokeInvite,
-  setMemberAccount,
   setMemberActive,
   type InviteRow,
   type TeamMember,
@@ -57,9 +56,6 @@ export default function TeamPanel({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [armed, setArmed] = useState(false);
-  const [editAcct, setEditAcct] = useState<string | null>(null);
-  const [bank, setBank] = useState('');
-  const [acct, setAcct] = useState('');
 
   async function run(fn: () => Promise<{ ok: boolean; message?: string }>) {
         setBusy(true);
@@ -77,15 +73,7 @@ export default function TeamPanel({
     setEditing(null);
   }
 
-  async function copyAccount(id: string, text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(id);
-      setTimeout(() => setCopied(null), 2000);
-    } catch {
-      // 복사가 막혀 있으면 계좌가 화면에 그대로 있으니 손으로 고르면 된다.
-    }
-  }
+
 
   async function copy(link: string, token: string) {
     try {
@@ -106,7 +94,7 @@ export default function TeamPanel({
         <div className="caption">{T('membersN', { n: active.length })}</div>
 
         <div className="scroll" style={{ marginTop: 14 }}>
-          <table className="book">
+          <table className="book members">
             <tbody>
               {members.map((m) => (
                 <tr key={m.id} className={m.active ? undefined : 'left'}>
@@ -140,74 +128,6 @@ export default function TeamPanel({
                   </td>
                   <td className="muted" style={{ whiteSpace: 'nowrap' }}>
                     {m.isMe ? T('me') : m.hasAccount ? '' : T('notLinked')}
-                  </td>
-                  <td>
-                    {!m.isMe ? (
-                      // 계좌는 본인만 적는다. 남의 줄에는 적힌 것만 보이고,
-                      // 누르면 복사된다. 복사 버튼을 따로 세우지 않는다.
-                      m.bank && m.accountNo ? (
-                        <span className="remit-to">
-                          <button
-                            className="acct num"
-                            title={T('copyAccount')}
-                            onClick={() => copyAccount(m.id, `${m.bank} ${m.accountNo}`)}
-                          >
-                            {m.bank} {m.accountNo}
-                            {copied === m.id && <span className="acct-done"> {T('copied')}</span>}
-                          </button>
-                        </span>
-                      ) : (
-                        <span className="muted" style={{ whiteSpace: 'nowrap' }}>
-                          {T('noAccount')}
-                        </span>
-                      )
-                    ) : editAcct === m.id ? (
-                      <span className="acct-fields">
-                        <input
-                          type="text"
-                          className="bank"
-                          placeholder={T('bank')}
-                          value={bank}
-                          autoFocus
-                          onChange={(e) => setBank(e.target.value)}
-                        />
-                        <input
-                          type="text"
-                          className="no num"
-                          inputMode="numeric"
-                          placeholder={T('accountNo')}
-                          value={acct}
-                          onChange={(e) => setAcct(e.target.value)}
-                        />
-                        <button
-                          className="act small"
-                          disabled={busy}
-                          onClick={async () => {
-                            await run(() =>
-                              setMemberAccount({ ledgerId, memberId: m.id, bank, accountNo: acct }),
-                            );
-                            setEditAcct(null);
-                          }}
-                        >
-                          {T('save')}
-                        </button>
-                        <button className="plain" onClick={() => setEditAcct(null)}>
-                          {T('close')}
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        className="plain"
-                        style={{ whiteSpace: 'nowrap' }}
-                        onClick={() => {
-                          setEditAcct(m.id);
-                          setBank(m.bank);
-                          setAcct(m.accountNo);
-                        }}
-                      >
-                        {m.bank && m.accountNo ? `${m.bank} ${m.accountNo}` : T('noAccount')}
-                      </button>
-                    )}
                   </td>
                   <td className="muted">{m.active ? '' : T('gone')}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
@@ -246,7 +166,7 @@ export default function TeamPanel({
           </p>
         ) : (
           <div className="scroll" style={{ marginTop: 14 }}>
-            <table className="book">
+            <table className="book invites">
               <tbody>
                 {invites.map((i) => {
                   const link = `${origin}/join/${i.token}`;

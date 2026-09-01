@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { teamForInvite } from '../../../lib/access.ts';
 import { db } from '../../../lib/db/client.ts';

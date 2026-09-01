@@ -284,7 +284,3 @@ export function allocationLabel(expense: Expense, members: Member[]): string {
   }
 }
 
-export function adjustmentLabel(expense: Expense): string {
-  if (!expense.adjustment) return '';
-  return expense.adjustment.kind === 'refund' ? '환불' : '보정';
-}

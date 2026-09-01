@@ -20,7 +20,7 @@ import {
   won,
 } from '../lib/domain/settlement.ts';
 import { buildLedger, members } from '../lib/domain/seed.ts';
-import type { MemberBalance, SettlementResult } from '../lib/domain/types.ts';
+import type { SettlementResult } from '../lib/domain/types.ts';
 
 const ledger = buildLedger();
 const pad = (s: string, n: number) => s + ' '.repeat(Math.max(0, n - [...s].reduce((w, c) => w + (c.charCodeAt(0) > 0x2e80 ? 2 : 1), 0)));
@@ -189,10 +189,10 @@ check('결제자 = 귀속자인 개인 귀속은 공동 정산 영향 0 (e06 커
   whole.balances.every((b, i) => b.netBalance === withoutE06.balances[i].netBalance),
   '총지출에는 +21,000, balance에는 0');
 const withoutE18 = computeSettlement(ledger.expenses.filter((e) => e.id !== 'e18'), members);
-const jsWith = whole.balances.find((b) => b.memberId === 'js')!.netBalance;
-const jsWithout = withoutE18.balances.find((b) => b.memberId === 'js')!.netBalance;
+const ownerWith = whole.balances.find((b) => b.memberId === 'kw')!.netBalance;
+const ownerWithout = withoutE18.balances.find((b) => b.memberId === 'kw')!.netBalance;
 check('결제자 ≠ 귀속자인 개인 귀속은 귀속자 채무로 반영 (e18 드라이버)',
-  jsWithout - jsWith === 39000, `지수 balance ${won(jsWithout)} → ${won(jsWith)}`);
+  ownerWithout - ownerWith === 39000, `관우 balance ${won(ownerWithout)} → ${won(ownerWith)}`);
 
 console.log('\n[송금]');
 for (const [label, r] of [['#01', first], ['#02', second]] as const) {
@@ -214,15 +214,15 @@ check('중간 정산을 해도 Expense 원본은 전부 그대로 남는다', le
 console.log('\n[팀원 변동 · 보정 · 환불]');
 const firstCycleExpenses = ledger.expenses.filter((e) => ledger.settlements[0].snapshot.expenseIds.includes(e.id));
 const recomputedWithNewMember = computeSettlement(firstCycleExpenses, members);
-check('태윤이 나중에 합류해도 1차 정산 결과는 한 푼도 바뀌지 않는다',
+check('유란이 나중에 합류해도 1차 정산 결과는 한 푼도 바뀌지 않는다',
   recomputedWithNewMember.balances.every((b) => {
     const old = first.balances.find((x) => x.memberId === b.memberId);
     return old && old.netBalance === b.netBalance;
-  }) && recomputedWithNewMember.balances.length === 4,
-  '1차 정산 대상자 4명 유지');
-check('10월 지출은 5인으로 나뉜다 (e17 전시 판넬)',
-  breakdownOf(ledger.expenses.find((e) => e.id === 'e17')!).shares.length === 5,
-  `96,000/5 = ${(96000 / 5).toLocaleString('ko-KR')}`);
+  }) && recomputedWithNewMember.balances.length === 3,
+  '1차 정산 대상자 3명 유지');
+check('10월 지출은 4인으로 나뉜다 (e17 전시 판넬)',
+  breakdownOf(ledger.expenses.find((e) => e.id === 'e17')!).shares.length === 4,
+  `96,000/4 = ${(96000 / 4).toLocaleString('ko-KR')}`);
 const e13 = ledger.expenses.find((e) => e.id === 'e13')!;
 check('환불은 원본 부담 구조를 그대로 따른다 (e21 → e13)',
   breakdownOf(ledger.expenses.find((e) => e.id === 'e21')!).shares.length === breakdownOf(e13).shares.length,

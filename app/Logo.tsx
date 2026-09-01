@@ -1,21 +1,24 @@
 import Link from 'next/link';
+import Stamp from './Stamp.tsx';
 
 /**
  * 로고 (§20)
  *
- * 필기체 글자 하나만 놓으면 장부가 아니라 상표처럼 읽힌다. 그래서 그 위에
- * 도장을 하나 찍었다. 이 장부 프로그램이 만들어진 날짜다.
+ * 필기체 글자만 놓으면 장부가 아니라 상표처럼 읽힌다. 그래서 도장을 하나 둔다.
+ * 다만 **찍혀 있지 않다.** 마우스를 올려야 그때 내려와 찍힌다.
  *
- * 종이 장부의 첫 장에는 언제나 날짜가 있었다. 접수한 날, 기표한 날, 결재한 날.
- * 도장은 그중에서도 "이때 이 종이가 여기를 지나갔다"는 표시다. 그 표시를
- * 서비스 자신에게 찍어 둔다. 이 장부가 언제부터의 것인지가 첫 화면에 있다.
+ * 도장은 원래 누가 찍어야 찍히는 것이다. 처음부터 찍혀 있으면 그건 도장이
+ * 아니라 인쇄다. 이 서비스가 정산을 끝낼 때 도장을 찍는 것처럼, 로고도
+ * 손이 닿았을 때 찍힌다.
  *
- * 날짜는 고정이다. 보는 사람의 오늘이 아니라 만들어진 날이라서, 내일 열어도
- * 같은 날짜가 찍혀 있어야 한다.
+ * 찍히는 말은 이 장부가 끝났다는 말이다. 정산 완료 도장과 같은 낱말을 쓴다.
  */
 
-/** 이 장부 프로그램이 만들어진 날. 도장에 찍히는 날짜다. */
-export const MADE_ON = '2026 · 08 · 31';
+/** 로고에 찍히는 말. 화면 안의 완료 도장과 같은 낱말이다. */
+export const STAMP_WORD = 'Completed';
+
+/** 이 장부 프로그램이 만들어진 해. 화면 맨 아래 줄에 적힌다. */
+export const MADE_ON = '2026 · 09 · 01';
 
 export default function Logo({ plain = false }: { plain?: boolean }) {
   // 첫 화면에서는 같은 주소로의 Link가 화면을 다시 그리지 않는다. 계산기를
@@ -24,7 +27,7 @@ export default function Logo({ plain = false }: { plain?: boolean }) {
     <>
       <span className="logo-word">Ledger</span>
       <span className="logo-stamp" aria-hidden="true">
-        {MADE_ON}
+        <Stamp />
       </span>
     </>
   );

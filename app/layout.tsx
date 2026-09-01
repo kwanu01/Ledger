@@ -4,6 +4,7 @@ import './globals.css';
 import { getLang } from '../lib/lang.ts';
 import { HelperProvider } from './helper/HelperContext.tsx';
 import Helper from './helper/Helper.tsx';
+import Footer from './Footer.tsx';
 
 /**
  * 글꼴을 직접 심는다. (§20)
@@ -78,7 +79,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={lang} className={`${courier.variable} ${hanSerif.variable}`}>
       <body>
         <HelperProvider>
-          <div className="wrap">{children}</div>
+          <div className="wrap">
+            {children}
+            <Footer lang={lang} />
+          </div>
           <Helper lang={lang} />
         </HelperProvider>
       </body>

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import QuickSplit from './QuickSplit.tsx';
 import { currentUser } from '../lib/auth-client.ts';
 import { myLedgers } from './actions/teams.ts';

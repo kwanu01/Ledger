@@ -252,7 +252,6 @@ export default function SettlePanel({
   meId,
   lang,
   openSeqs = [],
-  accounts = {},
 }: {
   ledger: Ledger;
   meId: string;
@@ -260,7 +259,6 @@ export default function SettlePanel({
   /** 아직 오가지 않은 송금이 남은 정산 회차. 여기 없는 회차는 다 끝난 것이다. */
   openSeqs?: number[];
   /** 받는 사람의 계좌. 요청 글에 실어야 받은 사람이 바로 보낼 수 있다. */
-  accounts?: Record<string, { bank: string; accountNo: string }>;
 }) {
   const router = useRouter();
   // 경고는 도우미 말풍선 한 자리로 모인다(app/helper).
@@ -284,6 +282,9 @@ export default function SettlePanel({
   const [busy, setBusy] = useState(false);
   /** 방금 확정한 정산의 보낼 글. 이게 있으면 먼저 보내라고 내민다. */
   const [justSettled, setJustSettled] = useState<string | null>(null);
+  /** 방금 확정한 정산. 사람마다 다른 글을 만들려면 결과가 있어야 한다. */
+  const [justSettledResult, setJustSettledResult] = useState<SettlementResult | null>(null);
+  const [justSettledSeq, setJustSettledSeq] = useState(0);
 
   const pending = computeSettlement(open, ledger.members);
   const myNet = pending.balances.find((b) => b.memberId === meId)?.netBalance ?? 0;
@@ -302,29 +303,59 @@ export default function SettlePanel({
     const r = await settle({ ledgerId: ledger.id });
     setBusy(false);
     if (!r.ok) return say(r.message);
-    setJustSettled(message(pending, (ledger.settlements.at(-1)?.seq ?? 0) + 1));
+    const seq = (ledger.settlements.at(-1)?.seq ?? 0) + 1;
+    setJustSettledSeq(seq);
+    setJustSettledResult(pending);
+    setJustSettled(message(pending, seq));
   }
 
   /**
    * 카카오톡으로 보낼 글. 어느 채팅방에 보낼지는 카카오톡이 묻는다.
    *
-   * 받는 사람의 계좌를 같이 싣는다. 이 글만 보고 바로 보낼 수 있어야 한다.
-   * 계좌를 찾으러 대화를 거슬러 올라가게 만들면 정산이 며칠 밀린다.
+   * 두 가지를 만든다. 단톡방에 한 번에 붙일 전체 글과, 보낼 사람 한 명에게만
+   * 가는 글이다.
+   *
+   * 전체 글은 누가 누구에게 얼마인지가 한눈에 보여야 하고, 개인 글은 받는
+   * 사람이 자기 할 일만 보면 되어야 한다. 단톡방에 올린 표에서 자기 줄을
+   * 찾는 일은 생각보다 잘 안 된다. 넷이 넘어가면 더 그렇다.
+   *
+   * 계좌는 싣지 않는다. 받을 사람의 계좌번호가 단톡방에 남는 것은 이 서비스가
+   * 대신 결정할 일이 아니다. 보낼 곳은 서로 아는 사이끼리 정하면 된다.
    */
   function message(result: SettlementResult, seq: number) {
-    const line = (t: (typeof result.transfers)[number]) => {
-      const to = nameOf(ledger.members, t.toMemberId);
-      const acct = accounts[t.toMemberId];
-      const where = acct?.bank && acct?.accountNo ? `\n${acct.bank} ${acct.accountNo}` : '';
-      return `${nameOf(ledger.members, t.fromMemberId)} → ${to}\n${cash(t.amount)}${where}`;
-    };
+    const line = (t: (typeof result.transfers)[number]) =>
+      `${nameOf(ledger.members, t.fromMemberId)} → ${nameOf(ledger.members, t.toMemberId)}  ${cash(t.amount)}`;
 
     return (
       `${ledger.teamName} · ${s0(seq)}\n\n` +
-      result.transfers.map(line).join('\n\n') +
+      result.transfers.map(line).join('\n') +
       `\n\n대상 지출 ${result.expenseIds.length}건 · ${cash(result.totalAmount)}` +
       `\n\n보낸 뒤 아래 주소에서 '보냈어요'를 눌러 주세요.`
     );
+  }
+
+  /** 보낼 사람 한 명에게만 가는 글. 그 사람이 보낼 것만 적는다. */
+  function messageFor(fromId: string, result: SettlementResult, seq: number) {
+    const mine = result.transfers.filter((t) => t.fromMemberId === fromId);
+    const lines = mine.map(
+      (t) => `${nameOf(ledger.members, t.toMemberId)}에게 ${cash(t.amount)}`,
+    );
+    const total = mine.reduce((a, t) => a + t.amount, 0);
+
+    return (
+      `${ledger.teamName} · ${s0(seq)}\n\n` +
+      `${nameOf(ledger.members, fromId)} 님이 보낼 것\n` +
+      lines.join('\n') +
+      (mine.length > 1 ? `\n합계 ${cash(total)}` : '') +
+      `\n\n보낸 뒤 아래 주소에서 '보냈어요'를 눌러 주세요.`
+    );
+  }
+
+  /** 이번 정산에서 돈을 보내야 하는 사람들. 한 사람이 여러 곳에 보낼 수 있다. */
+  function senders(result: SettlementResult) {
+    const ids: string[] = [];
+    for (const t of result.transfers) if (!ids.includes(t.fromMemberId)) ids.push(t.fromMemberId);
+    return ids;
   }
 
   const s0 = (seq: number) => ledger.settlements.find((x) => x.seq === seq)?.label ?? `${seq}차 정산`;
@@ -356,6 +387,46 @@ export default function SettlePanel({
             }}
           />
         </div>
+
+        {/* 한 사람씩 보내기.
+            단톡방에 올린 표에서 자기 줄을 찾는 일은 생각보다 잘 안 된다.
+            보낼 사람에게 개인톡으로 자기 몫만 보내면 그 일이 없어진다. */}
+        {justSettledResult && senders(justSettledResult).length > 0 && (
+          <div style={{ marginTop: 26 }}>
+            <div className="caption">{T('sendOneByOne')}</div>
+            <div className="scroll">
+              <table className="book transfers">
+                <tbody>
+                  {senders(justSettledResult).map((id) => {
+                    const mine = justSettledResult.transfers.filter((t) => t.fromMemberId === id);
+                    const sum = mine.reduce((a, t) => a + t.amount, 0);
+                    return (
+                      <tr key={id}>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {nameOf(ledger.members, id)}
+                          {id === meId && <span className="faint"> {T('me')}</span>}
+                        </td>
+                        <td className="r money debit">{cash(sum)}</td>
+                        <td className="muted">
+                          {mine
+                            .map((t) => nameOf(ledger.members, t.toMemberId))
+                            .join(', ')}
+                        </td>
+                        <td>
+                          <ShareButton
+                            text={messageFor(id, justSettledResult, justSettledSeq)}
+                            lang={lang}
+                            href={`/l/${ledger.id}`}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </section>
     );
   }

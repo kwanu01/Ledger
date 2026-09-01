@@ -1,5 +1,10 @@
 /**
- * Ledger — 시뮬레이션 시드 데이터 (Master Context §32-1)
+ * Ledger — 정산 엔진 검산용 시드 데이터 (Master Context §32-1)
+ *
+ * **화면에서는 쓰지 않는다.** 예전에는 이 시드로 "샘플 장부"를 만들어 주었지만
+ * 지어낸 장부를 보여 주는 일은 걷어냈다. 지금 이 파일이 있는 이유는 하나다 —
+ * `npm run simulate` 이 여기 있는 한 장부로 불변식 21개를 돌린다. 정산 엔진이
+ * 맞는지 확인할 수 있는 자리다.
  *
  * 가상 팀 4인 / 22건 지출 / 중간 정산 1회 / 팀원 1명 중도 합류.
  * §29 Phase 2의 검증 케이스를 전부 한 장부 안에 담는다.
@@ -22,23 +27,11 @@ import type { Expense, Ledger, Member, MemberId } from './types.ts';
 import { computeSettlement } from './settlement.ts';
 
 export const members: Member[] = [
-  // 첫 사람이 샘플을 만든 본인이 된다. 검산 화면의 '나'가 여기서 정해진다.
   { id: 'kw', name: '관우' },
   { id: 'hw', name: '현우' },
   { id: 'sj', name: '성주' },
   { id: 'yr', name: '유란' }, // 10월 1일 합류
 ];
-
-/**
- * 계좌는 지어낸 것이다. 샘플에서 "보낼 곳"과 토스 링크가 어떻게 뜨는지 보려면
- * 받는 쪽 계좌가 있어야 한다. 실제 계좌가 아니라는 것이 번호에서 보이게 둔다.
- * 본인(첫 사람)의 계좌는 비워 둔다. 자기 계좌는 자기가 적는 자리이기 때문이다.
- */
-export const sampleAccounts: Record<MemberId, { bank: string; accountNo: string }> = {
-  hw: { bank: '카카오뱅크', accountNo: '3333-00-0000001' },
-  sj: { bank: '국민', accountNo: '000000-00-000002' },
-  yr: { bank: '토스뱅크', accountNo: '1000-0000-0003' },
-};
 
 /**
  * 팀원 명단은 시점마다 다르다. 지출을 기록할 때 이 명단이 그대로 박힌다.
@@ -57,31 +50,26 @@ const drafts: Draft[] = [
     id: 'e01', date: '2026-09-01', title: '폼보드 5T 5장', amount: 32500, payerId: 'kw',
     teamMemberIds: ROSTER_3, vendor: '알파문구 정릉점', category: '재료비', allocation: { type: 'all' },
     productLink: 'https://example.com/foamboard-5t', receiptImage: 'receipt-e01.jpg',
-    representativeImage: '/sample/foamboard.jpg',
   },
   {
     id: 'e02', date: '2026-09-02', title: '아크릴 3T 재단', amount: 60000, payerId: 'sj',
     teamMemberIds: ROSTER_3, vendor: '을지로 아크릴상가', category: '제작비', allocation: { type: 'all' },
     receiptImage: 'receipt-e02.jpg',
-    representativeImage: '/sample/acrylic.jpg',
   },
   {
     id: 'e03', date: '2026-09-03', title: '목공본드와 양면테이프', amount: 8500, payerId: 'hw',
     teamMemberIds: ROSTER_3, vendor: '다이소', category: '재료비', allocation: { type: 'all' },
-    representativeImage: '/sample/glue.jpg',
   },
   {
     id: 'e04', date: '2026-09-05', title: 'A0 출력 3장', amount: 54000, payerId: 'kw',
     teamMemberIds: ROSTER_3, vendor: '홍대 그래픽스', category: '출력비', allocation: { type: 'all' },
     receiptImage: 'receipt-e04.jpg',
-    representativeImage: '/sample/print_a0.jpg',
   },
   {
     // 일부 인원 부담 — 현우는 자재 운반에 함께하지 않았다
     id: 'e05', date: '2026-09-06', title: '택시 (자재 운반)', amount: 24000, payerId: 'sj',
     teamMemberIds: ROSTER_3, vendor: '카카오T', category: '이동비',
     allocation: { type: 'partial', participantIds: ['kw', 'sj'] },
-    representativeImage: '/sample/taxi.jpg',
   },
   {
     // 개인 귀속 · 결제자 = 귀속자 → 공동 정산 영향 0
@@ -89,73 +77,62 @@ const drafts: Draft[] = [
     teamMemberIds: ROSTER_3, vendor: '알파문구', category: '도구',
     allocation: { type: 'personal', ownerId: 'hw' },
     note: '프로젝트 끝나고 현우가 가져감',
-    representativeImage: '/sample/cuttingmat.jpg',
   },
   {
     id: 'e07', date: '2026-09-09', title: '스프레이 도료 4캔', amount: 36800, payerId: 'sj',
     teamMemberIds: ROSTER_3, vendor: '삼화페인트몰', category: '재료비', allocation: { type: 'all' },
     productLink: 'https://example.com/spray-paint',
-    representativeImage: '/sample/spraypaint.jpg',
   },
   {
     id: 'e08', date: '2026-09-11', title: '사포와 커터날 세트', amount: 12300, payerId: 'kw',
     teamMemberIds: ROSTER_3, vendor: '다이소', category: '재료비', allocation: { type: 'all' },
-    representativeImage: '/sample/sandpaper.jpg',
   },
   {
     id: 'e09', date: '2026-09-13', title: '3D 프린팅 출력 대행', amount: 88000, payerId: 'sj',
     teamMemberIds: ROSTER_3, vendor: '쓰리디몰', category: '제작비', allocation: { type: 'all' },
     receiptImage: 'receipt-e09.jpg',
-    representativeImage: '/sample/printer3d.jpg',
   },
   {
     // 나머지 배분 케이스: 21,500 / 3 = 7,166.67 → 7,167 · 7,167 · 7,166
     id: 'e10', date: '2026-09-15', title: '팀 회의 카페', amount: 21500, payerId: 'hw',
     teamMemberIds: ROSTER_3, vendor: '스타벅스 국민대점', category: '기타',
     allocation: { type: 'all' },
-    representativeImage: '/sample/coffee.jpg',
   },
   {
     id: 'e11', date: '2026-09-17', title: 'MDF 재단', amount: 45000, payerId: 'kw',
     teamMemberIds: ROSTER_3, vendor: '방산시장 목재', category: '재료비', allocation: { type: 'all' },
-    representativeImage: '/sample/mdf.jpg',
   },
   {
     id: 'e12', date: '2026-09-18', title: '아크릴 배송비', amount: 4000, payerId: 'sj',
     teamMemberIds: ROSTER_3, category: '재료비', allocation: { type: 'all' },
     note: '아크릴 재단 건 배송비 — 부가 금액은 별도 항목 없이 그대로 기록',
-    representativeImage: '/sample/delivery.jpg',
   },
 
   // ── Settlement #01 (09-20) 이후 ────────────────────────────────────
   //
-  // 여기서부터가 아직 정산하지 않은 몫이다. 이 구간에서 관우(=샘플을 만든 본인)는
+  // 여기서부터가 아직 정산하지 않은 몫이다. 이 구간에서 관우(=검산의 '나')는
   // 결제한 것이 없고 부담만 쌓인다. 그래서 홈 화면에 "보낼 돈"이 뜨고,
   // 계좌·토스 링크·보냈어요를 눌러 볼 수 있다.
   {
     id: 'e13', date: '2026-09-22', title: 'LED 스트립 5m 4롤', amount: 27900, payerId: 'hw',
     teamMemberIds: ROSTER_3, vendor: '디바이스마트', category: '전장', allocation: { type: 'all' },
     productLink: 'https://example.com/led-strip',
-    representativeImage: '/sample/ledstrip.jpg',
   },
   {
     id: 'e14', date: '2026-09-24', title: '아두이노 우노 + 케이블', amount: 34500, payerId: 'hw',
     teamMemberIds: ROSTER_3, vendor: '디바이스마트', category: '전장', allocation: { type: 'all' },
     productLink: 'https://example.com/arduino-uno',
-    representativeImage: '/sample/arduino.jpg',
   },
   {
     // 반복 구매 — e07과 동일 제품 (AI Stage 2 감지 대상)
     id: 'e15', date: '2026-09-27', title: '스프레이 도료 4캔 (재구매)', amount: 36800, payerId: 'sj',
     teamMemberIds: ROSTER_3, vendor: '삼화페인트몰', category: '재료비', allocation: { type: 'all' },
     productLink: 'https://example.com/spray-paint',
-    representativeImage: '/sample/spraypaint.jpg',
   },
   {
     id: 'e16', date: '2026-09-30', title: '택시 (전시장 답사)', amount: 18400, payerId: 'sj',
     teamMemberIds: ROSTER_3, vendor: '카카오T', category: '이동비',
     allocation: { type: 'partial', participantIds: ['kw', 'sj'] },
-    representativeImage: '/sample/taxi.jpg',
   },
 
   // ── 10월 1일: 유란 합류. 이후 '전체 팀'은 4인을 뜻한다 ──────────────
@@ -163,7 +140,6 @@ const drafts: Draft[] = [
     id: 'e17', date: '2026-10-04', title: '전시 판넬 A1 6장', amount: 96000, payerId: 'hw',
     teamMemberIds: ROSTER_4, vendor: '홍대 그래픽스', category: '출력비', allocation: { type: 'all' },
     receiptImage: 'receipt-e17.jpg',
-    representativeImage: '/sample/panel.jpg',
   },
   {
     // 개인 귀속 · 결제자 ≠ 귀속자 → 관우가 성주에게 39,000을 갚아야 한다
@@ -172,17 +148,14 @@ const drafts: Draft[] = [
     allocation: { type: 'personal', ownerId: 'kw' },
     note: '성주가 대신 결제, 관우 개인 소유',
     productLink: 'https://example.com/bosch-driver',
-    representativeImage: '/sample/drill.jpg',
   },
   {
     id: 'e19', date: '2026-10-12', title: '케이블타이와 피스', amount: 9750, payerId: 'yr',
     teamMemberIds: ROSTER_4, vendor: '철물점', category: '재료비', allocation: { type: 'all' },
-    representativeImage: '/sample/cabletie.jpg',
   },
   {
     id: 'e20', date: '2026-10-15', title: '설치 당일 식사 4인', amount: 52000, payerId: 'sj',
     teamMemberIds: ROSTER_4, vendor: '정릉 백반', category: '기타', allocation: { type: 'all' },
-    representativeImage: '/sample/meal.jpg',
   },
 
   // ── 환불 / 보정 ───────────────────────────────────────────────────
@@ -195,7 +168,6 @@ const drafts: Draft[] = [
     id: 'e21', date: '2026-10-18', title: 'LED 스트립 1롤 반품', amount: -8900, payerId: 'hw',
     teamMemberIds: ROSTER_3, vendor: '디바이스마트', category: '전장', allocation: { type: 'all' },
     adjustment: { kind: 'refund', targetExpenseId: 'e13', reason: '1롤 불량 반품' },
-    representativeImage: '/sample/ledstrip.jpg',
   },
   {
     /**
@@ -207,7 +179,6 @@ const drafts: Draft[] = [
     teamMemberIds: ROSTER_3, vendor: '스타벅스 국민대점', category: '기타',
     allocation: { type: 'all' },
     adjustment: { kind: 'correction', targetExpenseId: 'e10', reason: '영수증 재확인 — 21,500이 아니라 23,500' },
-    representativeImage: '/sample/coffee.jpg',
   },
 ];
 

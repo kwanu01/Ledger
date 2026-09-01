@@ -76,13 +76,6 @@ function greetFor(path: string | null): { pose: string; trick: string; ms: numbe
   return { pose: 'stand', ...nod };
 }
 
-/**
- * 커피 사주기.
- *
- * 계좌를 그대로 두는 쪽이 제일 확실하다. 개인 송금 링크(toss.me 같은 것)는
- * 서비스가 닫히면 그날로 죽은 링크가 되지만, 계좌번호는 은행이 있는 한 산다.
- * 후원 페이지 주소가 따로 있으면 그것도 함께 둔다.
- */
 /** 이 화면에서 무엇을 할 수 있는지. 탭을 옮길 때마다 길잡이가 한 번 알려 준다. */
 function tipFor(path: string | null): Key | null {
   if (!path) return null;
@@ -162,8 +155,6 @@ function heldPose(dx: number, dy: number, speed: number, wobbly: boolean): strin
   return dx < 0 ? 'point' : 'wave';
 }
 
-const COFFEE = process.env.NEXT_PUBLIC_COFFEE_URL;
-const COFFEE_ACCOUNT = process.env.NEXT_PUBLIC_COFFEE_ACCOUNT;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export default function Helper({ lang }: { lang: Locale }) {
@@ -182,14 +173,12 @@ export default function Helper({ lang }: { lang: Locale }) {
   const [unread, setUnread] = useState(false);
   const [open, setOpen] = useState(false);
   const [asking, setAsking] = useState(false);
-  const [coffee, setCoffee] = useState(false);
   const [tip, setTip] = useState<Key | null>(null);
   /** 안내는 한 번에 한 줄씩. 지금 몇 번째 줄인가. -1이면 쉬는 참. */
   const [tipAt, setTipAt] = useState(-1);
   const [placed, setPlaced] = useState(false);
   /** 말이 어느 쪽에 붙는가. 왼쪽이 기본이고, 화면 왼쪽에 붙어 있으면 오른쪽. */
   const [sayRight, setSayRight] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [held, setHeld] = useState(false);
   /** 버리는 중 — 구겨지며 사라지는 3초 동안 */
   const [tossing, setTossing] = useState(false);
@@ -435,7 +424,7 @@ export default function Helper({ lang }: { lang: Locale }) {
    * 사람이 점을 눌러 말풍선을 열면 이 순서는 멈춘다 — 그때는 사람 차례다.
    */
   useEffect(() => {
-    if (menu || coffee || asking || line) return;
+    if (menu || asking || line) return;
     const say = sayAt(tipAt);
     if (!say) return;
 
@@ -463,7 +452,7 @@ export default function Helper({ lang }: { lang: Locale }) {
       timers.current.forEach(clearTimeout);
       timers.current = [];
     };
-  }, [tipAt, menu, coffee, asking, line, sayAt, play]);
+  }, [tipAt, menu, asking, line, sayAt, play]);
 
   /* 할 말이 생기면 손을 흔든다. 말풍선은 스스로 열지 않는다. */
   useEffect(() => {
@@ -493,7 +482,7 @@ export default function Helper({ lang }: { lang: Locale }) {
       const quiet = Date.now() - lastSeen.current;
 
       if (!open && !dragging.current) {
-        if (quiet > 40_000) setPose('crumple');
+        if (quiet > 40_000) setPose('sleep');
         else if (quiet > 10_000) setPose('flat');
         else if (!still) {
           setPose((p) => {
@@ -589,7 +578,6 @@ export default function Helper({ lang }: { lang: Locale }) {
       setOpen(false);
       setMenu(false);
       setAsking(false);
-      setCoffee(false);
       hushUntil.current = Date.now() + 7000; // 닫았으니 잠깐 쉬었다가 이어 간다
       setPose('stand');
       if (unread) {
@@ -603,7 +591,6 @@ export default function Helper({ lang }: { lang: Locale }) {
     hushUntil.current = Date.now() + 7000; // 사람 차례다. 그동안은 말하지 않는다
     setMenu(!line);
     setAsking(false);
-    setCoffee(false);
     if (restPose.current) clearTimeout(restPose.current);
     setPose('point'); // 말하는 중
   }
@@ -628,8 +615,8 @@ export default function Helper({ lang }: { lang: Locale }) {
     );
   }
 
-  // 사람이 연 것(메뉴·커피)인지 길잡이가 말하는 중인지 기억해 둔다.
-  menuRef.current = menu || coffee;
+  // 사람이 연 메뉴인지 길잡이가 말하는 중인지 기억해 둔다.
+  menuRef.current = menu;
 
   const bubble = !open ? null : line ? line.text : (sayAt(tipAt)?.text ?? null);
 
@@ -640,27 +627,17 @@ export default function Helper({ lang }: { lang: Locale }) {
       aria-hidden={tossing || undefined}
     >
       {/* 말 — 옆에, 상자 없이. 장부 위에 연필로 적어 둔 것처럼 얹힌다. */}
-      {open && bubble && !menu && !coffee && (
+      {open && bubble && !menu && (
         <p className={`helper-say${line ? ' warn' : ''}${sayRight ? ' right' : ''}`}>{bubble}</p>
       )}
 
       {/* 할 수 있는 일 — 머리 위 점에서 자라 나오는 말풍선 안에. */}
-      {open && (menu || coffee) && (
+      {open && menu && (
         <div className={`helper-bubble${sayRight ? ' right' : ''}`}>
-          {menu && !coffee && (
-            <div className="say-menu">
+          <div className="say-menu">
               {ledgerId && (
                 <button className="plain" onClick={() => { setAsking(true); setOpen(false); }}>
                   {T('helperAsk')}
-                </button>
-              )}
-              {/* 커피는 어느 화면에서나 있다. 장부와 상관없는 일이라서. */}
-              {(COFFEE_ACCOUNT || COFFEE) && (
-                <button
-                  className="plain"
-                  onClick={() => { setCoffee(true); setMenu(false); setPose('cheer'); }}
-                >
-                  {T('helperCoffee')}
                 </button>
               )}
               <button
@@ -687,42 +664,7 @@ export default function Helper({ lang }: { lang: Locale }) {
               >
                 {T('helperHide')}
               </button>
-            </div>
-          )}
-
-          {coffee && (
-            <div className="say-menu">
-              {COFFEE_ACCOUNT && (
-                <>
-                  <span className="remit-to">
-                    <button
-                      className="acct num"
-                      title={T('copyAccount')}
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(COFFEE_ACCOUNT);
-                          setCopied(true);
-                          setTimeout(() => setCopied(false), 2000);
-                        } catch {
-                          // 복사가 막혀 있으면 계좌가 화면에 그대로 있다.
-                        }
-                      }}
-                    >
-                      {COFFEE_ACCOUNT}
-                      {copied && <span className="acct-done"> {T('copied')}</span>}
-                    </button>
-                  </span>
-                  <span className="faint" style={{ fontSize: 12 }}>{T('coffeeThanks')}</span>
-                </>
-              )}
-              {COFFEE && (
-                <a className="plain" href={COFFEE} target="_blank" rel="noreferrer noopener">
-                  {T('coffeePage')}
-                </a>
-              )}
-            </div>
-          )}
-
+          </div>
         </div>
       )}
 

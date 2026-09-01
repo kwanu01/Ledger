@@ -12,8 +12,6 @@ import {
 } from '../../lib/access.ts';
 import { currentUser } from '../../lib/auth-client.ts';
 import { db } from '../../lib/db/client.ts';
-import { confirmSettlement, insertAdjustment, insertExpense } from '../../lib/db/repo.ts';
-import { buildLedger, sampleAccounts } from '../../lib/domain/seed.ts';
 import { CURRENCIES, type CurrencyCode } from '../../lib/domain/money.ts';
 
 /**
@@ -170,42 +168,6 @@ export async function revokeInvite(args: { ledgerId: string; token: string }): P
   }
 }
 
-/**
- * 계좌 적기. 본인 것만 적을 수 있다.
- *
- * 계좌는 돈이 실제로 도착하는 자리다. 남이 대신 적어 준 계좌가 한 자리라도
- * 틀리면 돈은 엉뚱한 곳으로 가고, 그때 누구의 실수인지도 남지 않는다.
- * 그래서 자기 계좌는 자기만 적는다.
- */
-export async function setMemberAccount(args: {
-  ledgerId: string;
-  memberId: string;
-  bank: string;
-  accountNo: string;
-}): Promise<Result> {
-  try {
-    const pass = await requireLedgerAccess(args.ledgerId);
-    if (args.memberId !== pass.memberId) {
-      return { ok: false, message: '계좌는 본인만 적을 수 있습니다.' };
-    }
-
-    const { error } = await db
-      .from('members')
-      .update({
-        bank: args.bank.trim() || null,
-        // 사람이 적는 대로 두되 눈에 거슬리는 공백만 정리한다.
-        account_no: args.accountNo.replace(/\s+/g, '') || null,
-      })
-      .eq('id', args.memberId)
-      .eq('team_id', pass.teamId);
-    if (error) throw new Error(error.message);
-
-    revalidatePath(`/l/${args.ledgerId}`, 'layout');
-    return { ok: true };
-  } catch (e) {
-    return failed(e);
-  }
-}
 
 /** 팀을 고르면 그 장부로 들어간다. */
 export async function openLedger(ledgerId: string): Promise<never> {
@@ -226,7 +188,6 @@ export type TeamMember = {
   sortOrder: number;
   isMe: boolean;
   hasAccount: boolean;
-  /** 송금 받을 계좌. 정산이 끝난 뒤 "그래서 어디로 보내지"를 없앤다. */
   bank: string;
   accountNo: string;
 };
@@ -374,7 +335,7 @@ export async function liveInvites(ledgerId: string): Promise<InviteRow[]> {
  *
  * 링크는 문을 열어 줄 뿐이고, 이름표는 계정에 붙는다. 그래서 들어올 때 로그인을
  * 한 번 거친다. 그러면 그 사람의 장부 목록에 이 장부가 남고, 다음에 어느 기기에서
- * 들어오든 같은 사람으로 인식된다. 계좌·보냈어요·받았어요가 성립하는 근거다.
+ * 들어오든 같은 사람으로 인식된다. 보냈어요·받았어요가 성립하는 근거다.
  */
 export async function joinTeam(args: {
   token: string;
@@ -389,7 +350,7 @@ export async function joinTeam(args: {
 
     // 링크는 문을 열어 줄 뿐, 이름표를 다는 것은 계정이다. 로그인하지 않으면
     // 나중에 이 사람이 다시 들어왔을 때 아까 그 사람인지 알 방법이 없고,
-    // 보냈어요·받았어요·계좌처럼 본인만 할 수 있는 일도 성립하지 않는다.
+    // 보냈어요·받았어요처럼 본인만 할 수 있는 일도 성립하지 않는다.
     const user = await currentUser();
     if (!user) return { ok: false, message: '로그인한 뒤에 들어올 수 있습니다.' };
 
@@ -489,136 +450,6 @@ export async function claimMembership(): Promise<void> {
   if (mine) return;
 
   await db.from('members').update({ user_id: user.id }).eq('id', pass.memberId);
-}
-
-/* ── 샘플 장부 (§32-1) ──────────────────────────────────────────────────── */
-
-/**
- * 시뮬레이션에 쓰는 시드 장부를 실제 데이터베이스에 만든다.
- *
- * 빈 장부만 보고는 이 서비스가 무엇을 하는지 알기 어렵다. 지출 스물몇 건과
- * 정산 한 번이 들어 있는 장부가 하나 있으면, 도장·검산·마감선이 어떻게
- * 보이는지 눌러서 확인할 수 있다.
- *
- * 지어낸 데이터라는 것이 이름에 드러나야 한다. 다 보고 나면 팀 화면에서
- * 지우지 말고 그냥 두어도 되고, 새 장부를 따로 만들면 된다.
- */
-export async function createSampleLedger(): Promise<Result<{ ledgerId: string }>> {
-  try {
-    const user = await requireUser();
-    await ensureProfile();
-
-    const seed = buildLedger();
-
-    const { data: team, error: teamError } = await db
-      .from('teams')
-      .insert({ name: `${seed.teamName} (샘플)`, owner_id: user.id })
-      .select('id')
-      .single();
-    if (teamError) throw new Error(teamError.message);
-
-    // 시드의 사람 id(kw, ms…)를 실제 uuid로 바꿔 줄 표
-    const { data: rows, error: memberError } = await db
-      .from('members')
-      .insert(
-        seed.members.map((m, i) => ({
-          team_id: team.id,
-          display_name: m.name,
-          sort_order: i + 1,
-          // 첫 사람은 만든 사람 본인으로 둔다. 그래야 검산 화면에 '나'가 표시된다.
-          user_id: i === 0 ? user.id : null,
-          // 지어낸 계좌. 보낼 곳과 토스 링크가 어떻게 뜨는지 눌러 볼 수 있어야 한다.
-          // 본인 계좌는 비워 둔다 — 자기 계좌는 자기가 적는 자리다.
-          bank: sampleAccounts[m.id]?.bank ?? null,
-          account_no: sampleAccounts[m.id]?.accountNo ?? null,
-        })),
-      )
-      .select('id, sort_order');
-    if (memberError) throw new Error(memberError.message);
-
-    const idOf = new Map<string, string>();
-    seed.members.forEach((m, i) => {
-      const row = (rows ?? []).find((r) => r.sort_order === i + 1);
-      if (row) idOf.set(m.id, row.id as string);
-    });
-    const map = (id: string) => idOf.get(id) ?? id;
-
-    const { data: ledger, error: ledgerError } = await db
-      .from('ledgers')
-      .insert({ team_id: team.id, name: seed.name, currency: seed.currency ?? 'KRW' })
-      .select('id')
-      .single();
-    if (ledgerError) throw new Error(ledgerError.message);
-    const ledgerId = ledger.id as string;
-
-    // 원본 지출 먼저. 보정과 환불은 대상이 있어야 하므로 나중에 붙인다.
-    const inserted = new Map<string, string>();
-    const plain = seed.expenses.filter((e) => !e.adjustment);
-    for (const e of plain) {
-      const id = await insertExpense({
-        ledgerId,
-        date: e.date,
-        title: e.title,
-        amount: e.amount,
-        payerId: map(e.payerId),
-        teamMemberIds: e.teamMemberIds.map(map),
-        allocation:
-          e.allocation.type === 'partial'
-            ? { type: 'partial', participantIds: e.allocation.participantIds.map(map) }
-            : e.allocation.type === 'personal'
-              ? { type: 'personal', ownerId: map(e.allocation.ownerId) }
-              : { type: 'all' },
-        vendor: e.vendor,
-        category: e.category,
-        productLink: e.productLink,
-        representativeImage: e.representativeImage,
-        note: e.note,
-        createdBy: map(e.createdBy),
-      });
-      inserted.set(e.id, id);
-    }
-
-    // 첫 정산. 시드에서 1차 정산 대상이었던 것만 묶어 확정한다.
-    const firstCycle = seed.settlements[0]?.snapshot.expenseIds ?? [];
-    const targets = firstCycle.map((x) => inserted.get(x)).filter(Boolean) as string[];
-    if (targets.length) {
-      // 마감선은 시간 순서 위에 놓인다. 오늘 날짜로 찍으면 지출보다 앞서 버려
-      // 장부 맨 위에 마감이 오는 이상한 모양이 된다. 대상의 마지막 날 다음 날로 둔다.
-      const covered = plain.filter((e) => firstCycle.includes(e.id));
-      const lastDay = covered.map((e) => e.date).sort().at(-1)!;
-      const settledOn = new Date(new Date(lastDay).getTime() + 86400000)
-        .toISOString()
-        .slice(0, 10);
-      await confirmSettlement({
-        ledgerId,
-        expenseIds: targets,
-        label: '1차 정산',
-        settledOn,
-      });
-    }
-
-    // 환불과 보정. 정산 뒤에 붙어야 "이미 정산된 지출의 보정"이 그대로 재현된다.
-    for (const e of seed.expenses) {
-      if (!e.adjustment) continue;
-      const targetId = inserted.get(e.adjustment.targetExpenseId);
-      if (!targetId) continue;
-      await insertAdjustment({
-        ledgerId,
-        targetId,
-        kind: e.adjustment.kind,
-        amount: e.amount,
-        date: e.date,
-        title: e.title,
-        payerId: map(e.payerId),
-        reason: e.adjustment.reason,
-      });
-    }
-
-    revalidatePath('/teams');
-    return { ok: true, value: { ledgerId } };
-  } catch (e) {
-    return failed(e);
-  }
 }
 
 /* ── 장부 지우기 ────────────────────────────────────────────────────────── */

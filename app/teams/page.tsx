@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import TeamsList, { type LedgerRow } from './TeamsList.tsx';
 import { currentUser } from '../../lib/auth-client.ts';

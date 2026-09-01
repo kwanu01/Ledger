@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Remit from '../../Remit.tsx';
 import { markTransferReceived, markTransferSent } from '../../actions/ledger.ts';
 import { translator } from '../../../lib/i18n.ts';
 import { formatMoney, type CurrencyCode, type Locale } from '../../../lib/domain/money.ts';
@@ -63,24 +62,15 @@ export default function Moving({
   return (
     <>
       <div className="scroll" style={{ marginTop: 16 }}>
-        <table className="book">
+        <table className="book transfers">
           <tbody>
-            {/* 내가 보낼 것 — 계좌가 바로 옆에 있어야 한 번에 끝난다. */}
+            {/* 내가 보낼 것 */}
             {fromMe.map((t) => (
               <tr key={t.transferId}>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {T('me')} → {t.who}
                 </td>
                 <td className="r money debit">{cash(t.amount)}</td>
-                <td>
-                  <Remit
-                    bank={t.bank}
-                    accountNo={t.accountNo}
-                    amount={t.amount}
-                    currency={currency}
-                    lang={lang}
-                  />
-                </td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {t.sent ? (
                     <>

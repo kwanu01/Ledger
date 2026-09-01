@@ -6,7 +6,7 @@ import { loadLedger, openTransfers } from '../../../lib/db/repo.ts';
 import { nameOf, settledExpenseIds, summarizeLedger } from '../../../lib/domain/settlement.ts';
 import { adjustmentLabel, allocationLabel } from '../../../lib/labels.ts';
 import { translator } from '../../../lib/i18n.ts';
-import { formatEntryAmount, formatMoney, formatNumber } from '../../../lib/domain/money.ts';
+import { formatEntryAmount, formatMoney } from '../../../lib/domain/money.ts';
 import Moving from './Moving.tsx';
 import { teamMembers } from '../../actions/teams.ts';
 
@@ -33,7 +33,6 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
   const T = translator(lang);
   const currency = ledger.currency ?? 'KRW';
   const won = (n: number) => formatMoney(n, currency, lang);
-  const won0 = (n: number) => formatNumber(n, currency, lang);
   // 빼는 금액은 괄호로 적는다. 빨간 마이너스는 반대로 읽힌다(money.ts).
   const entry = (n: number) => formatEntryAmount(n, currency, lang);
 
