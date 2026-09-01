@@ -54,7 +54,16 @@ export default async function Goods({ params }: { params: Promise<{ ledgerId: st
     category: e.category || T('etc'),
     vendor: e.vendor,
     productLink: e.productLink,
+    /*
+     * 카드에 걸리는 사진과, 여기서 올릴 사진은 다르다.
+     *
+     * 보이는 것은 '산 물건 사진'이 먼저고, 없으면 영수증이라도 보여 준다 —
+     * 아무것도 안 보이는 카드보다는 낫다. 반면 여기서 올리는 것은 언제나
+     * 물건 사진이다. 영수증은 그 지출의 근거라 장부 쪽에 자리가 따로 있다.
+     */
     image: firstImage(ledgerId, e.representativeImage ?? e.receiptImage),
+    /** 이 카드에서 올리고 바꾸는 대상. 비어 있으면 아직 물건 사진이 없다. */
+    itemPhoto: e.representativeImage,
     dup: (counts.get(e.productLink || e.title) ?? 0) > 1,
   }));
 
@@ -75,7 +84,7 @@ export default async function Goods({ params }: { params: Promise<{ ledgerId: st
           <div className="empty faint">{T('none')}</div>
         </section>
       ) : (
-        <GoodsGrid items={items} currency={currency} lang={lang} />
+        <GoodsGrid ledgerId={ledgerId} items={items} currency={currency} lang={lang} />
       )}
 
       <AdSlot />

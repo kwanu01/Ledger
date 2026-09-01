@@ -207,8 +207,12 @@ for (const [label, r] of [['#01', first], ['#02', second]] as const) {
 }
 
 console.log('\n[누적 장부]');
-check('총지출 = 정산 완료 + 미정산', summary.totalSpent === summary.settledAmount + summary.unsettledAmount,
-  `${won(summary.totalSpent)} = ${won(summary.settledAmount)} + ${won(summary.unsettledAmount)}`);
+// 자기가 사서 자기가 가져간 줄은 '미정산'이 아니라 '정산 불필요'다.
+// 셋을 합쳐야 총지출이 된다.
+check('총지출 = 정산 완료 + 미정산 + 정산 불필요',
+  summary.totalSpent === summary.settledAmount + summary.unsettledAmount + summary.selfPaidAmount,
+  `${won(summary.totalSpent)} = ${won(summary.settledAmount)} + ${won(summary.unsettledAmount)}` +
+    ` + ${won(summary.selfPaidAmount)}`);
 check('중간 정산을 해도 Expense 원본은 전부 그대로 남는다', ledger.expenses.length === 22, '22건');
 
 console.log('\n[팀원 변동 · 보정 · 환불]');

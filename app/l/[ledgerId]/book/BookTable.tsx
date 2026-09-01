@@ -9,6 +9,7 @@ import {
   effectiveAmount,
   nameOf,
   settledExpenseIds,
+  needsSettling,
 } from '../../../../lib/domain/settlement.ts';
 import { adjustmentLabel, allocationLabel } from '../../../../lib/labels.ts';
 import { translator } from '../../../../lib/i18n.ts';
@@ -168,6 +169,10 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
       ci += 1;
     }
     const done = settled.has(e.id);
+    // 자기가 사서 자기가 가져간 줄은 정산할 것이 애초에 없다. '미정산'으로
+    // 두면 정산해야 할 것이 남은 것처럼 보이는데, 정산을 눌러도 이 줄에서는
+    // 아무 송금도 나오지 않는다.
+    const nothingToSettle = !done && !needsSettling(e);
     // 글자를 더해 버리면 이웃한 id끼리 값이 1씩만 벌어져 도장이 다 비슷해진다.
     // 자리마다 무게를 달리 줘서 흩어 놓는다.
     const hash = [...e.id].reduce((a, c, i) => (a * 31 + c.charCodeAt(0) * (i + 7)) >>> 0, 17);
@@ -175,7 +180,7 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
     rows.push(
       <tr className={`entry${done ? ' done' : ''}${openRow === e.id ? ' open' : ''}`} key={e.id}>
         <td>
-          {!done && (
+          {!done && !nothingToSettle && (
             <input
               type="checkbox"
               checked={selection.has(e.id)}
@@ -199,6 +204,7 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
         <td className="r money">{entry(e.amount)}</td>
         <td className="muted">{allocationLabel(e, ledger.members, lang)}</td>
         <td>
+          {nothingToSettle && <span className="muted">{T('noSettleNeeded')}</span>}
           {done && (
             <span
               className="done-mark"

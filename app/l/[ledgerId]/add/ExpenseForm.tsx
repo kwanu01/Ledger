@@ -73,12 +73,19 @@ export default function ExpenseForm({
   /* 읽은 뒤에도 파일을 들고 있는다. 남길지 말지는 저장할 때 정한다. */
   const [photo, setPhoto] = useState<File | null>(null);
   const [keepPhoto, setKeepPhoto] = useState(false);
+  /** 나머지 칸을 펴 둘지. 넓은 화면에서는 처음부터 편다(아래 useEffect). */
+  const [more, setMore] = useState(false);
   const [read, setRead] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // 화면을 캡처해서 그대로 붙여넣는 편이 파일로 저장했다 고르는 것보다 빠르다.
   // 사진 받는 단계에 있을 때만 듣는다.
+  /* 넓은 화면에서는 나머지 칸도 처음부터 펴 둔다. 자리가 있으니 접을 이유가 없다. */
+  useEffect(() => {
+    if (window.innerWidth > 640) setMore(true);
+  }, []);
+
   useEffect(() => {
     if (step !== 'photo') return;
     function onPaste(e: ClipboardEvent) {
@@ -137,7 +144,13 @@ export default function ExpenseForm({
   }
 
   const foreign = curr !== currency;
+
   const name = (id: string) => members.find((m) => m.id === id)?.name ?? id;
+
+  /* 해외 결제로 읽혔으면 통화 칸이 보여야 한다. 못 보고 지나가면 장부가 틀어진다. */
+  useEffect(() => {
+    if (foreign) setMore(true);
+  }, [foreign]);
 
   // 장부에 적히는 금액은 언제나 장부의 통화다. 해외 결제면 청구액 칸이 그 자리를 대신한다.
   const booked = foreign ? parseMoney(charged, currency) : parseMoney(amount, currency);
@@ -345,17 +358,6 @@ export default function ExpenseForm({
           />
         </label>
 
-        <label className="field">
-          <span className="lab">{T('currency')}{fromAI('currency')}</span>
-          <select value={curr} onChange={(e) => setCurr(e.target.value as CurrencyCode)}>
-            {FOREIGN.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-
         {/* 환율은 우리가 계산하지 않는다. 카드사가 청구한 금액을 그대로 받아 적는다. */}
         {foreign && (
           <label className="field">
@@ -373,16 +375,6 @@ export default function ExpenseForm({
         <label className="field">
           <span className="lab">{T('date')}{fromAI('date')}</span>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </label>
-
-        <label className="field">
-          <span className="lab">{T('vendor')}{fromAI('vendor')}</span>
-          <input type="text" value={vendor} onChange={(e) => setVendor(e.target.value)} />
-        </label>
-
-        <label className="field">
-          <span className="lab">{T('category')}{fromAI('category')}</span>
-          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} />
         </label>
 
         <label className="field">
@@ -459,20 +451,62 @@ export default function ExpenseForm({
         )}
       </fieldset>
 
-      <div className="fields" style={{ marginTop: 24 }}>
-        <label className="field">
-          <span className="lab">{T('productLink')}</span>
-          <input
-            type="text"
-            value={productLink}
-            onChange={(e) => setProductLink(e.target.value)}
-            placeholder="https://"
-          />
-        </label>
-        <label className="field">
-          <span className="lab">{T('noteField')}</span>
-          <input type="text" value={note} onChange={(e) => setNote(e.target.value)} />
-        </label>
+      {/*
+        나머지 칸 (§21.5)
+
+        지출 한 줄을 적는 데 꼭 있어야 하는 것은 항목·금액·날짜·결제자·나눌
+        사람 다섯이다. 통화는 대개 장부의 통화 그대로고, 판매처와 분류와 구매
+        링크와 메모는 있으면 좋은 것이지 없으면 못 적는 것이 아니다.
+
+        폰에서는 그 다섯이 이미 한 화면을 다 쓴다. 나머지를 같이 펼쳐 두면
+        스크롤이 길어지고, 꼭 채워야 하는 칸처럼 보인다. 그래서 접어 두고
+        필요한 사람만 편다. 넓은 화면에서는 자리가 있으니 처음부터 펴 둔다.
+
+        해외 결제일 때는 접지 않는다. 통화를 못 보고 지나가면 장부가 통째로
+        틀어진다.
+      */}
+      <div className="more" style={{ marginTop: 24 }}>
+        {!more && (
+          <button className="plain" onClick={() => setMore(true)}>
+            {T('moreFields')}
+          </button>
+        )}
+
+        {more && (
+          <div className="fields">
+            <label className="field">
+              <span className="lab">{T('currency')}{fromAI('currency')}</span>
+              <select value={curr} onChange={(e) => setCurr(e.target.value as CurrencyCode)}>
+                {FOREIGN.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="lab">{T('vendor')}{fromAI('vendor')}</span>
+              <input type="text" value={vendor} onChange={(e) => setVendor(e.target.value)} />
+            </label>
+            <label className="field">
+              <span className="lab">{T('category')}{fromAI('category')}</span>
+              <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} />
+            </label>
+            <label className="field">
+              <span className="lab">{T('productLink')}</span>
+              <input
+                type="text"
+                value={productLink}
+                onChange={(e) => setProductLink(e.target.value)}
+                placeholder="https://"
+              />
+            </label>
+            <label className="field wide">
+              <span className="lab">{T('noteField')}</span>
+              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} />
+            </label>
+          </div>
+        )}
       </div>
 
       <div className="row" style={{ marginTop: 28 }}>

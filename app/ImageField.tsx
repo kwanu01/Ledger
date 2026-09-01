@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Lightbox from './Lightbox.tsx';
 import { attachImage, removeImage } from './actions/images.ts';
 import { imageSrc } from '../lib/img.ts';
+import { shrinkImage } from '../lib/shrink.ts';
 import { translator } from '../lib/i18n.ts';
 import type { Locale } from '../lib/domain/money.ts';
 
@@ -14,7 +15,9 @@ import type { Locale } from '../lib/domain/money.ts';
  * 붙이고, 바꾸고, 뗀다. 셋 다 이 한 칸에서 한다.
  *
  * 사진이 있으면 점으로 찍힌 작은 그림이 보이고 누르면 원본이 열린다(Lightbox).
- * 없으면 빈 자리와 '사진 올리기'만 보인다. 있을 때와 없을 때 자리가 크게
+ * 없으면 빈 자리가 그대로 **누를 수 있는 자리**가 된다. 빈 네모 아래에 작은
+ * 글씨로 '사진 올리기'가 따로 있으면, 그 글씨를 찾아야 올릴 수 있다. 비어
+ * 있는 자리는 그 자리를 누르는 것이 당연하다. 있을 때와 없을 때 자리가 크게
  * 달라지면 줄이 들썩이므로, 빈 자리도 같은 크기로 둔다.
  *
  * 지우기는 되돌릴 수 없어서 한 번 더 묻는다. 다만 창을 띄우지는 않는다 —
@@ -51,12 +54,24 @@ export default function ImageField({
   function pick(f: File | null) {
     if (!f) return;
     setError(null);
-    const fd = new FormData();
-    fd.set('ledgerId', ledgerId);
-    fd.set('expenseId', expenseId);
-    fd.set('kind', kind);
-    fd.set('image', f);
     start(async () => {
+      /*
+       * 올리기 전에 브라우저에서 한 번 그린다. 세 가지가 한꺼번에 풀린다.
+       *
+       *   형식 — 아이폰 사진은 HEIC다. 저장소는 JPG·PNG·WEBP만 받는다.
+       *   크기 — 요즘 폰 사진은 5MB 제한을 그냥 넘는다.
+       *   시간 — 4MB를 그대로 올리면 LTE에서 몇 초씩 걸린다.
+       *
+       * 예전에는 원본을 그대로 보내서, 폰에서 고른 사진이 자주 거절당했다.
+       */
+      const small = await shrinkImage(f);
+
+      const fd = new FormData();
+      fd.set('ledgerId', ledgerId);
+      fd.set('expenseId', expenseId);
+      fd.set('kind', kind);
+      fd.set('image', small);
+
       const r = await attachImage(fd);
       if (!r.ok) setError(r.message);
       else router.refresh();
@@ -77,13 +92,30 @@ export default function ImageField({
       {path ? (
         <Lightbox src={imageSrc(ledgerId, path)} alt={alt} caption={caption} wide={wide} />
       ) : (
-        <div className="plate empty-plate">{T(kind === 'receipt' ? 'noReceipt' : 'noPhoto')}</div>
+        // 빈 자리 자체가 단추다. 누르면 바로 사진을 고른다.
+        <button
+          type="button"
+          className="empty-plate"
+          disabled={pending}
+          onClick={() => file.current?.click()}
+        >
+          <span className="plus" aria-hidden="true">＋</span>
+          <span>
+            {pending
+              ? T('working')
+              : kind === 'receipt'
+                ? T('addReceiptHere')
+                : T('addItemPhotoHere')}
+          </span>
+        </button>
       )}
 
       <div className="imgfield-do">
-        <button className="plain" disabled={pending} onClick={() => file.current?.click()}>
-          {pending ? T('working') : path ? T('replacePhoto') : T('addPhoto')}
-        </button>
+        {path && (
+          <button className="plain" disabled={pending} onClick={() => file.current?.click()}>
+            {pending ? T('working') : T('replacePhoto')}
+          </button>
+        )}
         {path &&
           (asking ? (
             <button className="plain danger" disabled={pending} onClick={drop}>
@@ -101,7 +133,7 @@ export default function ImageField({
       <input
         ref={file}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         hidden
         onChange={(e) => {
           pick(e.target.files?.[0] ?? null);

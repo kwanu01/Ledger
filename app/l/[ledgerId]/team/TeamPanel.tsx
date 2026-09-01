@@ -227,7 +227,7 @@ export default function TeamPanel({
 
       <section>
         <div className="caption">{T('bookSection')}</div>
-        <table className="facts" style={{ marginTop: 14, minWidth: 320 }}>
+        <table className="facts roomy" style={{ marginTop: 14 }}>
           <tbody>
             <tr>
               <td className="k">{T('teamName')}</td>

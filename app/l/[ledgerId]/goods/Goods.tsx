@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Lightbox from '../../../Lightbox.tsx';
+import ImageField from '../../../ImageField.tsx';
 import { translator } from '../../../../lib/i18n.ts';
 import { formatMoney, type CurrencyCode, type Locale } from '../../../../lib/domain/money.ts';
 
@@ -32,16 +33,19 @@ export type Good = {
   vendor?: string;
   productLink?: string;
   image?: string;
+  itemPhoto?: string;
   dup: boolean;
 };
 
 type Key = 'date' | 'amount' | 'category';
 
 export default function Goods({
+  ledgerId,
   items,
   currency,
   lang,
 }: {
+  ledgerId: string;
   items: Good[];
   currency: CurrencyCode;
   lang: Locale;
@@ -98,16 +102,53 @@ export default function Goods({
           <div className="goods">
             {g.list.map((e) => (
               <div className="good" key={e.id}>
-                {/* 사진이 있으면 점으로 찍어 보여 준다. 누르면 원본이 크게 열린다. */}
-                {e.image ? (
-                  <Lightbox
-                    src={e.image}
+                {/*
+                  산 물건이 무엇이었는지는 결국 사진이 말한다. 그걸 보는
+                  자리가 여기이므로, 올리는 것도 여기서 한다. 예전에는 장부의
+                  줄을 펼쳐야만 올릴 수 있어서, 보는 자리와 올리는 자리가
+                  달랐다.
+
+                  물건 사진이 아직 없으면 빈 자리가 곧 단추다. 영수증을 빌려
+                  보여 주는 중이면 사진은 그대로 두고 아래에 올리는 자리를
+                  따로 붙인다 — 근거로 남긴 영수증을 여기서 지울 수는 없다.
+                */}
+                {e.itemPhoto ? (
+                  <ImageField
+                    ledgerId={ledgerId}
+                    expenseId={e.id}
+                    kind="item"
+                    path={e.itemPhoto}
                     alt={e.title}
-                    wide
                     caption={`${e.title} · ${cash(e.effective)} · ${e.date}`}
+                    lang={lang}
+                    wide
                   />
+                ) : e.image ? (
+                  <>
+                    <Lightbox
+                      src={e.image}
+                      alt={e.title}
+                      wide
+                      caption={`${e.title} · ${cash(e.effective)} · ${e.date}`}
+                    />
+                    <ImageField
+                      ledgerId={ledgerId}
+                      expenseId={e.id}
+                      kind="item"
+                      alt={e.title}
+                      lang={lang}
+                      wide
+                    />
+                  </>
                 ) : (
-                  <div className="plate">{e.category}</div>
+                  <ImageField
+                    ledgerId={ledgerId}
+                    expenseId={e.id}
+                    kind="item"
+                    alt={e.title}
+                    lang={lang}
+                    wide
+                  />
                 )}
 
                 <div className="good-slip">{e.slip}</div>

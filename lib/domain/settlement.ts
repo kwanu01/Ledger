@@ -207,9 +207,35 @@ export function settledExpenseIds(ledger: Ledger): Set<string> {
   return ids;
 }
 
+/**
+ * 정산할 것이 있는 지출인가 (§13.2)
+ *
+ * 자기가 사서 자기가 가져가는 지출은 아무에게도 줄 것도 받을 것도 없다.
+ * 프로젝트 총지출에는 들어가지만 공동 balance는 한 푼도 움직이지 않는다.
+ *
+ * 그런 줄이 '아직 정산 안 함'에 쌓여 있으면 화면이 거짓말을 한다. 정산해야
+ * 할 것이 남은 것처럼 보이는데, 정산을 눌러도 그 줄에서는 아무 송금도 나오지
+ * 않는다. 그래서 처음부터 정산 대상에서 뺀다.
+ *
+ * 결제자와 귀속자가 다른 개인 지출은 다르다. 대신 사 준 것이므로 귀속자가
+ * 결제자에게 갚아야 한다 — 그건 정산 대상이다.
+ */
+export function needsSettling(expense: Expense): boolean {
+  const a = expense.allocation;
+  if (a.type !== 'personal') return true;
+  return a.ownerId !== expense.payerId;
+}
+
+/** 아직 정산하지 않았고, 정산할 것이 남아 있는 지출 */
 export function unsettledExpenses(ledger: Ledger): Expense[] {
   const settled = settledExpenseIds(ledger);
-  return ledger.expenses.filter((e) => !settled.has(e.id));
+  return ledger.expenses.filter((e) => !settled.has(e.id) && needsSettling(e));
+}
+
+/** 정산할 것이 애초에 없는 지출 — 자기가 사서 자기가 가져간 것 */
+export function selfPaidExpenses(ledger: Ledger): Expense[] {
+  const settled = settledExpenseIds(ledger);
+  return ledger.expenses.filter((e) => !settled.has(e.id) && !needsSettling(e));
 }
 
 export type LedgerSummary = {
@@ -217,6 +243,8 @@ export type LedgerSummary = {
   totalSpent: number;
   settledAmount: number;
   unsettledAmount: number;
+  /** 정산할 것이 애초에 없는 금액 — 자기가 사서 자기가 가져간 것 */
+  selfPaidAmount: number;
   /** 공동 정산 대상 금액 (총지출 ≠ 정산 대상, §23.4) */
   sharedTotal: number;
   personalTotal: number;
@@ -227,7 +255,9 @@ export type LedgerSummary = {
 
 export function summarizeLedger(ledger: Ledger): LedgerSummary {
   const settled = settledExpenseIds(ledger);
-  const open = ledger.expenses.filter((e) => !settled.has(e.id));
+  // 아직 정산하지 않은 줄 중에서도, 주고받을 것이 있는 것만 '미정산'이다.
+  const open = ledger.expenses.filter((e) => !settled.has(e.id) && needsSettling(e));
+  const mine = ledger.expenses.filter((e) => !settled.has(e.id) && !needsSettling(e));
   const total = (list: Expense[]) => list.reduce((acc, e) => acc + e.amount, 0);
   const all = computeSettlement(ledger.expenses, ledger.members);
 
@@ -235,6 +265,7 @@ export function summarizeLedger(ledger: Ledger): LedgerSummary {
     totalSpent: total(ledger.expenses),
     settledAmount: total(ledger.expenses.filter((e) => settled.has(e.id))),
     unsettledAmount: total(open),
+    selfPaidAmount: total(mine),
     sharedTotal: all.sharedAmount,
     personalTotal: all.personalAmount,
     expenseCount: ledger.expenses.length,

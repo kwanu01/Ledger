@@ -70,7 +70,7 @@ export default async function Archive({ params }: { params: Promise<{ ledgerId: 
         <div className="caption">{T('archiveTitle')}</div>
         <h2 style={{ fontSize: 'clamp(23px,4vw,31px)', marginTop: 10 }}>{ledger.name}</h2>
 
-        <table className="facts" style={{ marginTop: 22, minWidth: 340 }}>
+        <table className="facts roomy" style={{ marginTop: 22 }}>
           <tbody>
             <tr>
               <td className="k">{T('period')}</td>
@@ -122,7 +122,7 @@ export default async function Archive({ params }: { params: Promise<{ ledgerId: 
 
       <section>
         <div className="caption">{T('settleHistory')}</div>
-        <table className="facts" style={{ marginTop: 14, minWidth: 400 }}>
+        <table className="facts roomy wide" style={{ marginTop: 14 }}>
           <tbody>
             {ledger.settlements.map((x) => (
               <tr key={x.id}>

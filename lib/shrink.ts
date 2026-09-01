@@ -23,10 +23,20 @@ const MAX_EDGE = 1600;
 /** 이보다 작으면 손대지 않는다. 줄여 봤자 얻을 게 없다. */
 const LEAVE_ALONE = 400 * 1024;
 
+/**
+ * 저장소가 받는 형식. 이 셋이 아니면 크기와 상관없이 다시 그려서 JPEG로 만든다.
+ *
+ * 아이폰은 사진을 HEIC로 저장한다. 파일 고르기에서 형식을 걸러도 그대로
+ * 올라오는 경우가 있고, 그러면 서버가 받아 주지 않는다. 브라우저는 그 그림을
+ * 화면에 그릴 수는 있으므로, 여기서 한 번 그려서 JPEG로 바꿔 보낸다.
+ */
+const KEEPS = ['image/jpeg', 'image/png', 'image/webp'];
+
 export async function shrinkImage(file: File): Promise<File> {
-  if (!file.type.startsWith('image/')) return file;
-  // 이미 작으면 그대로 보낸다. 다시 그리면 화질만 한 번 더 깎인다.
-  if (file.size <= LEAVE_ALONE) return file;
+  if (!file.type.startsWith('image/') && file.type !== '') return file;
+
+  // 받아 주는 형식이면서 이미 작으면 그대로 보낸다. 다시 그리면 화질만 깎인다.
+  if (KEEPS.includes(file.type) && file.size <= LEAVE_ALONE) return file;
 
   try {
     // 'from-image' 는 파일에 적힌 방향 표시를 따라 세워서 넘겨준다.
@@ -47,7 +57,10 @@ export async function shrinkImage(file: File): Promise<File> {
     const blob = await new Promise<Blob | null>((done) =>
       canvas.toBlob(done, 'image/jpeg', 0.82),
     );
-    if (!blob || blob.size >= file.size) return file;
+    if (!blob) return file;
+    // 형식을 바꾸려고 그린 경우에는 커져도 바꾼 쪽을 쓴다. 원본은 애초에
+    // 저장소가 받아 주지 않는 형식이다.
+    if (blob.size >= file.size && KEEPS.includes(file.type)) return file;
 
     return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
       type: 'image/jpeg',

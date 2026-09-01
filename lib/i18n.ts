@@ -49,7 +49,8 @@ export type Key =
   // 로그인 링크가 안 통했을 때
   | 'linkExpired' | 'linkOtherBrowser' | 'linkFailed'
   | 'leaveTeam' | 'leaveWarn' | 'leaveForReal'
-  | 'deleteEntry' | 'deleteEntryWarn'
+  | 'deleteEntry' | 'deleteEntryWarn' | 'addReceiptHere' | 'addItemPhotoHere'
+  | 'noSettleNeeded' | 'moreFields'
   // 탭
   | 'tabHome' | 'tabBook' | 'tabGoods' | 'tabSettle' | 'tabArchive' | 'tabTeam' | 'addExpense'
   // 홈
@@ -127,6 +128,10 @@ const ko: Record<Key, string> = {
   leaveForReal: '나가기',
   deleteEntry: '이 줄 지우기',
   deleteEntryWarn: '‘{title}’을(를) 지웁니다. 되돌릴 수 없습니다.',
+  addReceiptHere: '영수증 사진 올리기',
+  addItemPhotoHere: '산 물건 사진 올리기',
+  noSettleNeeded: '정산 불필요',
+  moreFields: '＋ 판매처 · 분류 · 링크 · 메모',
 
   tabHome: '홈', tabBook: '장부', tabGoods: '품목', tabSettle: '정산 내역',
   tabArchive: '아카이브', tabTeam: '팀', addExpense: '＋ 지출 기입',
@@ -253,6 +258,10 @@ const en: Record<Key, string> = {
   leaveForReal: 'Leave',
   deleteEntry: 'Delete this entry',
   deleteEntryWarn: '“{title}” will be deleted. This cannot be undone.',
+  addReceiptHere: 'Add receipt photo',
+  addItemPhotoHere: 'Add a photo of the item',
+  noSettleNeeded: 'Nothing to settle',
+  moreFields: '＋ Vendor, category, link, memo',
 
   tabHome: 'Home', tabBook: 'Ledger', tabGoods: 'Items', tabSettle: 'Settlements',
   tabArchive: 'Archive', tabTeam: 'Team', addExpense: '＋ Add expense',
@@ -379,6 +388,10 @@ const ja: Record<Key, string> = {
   leaveForReal: '抜ける',
   deleteEntry: 'この行を削除',
   deleteEntryWarn: '「{title}」を削除します。元に戻せません。',
+  addReceiptHere: 'レシート写真を追加',
+  addItemPhotoHere: '買ったものの写真を追加',
+  noSettleNeeded: '精算不要',
+  moreFields: '＋ 販売元 · 分類 · リンク · メモ',
 
   tabHome: 'ホーム', tabBook: '帳簿', tabGoods: '品目', tabSettle: '精算履歴',
   tabArchive: 'アーカイブ', tabTeam: 'チーム', addExpense: '＋ 支出を記入',
@@ -504,6 +517,10 @@ const zh: Record<Key, string> = {
   leaveForReal: '退出',
   deleteEntry: '删除这一行',
   deleteEntryWarn: '将删除“{title}”，无法撤销。',
+  addReceiptHere: '上传收据照片',
+  addItemPhotoHere: '上传物品照片',
+  noSettleNeeded: '无需结算',
+  moreFields: '＋ 商家 · 分类 · 链接 · 备注',
 
   tabHome: '首页', tabBook: '账本', tabGoods: '品项', tabSettle: '结算记录',
   tabArchive: '归档', tabTeam: '团队', addExpense: '＋ 记一笔',
@@ -632,6 +649,10 @@ const es: Record<Key, string> = {
   leaveForReal: 'Salir',
   deleteEntry: 'Borrar esta línea',
   deleteEntryWarn: 'Se borrará «{title}». No se puede deshacer.',
+  addReceiptHere: 'Subir foto del recibo',
+  addItemPhotoHere: 'Subir foto del artículo',
+  noSettleNeeded: 'Nada que ajustar',
+  moreFields: '＋ Vendedor, categoría, enlace, nota',
 
   tabHome: 'Inicio', tabBook: 'Libro', tabGoods: 'Artículos', tabSettle: 'Liquidaciones',
   tabArchive: 'Archivo', tabTeam: 'Equipo', addExpense: '＋ Añadir gasto',
@@ -760,6 +781,10 @@ const vi: Record<Key, string> = {
   leaveForReal: 'Rời',
   deleteEntry: 'Xóa dòng này',
   deleteEntryWarn: 'Sẽ xóa “{title}”. Không thể hoàn tác.',
+  addReceiptHere: 'Thêm ảnh hóa đơn',
+  addItemPhotoHere: 'Thêm ảnh món đồ',
+  noSettleNeeded: 'Không cần chia',
+  moreFields: '＋ Nơi bán · phân loại · liên kết · ghi chú',
 
   tabHome: 'Trang chính', tabBook: 'Sổ', tabGoods: 'Món đồ', tabSettle: 'Lịch sử chia',
   tabArchive: 'Lưu trữ', tabTeam: 'Nhóm', addExpense: '＋ Ghi chi tiêu',

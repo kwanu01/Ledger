@@ -265,6 +265,10 @@ section:last-of-type{border-bottom:0}
 .facts td.k{color:var(--ink-2);padding-right:28px;white-space:nowrap}
 .facts td.v{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .facts tr.sum td{border-top:1px solid var(--rule-hard);font-weight:700;padding-top:8px}
+/* 넓은 화면에서 라벨과 값이 너무 붙지 않게 최소 폭을 준다.
+   좁은 화면에서는 이 값이 화면보다 커져 페이지를 옆으로 밀므로 아래에서 푼다. */
+.facts.roomy{min-width:340px}
+.facts.roomy.wide{min-width:400px}
 
 /* ── 장부 표 ─────────────────────────────────────────────────────── */
 /* 세로 괘선이 금액 칸을 감싼다. 장부를 장부로 보이게 하는 건 이 선이다. */
@@ -760,6 +764,12 @@ footer a:hover{color:var(--ink)}
 .helper-tab.unread{
   background:var(--stamp);border-color:var(--stamp);
   animation:knock 1.1s ease-in-out infinite}
+/* 아래에서 올라오는 판. 폰의 묻는 창이 쓴다. */
+@keyframes sheet-up{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
 @keyframes knock{
   0%,100%{transform:translateX(-50%) scale(1)}
   50%{transform:translateX(-50%) scale(1.35)}}
@@ -805,9 +815,18 @@ footer a:hover{color:var(--ink)}
    같은 크기로 둔다. */
 .imgfield{display:flex;flex-direction:column;gap:8px;width:132px}
 .imgfield.wide{width:100%}
+/* 빈 자리가 곧 단추다. 점선은 '여기에 무언가 들어온다'는 표시다. */
 .imgfield .empty-plate{
-  aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;
-  border:1px dashed var(--rule);color:var(--ink-3);font-size:12px;background:var(--paper)}
+  appearance:none;width:100%;margin:0;padding:10px;cursor:pointer;
+  aspect-ratio:4/3;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:5px;
+  border:1px dashed var(--rule);color:var(--ink-3);
+  font:inherit;font-size:12px;line-height:1.4;text-align:center;
+  background:var(--paper);transition:border-color .15s ease,color .15s ease}
+.imgfield .empty-plate .plus{font-size:19px;line-height:1}
+.imgfield .empty-plate:hover,.imgfield .empty-plate:focus-visible{
+  border-color:var(--ink-2);color:var(--ink)}
+.imgfield .empty-plate:disabled{cursor:default;opacity:.6}
 .imgfield-do{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px}
 .imgfield-do .plain{font-size:12.5px}
 .imgfield-do .plain.danger{color:var(--debit);text-decoration-color:var(--debit)}
@@ -933,6 +952,12 @@ footer a:hover{color:var(--ink)}
   table.book.balances th:nth-child(2), table.book.balances td:nth-child(2),
   table.book.balances th:nth-child(3), table.book.balances td:nth-child(3){display:none}
 
+  /* 표에 준 최소 폭을 푼다. 넓은 화면을 위한 값이라 폰에서는 화면보다 크다.
+     하나라도 화면보다 넓으면 페이지 전체가 옆으로 밀린다 — 아카이브 화면이
+     그랬다. */
+  .facts.roomy,.facts.roomy.wide{min-width:0}
+  .facts td.k{white-space:normal}
+
   /* 입력 격자는 한 줄로 접는다.
 
      좁은 화면에서 이 격자는 한 칸짜리가 되는데, 그때 'span 2' 가 남아 있으면
@@ -978,9 +1003,32 @@ footer a:hover{color:var(--ink)}
   .helper{transform:scale(.72);transform-origin:100% 100%}
   .helper-say{max-width:calc(100vw - 150px);font-size:12.5px}
   .helper-bubble{max-width:calc(100vw - 60px)}
-  /* 묻는 창 — 자판이 올라오면 화면의 절반이 사라진다. 위를 덜 비운다. */
-  .ask-over{padding:6vh 14px 14px}
-  .ask-log{max-height:38vh}
+  /*
+    묻는 창 — 폰에서는 아래에서 올라오는 판으로 둔다.
+
+    가운데 띄우는 창은 자판이 올라오는 순간 무너진다. 화면의 절반이 자판에
+    덮이고, 창은 그 아래에 반쯤 잠긴 채 남는다. 묻는 칸이 안 보이면 물을 수가
+    없다.
+
+    아래에 붙여 두면 자판이 올라와도 묻는 칸이 자판 바로 위에 남는다. 오간
+    말은 그 위로 쌓이고, 넘치면 그 안에서 구른다. 화면 높이는 100dvh 로 잡는다
+    — 주소창이 접혔다 펴져도 값이 따라 움직이는 단위다.
+  */
+  .ask-over{
+    padding:0;align-items:flex-end;
+    animation:sheet-up .2s cubic-bezier(.2,.8,.3,1)}
+  .ask-panel{
+    max-width:none;border-left:0;border-right:0;border-bottom:0;box-shadow:none;
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    max-height:88dvh;gap:12px}
+  .ask-log{max-height:none;flex:1;min-height:0}
+  .ask-line{font-size:16px;padding:11px 12px}
+  .ask-foot .act{padding-left:16px;padding-right:16px}
+  /* 자판이 올라오면 힌트 한 줄이 자리를 다툰다. 없어도 되는 줄이다. */
+  .ask-hint{display:none}
+
+  /* 수증이가 하는 말 — 폰에서는 한 화면에 다 들어가야 읽힌다. */
+  .helper-say{max-width:min(60vw,240px)}
 }
 
 /* iOS는 글자가 16px보다 작은 입력칸에 손을 대면 화면을 확대한다.
