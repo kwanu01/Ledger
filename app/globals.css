@@ -52,19 +52,45 @@
   --sans:var(--type);
   --mono:var(--type);
 }
+/* ──────────────────────────────────────────────────────────────────
+   어두운 화면 (§21.13)
+
+   처음에는 밝은 화면을 그대로 뒤집었다. 검정 종이(#000)에 흰 글자(#fff),
+   링크는 브라우저 기본 파랑을 밝게 올린 것. 그런데 화면에서 보면 글자와
+   굵은 선이 종이에서 떠올라 번지고, 파란 링크만 색을 갖고 있어서 문장을
+   읽기도 전에 링크부터 눈에 들어왔다. 장부는 조용한 물건인데 그 반대가 됐다.
+
+   그래서 셋을 손봤다.
+
+   **종이를 순검정에서 뗀다.** #0e0e0d. 완전한 검정은 종이가 아니라 구멍처럼
+   보이고, 그 위의 흰 글자는 가장자리가 번진다.
+
+   **글자를 순백에서 뗀다.** #e4e2dd — 아주 조금 따뜻한 회백이다. 명암비는
+   21:1에서 15:1로 내려가지만, 읽기에는 이쪽이 편하다. 굵은 선도 같이 낮춘다
+   (#c4c1bb). 이 선은 장부를 닫는 선이라 자주 나오는데, 순백이면 그때마다
+   화면이 한 번씩 번쩍인다.
+
+   **링크에서 색을 걷어낸다.** 어두운 화면에서 파랑은 유일한 색이라 무조건
+   먼저 읽힌다. 링크는 색이 아니라 **밑줄**로 구분한다 — 종이 위의 인쇄물이
+   원래 그랬다. 밝은 화면의 파랑은 그대로 둔다. 흰 종이 위에서는 튀지 않고,
+   그게 웹의 오래된 약속이기도 하다.
+
+   빨강 둘(보낼 돈, 고무도장)만 색으로 남긴다. 그건 꾸밈이 아니라 뜻이다.
+   대신 채도를 낮춰 검은 종이 위에서 형광으로 보이지 않게 한다.
+   ────────────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --paper:#000000; --ink:#ffffff; --ink-2:#a6a6a6; --ink-3:#767676;
-    --rule:#4d4d4d; --rule-2:#2b2b2b; --rule-hard:#ffffff;
-    --link:#7da2ff; --link-v:#c2a3ff; --debit:#ff6f6f; --stamp:#e8574a;
-    --hl:#141414; --settled:#131313; --field:#0a0a0a;
+    --paper:#0e0e0d; --ink:#e4e2dd; --ink-2:#9b9892; --ink-3:#78756f;
+    --rule:#3b3a37; --rule-2:#232320; --rule-hard:#c4c1bb;
+    --link:#e4e2dd; --link-v:#a9a6a0; --debit:#d98b80; --stamp:#c0584b;
+    --hl:#1a1a18; --settled:#171715; --field:#131311;
   }
 }
 :root[data-theme="dark"]{
-  --paper:#000000; --ink:#ffffff; --ink-2:#a6a6a6; --ink-3:#767676;
-  --rule:#4d4d4d; --rule-2:#2b2b2b; --rule-hard:#ffffff;
-  --link:#7da2ff; --link-v:#c2a3ff; --debit:#ff6f6f; --stamp:#e8574a;
-  --hl:#141414; --settled:#131313; --field:#0a0a0a;
+  --paper:#0e0e0d; --ink:#e4e2dd; --ink-2:#9b9892; --ink-3:#78756f;
+  --rule:#3b3a37; --rule-2:#232320; --rule-hard:#c4c1bb;
+  --link:#e4e2dd; --link-v:#a9a6a0; --debit:#d98b80; --stamp:#c0584b;
+  --hl:#1a1a18; --settled:#171715; --field:#131311;
 }
 
 *{box-sizing:border-box}
@@ -425,6 +451,30 @@ input[type=number],input[type=search],textarea{
   font:inherit;font-size:14.5px;background:var(--field);color:var(--ink);
   border:1px solid var(--rule);border-radius:0;padding:7px 9px}
 input[type=text],input[type=email],input[type=password]{width:100%}
+/* 체크칸과 라디오는 브라우저가 자기 색으로 칠한다 — 대개 파랑이다. 어두운
+   화면에서 파랑은 유일한 색이라 글보다 먼저 읽힌다. 종이의 잉크색을 준다. */
+input[type=checkbox],input[type=radio]{accent-color:var(--rule-hard)}
+/* 날짜 칸 (§21.5)
+
+   폰의 사파리는 날짜 칸을 제 방식대로 그린다. 안쪽에 자기 여백을 하나 더 두고,
+   그 여백까지 합친 만큼을 '내가 필요한 폭'이라고 주장한다. width:100% 를 줘도
+   그 주장이 이기기 때문에, 다른 칸들은 다 줄에 맞는데 날짜 칸만 오른쪽으로
+   비어져 나왔다. 기본 그림을 끄고 안쪽 여백을 0으로 되돌려야 줄에 든다. */
+input[type=date]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;min-width:0;max-width:100%;text-align:left}
+input[type=date]::-webkit-date-and-time-value{
+  text-align:left;margin:0;min-width:0}
+input[type=date]::-webkit-datetime-edit{padding:0}
+/* 달력 아이콘은 칸의 오른쪽 끝에 세운다. 글자 뒤에 붙어 다니지 않게. */
+input[type=date]::-webkit-calendar-picker-indicator{margin-left:auto;padding:0}
+/* 달력 아이콘은 브라우저가 검은 글리프로 그린다. 어두운 종이에서는 안 보인다. */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) input[type=date]::-webkit-calendar-picker-indicator{
+    filter:invert(.82)}
+}
+:root[data-theme="dark"] input[type=date]::-webkit-calendar-picker-indicator{
+  filter:invert(.82)}
 label.field{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink-2);font-weight:600}
 label.field > .lab{display:flex;align-items:center;gap:7px}
 label.field > input,label.field > select{font-weight:400;color:var(--ink)}
@@ -889,6 +939,46 @@ footer a:hover{color:var(--ink)}
 .imgfield .empty-plate:hover,.imgfield .empty-plate:focus-visible{
   border-color:var(--ink-2);color:var(--ink)}
 .imgfield .empty-plate:disabled{cursor:default;opacity:.6}
+
+/* ── 지출 기입: 사진 두 자리 (§21.5) ──────────────────────────────
+   왼쪽에 영수증, 오른쪽에 품목 사진. 좁은 화면에서는 위아래로 쌓인다.
+   어느 쪽이든 판 가운데에 놓는다 — 사진은 글이 아니라 물건이라, 줄의
+   시작선에 맞출 것이 아니다. */
+.photopair{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,220px));
+  gap:26px 30px;justify-content:center;margin-top:20px}
+.photoslot{display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center}
+.photoslot .caption{color:var(--ink-2)}
+.photoslot-img{
+  display:block;width:100%;aspect-ratio:4/3;object-fit:cover;
+  border:1px solid var(--rule);background:var(--hl)}
+/* 빈 자리가 곧 단추다. imgfield 안이 아니어도 같은 생김새를 쓴다. */
+.photoslot .empty-plate{
+  appearance:none;width:100%;margin:0;padding:10px;cursor:pointer;
+  aspect-ratio:4/3;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:5px;
+  border:1px dashed var(--rule);color:var(--ink-3);
+  font:inherit;font-size:12px;line-height:1.4;text-align:center;
+  background:var(--paper);transition:border-color .15s ease,color .15s ease}
+.photoslot .empty-plate .plus{font-size:19px;line-height:1}
+.photoslot .empty-plate:hover,.photoslot .empty-plate:focus-visible{
+  border-color:var(--ink-2);color:var(--ink)}
+/* 남길지 끄는 자리. 무엇이 남는지 보면서 정하도록 사진 바로 아래에 둔다. */
+.keepline{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:12.5px;line-height:1.45;color:var(--ink-2);
+  text-align:left;cursor:pointer}
+.keepline input{margin:2px 0 0;flex:none}
+
+/* ── 지출 기입: 마무리 줄 ─────────────────────────────────────────
+   폼이 길어서, 다 적고 나면 '장부에 적기'가 화면 밖에 있다. 스크롤을
+   되짚어 내려가야 저장이 되는 폼은 다 적고도 한 번 더 일을 시킨다.
+   좁은 화면에서는 이 줄을 화면 아래에 붙여 둔다. 종이색을 깔고 위에 선
+   하나를 그어, 떠 있는 상자가 아니라 장부의 마지막 줄로 보이게 한다. */
+.formbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;font-size:14px}
+.formbar .split-say{
+  flex-basis:100%;font-size:13px;color:var(--ink-2);
+  font-variant-numeric:tabular-nums}
 .imgfield-do{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px}
 .imgfield-do .plain{font-size:12.5px}
 .imgfield-do .plain.danger{color:var(--debit);text-decoration-color:var(--debit)}
@@ -1229,6 +1319,42 @@ footer a:hover{color:var(--ink)}
   /* 손가락으로 누르는 것들은 작으면 안 된다. */
   .act{padding:10px 18px}
   nav .tab{padding:5px 0 8px}
+
+  /* ────────────────────────────────────────────────────────────────
+     지출 기입 (§21.5)
+
+     이 화면은 이 서비스에서 사람이 가장 오래 머무는 자리다. 그런데 폰에서
+     보면 칸이 작고 빽빽했다. 손가락은 마우스 포인터가 아니다.
+
+     칸을 키우고, 고르는 줄을 한 줄 통째로 누를 수 있게 하고, 마무리 줄을
+     화면 아래에 붙인다. 셋 다 '더 예쁘게'가 아니라 '덜 틀리게'를 위한 것이다.
+     ──────────────────────────────────────────────────────────────── */
+  select,input[type=text],input[type=email],input[type=password],input[type=date],
+  input[type=number],input[type=search],textarea{padding:11px 12px}
+  .fields{gap:20px}
+  label.field{gap:7px}
+
+  /* 고르는 줄은 글자만이 아니라 줄 전체가 손잡이다. 라디오 단추 하나를
+     정확히 누르게 하는 것은 폰에서 사람에게 시킬 일이 아니다. */
+  .pick{
+    padding:12px 2px;gap:11px;align-items:center;
+    border-bottom:1px solid var(--rule-2)}
+  .pick:last-of-type{border-bottom:0}
+  .pick input{width:19px;height:19px;flex:none;margin:0}
+  .pick-sub{padding:4px 0 10px 30px;gap:12px 20px}
+  .pick-sub label{display:flex;align-items:center;gap:8px}
+  .pick-sub input{width:18px;height:18px;margin:0}
+
+  /* 마무리 줄 — 화면 아래에 붙어 따라온다. 다 적고 나서 저장 단추를 찾아
+     스크롤을 되짚어 내려가는 일이 없게. 종이색을 깔고 위에 선 하나를 그어
+     떠 있는 상자가 아니라 장부의 마지막 줄로 보이게 한다. */
+  .formbar{
+    position:sticky;bottom:0;z-index:40;
+    margin-top:26px;padding:13px 0 calc(13px + env(safe-area-inset-bottom));
+    background:var(--paper);border-top:1px solid var(--rule-hard);
+    gap:10px 16px}
+  .formbar .act.primary{flex:1;text-align:center;padding:13px 18px}
+  .formbar .split-say{order:-1}
 
   /* 검산 표 — 결제와 부담은 접는다. 폰에서 알고 싶은 것은 결과다.
      자세한 숫자는 같은 화면 아래 지출 목록에 다 있다. */

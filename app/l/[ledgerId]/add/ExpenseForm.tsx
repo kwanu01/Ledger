@@ -72,12 +72,31 @@ export default function ExpenseForm({
   const [thumb, setThumb] = useState<string | null>(null);
   /* 읽은 뒤에도 파일을 들고 있는다. 남길지 말지는 저장할 때 정한다. */
   const [photo, setPhoto] = useState<File | null>(null);
-  const [keepPhoto, setKeepPhoto] = useState(false);
+  /*
+   * 영수증은 **남기는 것이 기본**이다.
+   *
+   * 처음에는 꺼 두었다. 영수증에는 카드 뒷번호와 매장과 시각이 찍혀 있고
+   * 그게 팀원 전체에게 보이니까, 남길지는 올린 사람이 정하라는 뜻이었다.
+   * 그런데 실제로는 대부분 남기고 싶어 한다 — 나중에 "이거 뭐였지" 하고
+   * 되짚는 자리가 장부이기 때문이다. 켜는 것을 매번 기억해야 하는 쪽이
+   * 끄는 것을 가끔 기억하는 쪽보다 훨씬 자주 어긋났다.
+   *
+   * 그래서 켜 두되, **끄는 자리를 사진 바로 아래**에 둔다. 무엇이 남는지
+   * 보면서 끌 수 있어야 하기 때문이다.
+   */
+  const [keepPhoto, setKeepPhoto] = useState(true);
+  /* 품목 사진 — 장부의 '품목' 화면에서 디더링되어 걸리는 그 사진이다.
+     영수증은 얼마를 냈는지의 증거고, 이건 무엇을 샀는지의 기록이다.
+     예전에는 지출을 적은 뒤 장부에서 다시 찾아 들어가야만 올릴 수 있었다. */
+  const [item, setItem] = useState<File | null>(null);
+  const [itemThumb, setItemThumb] = useState<string | null>(null);
   /** 나머지 칸을 펴 둘지. 넓은 화면에서는 처음부터 편다(아래 useEffect). */
   const [more, setMore] = useState(false);
   const [read, setRead] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const receiptRef = useRef<HTMLInputElement>(null);
+  const itemRef = useRef<HTMLInputElement>(null);
 
   // 화면을 캡처해서 그대로 붙여넣는 편이 파일로 저장했다 고르는 것보다 빠르다.
   // 사진 받는 단계에 있을 때만 듣는다.
@@ -143,6 +162,21 @@ export default function ExpenseForm({
     setStep('form');
   }
 
+  /* 폼에서 영수증을 바꾸거나 새로 붙일 때. 여기서는 다시 읽지 않는다 —
+     이미 손으로 적어 둔 칸을 사진 한 장이 덮어써 버리면 곤란하다. */
+  async function pickReceipt(original: File) {
+    const file = await shrinkImage(original);
+    setPhoto(file);
+    setThumb(URL.createObjectURL(file));
+    setKeepPhoto(true);
+  }
+
+  async function pickItem(original: File) {
+    const file = await shrinkImage(original);
+    setItem(file);
+    setItemThumb(URL.createObjectURL(file));
+  }
+
   const foreign = curr !== currency;
 
   const name = (id: string) => members.find((m) => m.id === id)?.name ?? id;
@@ -204,15 +238,18 @@ export default function ExpenseForm({
 
     // 남기기로 했으면 지출이 만들어진 뒤에 사진을 붙인다. 사진을 못 붙여도
     // 지출은 이미 적혔으므로 막지 않는다. 사진은 장부에서 다시 올릴 수 있다.
-    if (keepPhoto && photo) {
+    const expenseId = r.value.id;
+    async function put(kind: 'receipt' | 'item', file: File) {
       const fd = new FormData();
       fd.set('ledgerId', ledgerId);
-      fd.set('expenseId', r.value.id);
-      fd.set('kind', 'receipt');
-      fd.set('image', photo);
+      fd.set('expenseId', expenseId);
+      fd.set('kind', kind);
+      fd.set('image', file);
       const up = await attachImage(fd);
       if (!up.ok) say(up.message);
     }
+    if (keepPhoto && photo) await put('receipt', photo);
+    if (item) await put('item', item);
 
     router.push(`/l/${ledgerId}/book`);
     router.refresh();
@@ -290,14 +327,15 @@ export default function ExpenseForm({
     return (
       <section>
         <div className="caption">{T('expenseEntry')}</div>
+        {/* 읽는 동안에도 사진은 가운데. 왼쪽에 붙여 두면 판이 기울어 보인다. */}
         {thumb && (
-          <img
-            src={thumb}
-            alt={T('uploaded')}
-            style={{ maxHeight: 160, border: '1px solid var(--rule)', marginTop: 16 }}
-          />
+          <div className="photopair" style={{ marginTop: 16 }}>
+            <div className="photoslot">
+              <img className="photoslot-img" src={thumb} alt={T('uploaded')} />
+            </div>
+          </div>
         )}
-        <p className="muted" style={{ marginTop: 20 }}>
+        <p className="muted" style={{ marginTop: 20, textAlign: 'center' }}>
           {T('reading')}
         </p>
         {/* 막다른 골목을 두지 않는다. 오래 걸린다 싶으면 손으로 적으면 된다.
@@ -318,25 +356,90 @@ export default function ExpenseForm({
     <section>
       <div className="caption">{T('expenseEntry')}</div>
 
-      {thumb && (
-        <>
-          <img
-            src={thumb}
-            alt={T('uploaded')}
-            style={{ maxHeight: 160, border: '1px solid var(--rule)', marginTop: 16 }}
+      {/*
+        사진 두 자리 (§21.5)
+
+        **영수증**은 얼마를 냈는지의 증거고, **품목 사진**은 무엇을 샀는지의
+        기록이다. 둘은 다른 것인데 예전에는 여기서 영수증만 받았고, 품목
+        사진은 지출을 다 적은 뒤에 장부에서 그 줄을 다시 찾아 들어가야
+        올릴 수 있었다. 물건을 사고 사진을 찍는 것은 같은 순간에 일어나는
+        일이니, 적는 자리도 같아야 한다.
+
+        두 자리를 나란히 두고 가운데로 모은다. 사진은 글이 아니라 물건이라,
+        줄의 시작선에 맞출 것이 아니라 판 안에 놓이는 편이 맞다.
+      */}
+      <div className="photopair">
+        <div className="photoslot">
+          <div className="caption">{T('receipt')}</div>
+          {thumb ? (
+            <>
+              <img className="photoslot-img" src={thumb} alt={T('uploaded')} />
+              {/* 남길지 끌지는 무엇이 남는지 보면서 정한다. 그래서 사진 바로 아래다. */}
+              <label className="keepline">
+                <input
+                  type="checkbox"
+                  checked={keepPhoto}
+                  onChange={(e) => setKeepPhoto(e.target.checked)}
+                />
+                <span>{T('keepReceipt')}</span>
+              </label>
+              <button className="plain" onClick={() => receiptRef.current?.click()}>
+                {T('replacePhoto')}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="empty-plate"
+              onClick={() => receiptRef.current?.click()}
+            >
+              <span className="plus" aria-hidden="true">+</span>
+              <span>{T('addReceiptHere')}</span>
+            </button>
+          )}
+          <input
+            ref={receiptRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) pickReceipt(f);
+            }}
           />
-          {/* 자동으로 남기지 않는다. 영수증에는 카드 뒷번호와 매장과 시각이
-              찍혀 있고, 그게 팀원 전체에게 보인다. 남길지는 올린 사람이 정한다. */}
-          <label className="row" style={{ marginTop: 12, fontSize: 13.5 }}>
-            <input
-              type="checkbox"
-              checked={keepPhoto}
-              onChange={(e) => setKeepPhoto(e.target.checked)}
-            />
-            {T('keepReceipt')}
-          </label>
-        </>
-      )}
+        </div>
+
+        <div className="photoslot">
+          <div className="caption">{T('itemPhoto')}</div>
+          {itemThumb ? (
+            <>
+              <img className="photoslot-img" src={itemThumb} alt={T('itemPhoto')} />
+              <button className="plain" onClick={() => itemRef.current?.click()}>
+                {T('replacePhoto')}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="empty-plate"
+              onClick={() => itemRef.current?.click()}
+            >
+              <span className="plus" aria-hidden="true">+</span>
+              <span>{T('addItemPhotoHere')}</span>
+            </button>
+          )}
+          <input
+            ref={itemRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) pickItem(f);
+            }}
+          />
+        </div>
+      </div>
 
       <div className="fields" style={{ marginTop: 22 }}>
         <label className="field wide">
@@ -509,16 +612,12 @@ export default function ExpenseForm({
         )}
       </div>
 
-      <div className="row" style={{ marginTop: 28 }}>
-        <button className="act primary" onClick={save} disabled={busy}>
-          {busy ? T('working') : T('writeToBook')}
-        </button>
-        <Link href={`/l/${ledgerId}`} className="plain">
-          {T('giveUp')}
-        </Link>
+      {/* 마무리 줄. 폰에서는 화면 아래에 붙어 따라온다 — 다 적고 나서
+          저장 단추를 찾아 스크롤을 되짚어 내려가지 않게. */}
+      <div className="formbar">
         {/* 저장하기 전에 어떻게 갈라지는지 미리 보여 준다. 저장한 뒤에 놀랄 일이 없어야 한다. */}
         {each.length > 0 && (
-          <span className="faint">
+          <span className="split-say">
             {T('perPerson', {
               n: bearers.length,
               amount:
@@ -527,6 +626,12 @@ export default function ExpenseForm({
             })}
           </span>
         )}
+        <button className="act primary" onClick={save} disabled={busy}>
+          {busy ? T('working') : T('writeToBook')}
+        </button>
+        <Link href={`/l/${ledgerId}`} className="plain">
+          {T('giveUp')}
+        </Link>
       </div>
 
       {CURRENCIES[currency] && foreign && (
