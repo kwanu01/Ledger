@@ -8,7 +8,7 @@ import { translator, type Key } from '../../lib/i18n.ts';
 import type { Locale } from '../../lib/domain/money.ts';
 
 /**
- * 길잡이 (§21.10)
+ * 수증이 (§21.10)
  *
  * 종이 영수증 한 장이 장부 옆에 서 있다. 하는 일은 셋이다.
  *
@@ -76,7 +76,7 @@ function greetFor(path: string | null): { pose: string; trick: string; ms: numbe
   return { pose: 'stand', ...nod };
 }
 
-/** 이 화면에서 무엇을 할 수 있는지. 탭을 옮길 때마다 길잡이가 한 번 알려 준다. */
+/** 이 화면에서 무엇을 할 수 있는지. 탭을 옮길 때마다 수증이가 한 번 알려 준다. */
 function tipFor(path: string | null): Key | null {
   if (!path) return null;
   if (path.endsWith('/book')) return 'tipBook';
@@ -88,7 +88,10 @@ function tipFor(path: string | null): Key | null {
   if (path.startsWith('/teams')) return 'tipTeams';
   if (path.startsWith('/login') || path.startsWith('/join')) return 'tipLogin';
   if (path.startsWith('/l/')) return 'tipHome';
-  return null; // 첫 화면에는 볼 것이 두 줄뿐이다. 거기서는 아무 말도 하지 않는다.
+  // 첫 화면. 처음 온 사람은 여기가 무엇을 하는 곳인지부터 알아야 한다.
+  // 그 설명이 끝나면 일상적인 말로 이어진다(chat).
+  if (path === '/') return 'tipLanding';
+  return null;
 }
 
 /**
@@ -105,7 +108,7 @@ const SAY_POSES = ['point', 'wave', 'spread', 'smile', 'open'] as const;
  * 그 줄에는 누운 모습이어야 한다. 말이 곧 자세다.
  */
 const CHAT_POSES = [
-  'lean',    // 종이라서 바람에는 좀 약해요
+  'wave',    // 저는 수증이예요. 영수증이라 바람에는 좀 약해요 (인사)
   'point',   // 저 위의 점을 누르시면
   'crumple', // 구겨져도 적힌 건 안 없어져요
   'fold',    // 계산은 장부가 해요
@@ -374,7 +377,7 @@ export default function Helper({ lang }: { lang: Locale }) {
     const g = greetFor(path);
     play(g.pose, g.trick, g.ms);
 
-    // 이 화면에서 무엇을 할 수 있는지 일러 준다. 길잡이가 하는 일이다.
+    // 이 화면에서 무엇을 할 수 있는지 일러 준다. 수증이가 하는 일이다.
     //
     // 사람이 열어 둔 말풍선은 건드리지 않는다. 탭을 옮겼다고 손에 들고 있던
     // 것이 닫히면, 옮길 때마다 다시 열어야 한다.
@@ -615,7 +618,7 @@ export default function Helper({ lang }: { lang: Locale }) {
     );
   }
 
-  // 사람이 연 메뉴인지 길잡이가 말하는 중인지 기억해 둔다.
+  // 사람이 연 메뉴인지 수증이가 말하는 중인지 기억해 둔다.
   menuRef.current = menu;
 
   const bubble = !open ? null : line ? line.text : (sayAt(tipAt)?.text ?? null);

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { recordExpense } from '../../../actions/ledger.ts';
+import { attachImage } from '../../../actions/images.ts';
 import { analyzeReceipt } from '../../../actions/receipt.ts';
 import { splitEvenly } from '../../../../lib/domain/settlement.ts';
 import { translator } from '../../../../lib/i18n.ts';
@@ -68,6 +69,9 @@ export default function ExpenseForm({
   // 사진 먼저, 폼은 그다음. 손으로 적겠다고 하면 곧장 빈 폼으로 간다.
   const [step, setStep] = useState<'photo' | 'reading' | 'form'>('photo');
   const [thumb, setThumb] = useState<string | null>(null);
+  /* 읽은 뒤에도 파일을 들고 있는다. 남길지 말지는 저장할 때 정한다. */
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [keepPhoto, setKeepPhoto] = useState(false);
   const [read, setRead] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -91,6 +95,7 @@ export default function ExpenseForm({
 
   async function analyze(file: File) {
     say('');
+    setPhoto(file);
     setThumb(URL.createObjectURL(file));
     setStep('reading');
 
@@ -170,6 +175,19 @@ export default function ExpenseForm({
     setBusy(false);
 
     if (!r.ok) return say(r.message);
+
+    // 남기기로 했으면 지출이 만들어진 뒤에 사진을 붙인다. 사진을 못 붙여도
+    // 지출은 이미 적혔으므로 막지 않는다. 사진은 장부에서 다시 올릴 수 있다.
+    if (keepPhoto && photo) {
+      const fd = new FormData();
+      fd.set('ledgerId', ledgerId);
+      fd.set('expenseId', r.value.id);
+      fd.set('kind', 'receipt');
+      fd.set('image', photo);
+      const up = await attachImage(fd);
+      if (!up.ok) say(up.message);
+    }
+
     router.push(`/l/${ledgerId}/book`);
     router.refresh();
   }
@@ -267,11 +285,23 @@ export default function ExpenseForm({
       <div className="caption">{T('expenseEntry')}</div>
 
       {thumb && (
-        <img
-          src={thumb}
-          alt={T('uploaded')}
-          style={{ maxHeight: 160, border: '1px solid var(--rule)', marginTop: 16 }}
-        />
+        <>
+          <img
+            src={thumb}
+            alt={T('uploaded')}
+            style={{ maxHeight: 160, border: '1px solid var(--rule)', marginTop: 16 }}
+          />
+          {/* 자동으로 남기지 않는다. 영수증에는 카드 뒷번호와 매장과 시각이
+              찍혀 있고, 그게 팀원 전체에게 보인다. 남길지는 올린 사람이 정한다. */}
+          <label className="row" style={{ marginTop: 12, fontSize: 13.5 }}>
+            <input
+              type="checkbox"
+              checked={keepPhoto}
+              onChange={(e) => setKeepPhoto(e.target.checked)}
+            />
+            {T('keepReceipt')}
+          </label>
+        </>
       )}
 
       <div className="fields" style={{ marginTop: 22 }}>

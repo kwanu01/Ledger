@@ -12,12 +12,18 @@
  * 빈 ads.txt 는 "아무에게도 권한이 없다"는 뜻이라 없느니만 못하다.
  */
 
-const CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
-
 /** 구글 애드센스의 고정값. 모든 게시자가 같은 값을 쓴다. */
 const GOOGLE_TAG_ID = 'f08c47fec0942fa0';
 
+/**
+ * 미리 만들어 두지 않는다. 게시자 번호는 나중에 채워지는 값이라, 빌드할 때
+ * 결과를 굳혀 두면 번호를 넣고도 404가 남는다. 부를 때마다 읽는다.
+ */
+export const dynamic = 'force-dynamic';
+
 export function GET() {
+  // 값을 함수 밖에서 읽으면 빌드 시점 값이 박힌다. 여기서 읽는다.
+  const CLIENT = process.env.ADSENSE_CLIENT ?? process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
   if (!CLIENT) return new Response('Not found', { status: 404 });
 
   // client 는 'ca-pub-0000000000000000' 모양으로 들어온다. ads.txt 에는

@@ -585,6 +585,21 @@ ANTHROPIC_API_KEY=</pre>
       <pre>npm run simulate</pre>
       <p class="note">불변식 21개가 전부 통과하면 정산 엔진은 정상입니다.</p>
     </div></li>
+  <li><span class="sn">07-5</span><input type="checkbox" class="tick"><div class="body">
+      <b>사진 저장소</b>를 한 번 만듭니다. 영수증과 품목 사진이 여기에 담깁니다.
+      <span class="path">Supabase → SQL Editor</span>
+      <pre>supabase/migrations/0009_images.sql 의 내용을 붙여넣고 실행</pre>
+      <p class="note">
+        만들어지는 버킷은 <b>공개가 아닙니다.</b> 사진은 서버만 꺼낼 수 있고, 화면에는
+        <code>/l/&lt;장부&gt;/img/…</code> 를 거쳐 나갑니다. 그 자리에서 이 장부에 들어올 수
+        있는 사람인지 한 번 더 확인합니다. 영수증에는 카드 뒷자리와 매장, 시각이 찍혀
+        있어서 주소만 알면 열리는 자리에 두면 안 됩니다.
+      </p>
+      <p class="note">
+        이 단계를 건너뛰면 사진을 올릴 때 <code>Bucket not found</code> 가 뜹니다.
+        장부의 다른 기능은 그대로 됩니다.
+      </p>
+    </div></li>
   </ol>
 </section>
 

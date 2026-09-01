@@ -20,7 +20,7 @@ import {
 } from '../../../../lib/domain/money.ts';
 import type { Ledger } from '../../../../lib/domain/types.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
-import Lightbox from '../../../Lightbox.tsx';
+import ImageField from '../../../ImageField.tsx';
 
 /**
  * 장부 (§21.3)
@@ -229,15 +229,34 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
             <div style={{ padding: '18px 14px 22px' }}>
               <div className="fields" style={{ gap: 30 }}>
                 {/* 이 줄이 무엇이었는지는 결국 영수증에 적혀 있다.
-                    작게 붙여 두고, 누르면 읽을 수 있는 크기로 열린다. */}
-                {(e.receiptImage || e.representativeImage) && (
-                  <Lightbox
-                    src={(e.receiptImage || e.representativeImage) as string}
+                    작게 붙여 두고, 누르면 읽을 수 있는 크기로 열린다.
+                    여기서 올리고 바꾸고 뗄 수 있다. */}
+                <div>
+                  <div className="caption" style={{ marginBottom: 8 }}>{T('receipt')}</div>
+                  <ImageField
+                    ledgerId={ledger.id}
+                    expenseId={e.id}
+                    kind="receipt"
+                    path={e.receiptImage}
                     alt={e.title}
-                    label={T('uploaded')}
                     caption={`${e.title} · ${cash(e.amount)} · ${e.date}`}
+                    lang={lang}
                   />
-                )}
+                </div>
+
+                {/* 산 물건이 무엇인지 보이는 사진. 품목 화면의 카드에 걸린다. */}
+                <div>
+                  <div className="caption" style={{ marginBottom: 8 }}>{T('itemPhoto')}</div>
+                  <ImageField
+                    ledgerId={ledger.id}
+                    expenseId={e.id}
+                    kind="item"
+                    path={e.representativeImage}
+                    alt={e.title}
+                    caption={`${e.title} · ${cash(e.amount)} · ${e.date}`}
+                    lang={lang}
+                  />
+                </div>
 
                 <div>
                   <div className="caption" style={{ marginBottom: 8 }}>

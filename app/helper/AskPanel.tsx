@@ -26,7 +26,7 @@ export default function AskPanel({
   ledgerId: string;
   lang: Locale;
   onClose: () => void;
-  /** 읽는 동안과 대답한 뒤의 자세를 길잡이가 따라 하도록 알린다. */
+  /** 읽는 동안과 대답한 뒤의 자세를 수증이가 따라 하도록 알린다. */
   onBusy: (state: 'reading' | 'answered' | 'failed') => void;
 }) {
   const T = translator(lang);

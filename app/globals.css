@@ -768,6 +768,18 @@ footer a:hover{color:var(--ink)}
 /* ── 영수증 사진 (§21.3) ─────────────────────────────────────────── */
 /* 점으로 찍힌 그림이 기본이고, 마우스를 올리면 원본이 그 자리에 뜬다(.dither).
    테두리와 크기는 .dither 가 이미 맡고 있으므로 여기서는 자리만 잡는다. */
+/* ── 사진 한 자리 ────────────────────────────────────────────────
+   사진이 있을 때와 없을 때 크기가 달라지면 줄이 들썩인다. 빈 자리도
+   같은 크기로 둔다. */
+.imgfield{display:flex;flex-direction:column;gap:8px;width:132px}
+.imgfield.wide{width:100%}
+.imgfield .empty-plate{
+  aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;
+  border:1px dashed var(--rule);color:var(--ink-3);font-size:12px;background:var(--paper)}
+.imgfield-do{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px}
+.imgfield-do .plain{font-size:12.5px}
+.imgfield-do .plain.danger{color:var(--debit);text-decoration-color:var(--debit)}
+
 .shot{
   appearance:none;background:none;border:0;padding:0;margin:0;
   display:block;line-height:0;flex:none;width:106px;cursor:zoom-in}
@@ -915,7 +927,7 @@ footer a:hover{color:var(--ink)}
   table.book.members tr{padding:14px 0;border-bottom:1px solid var(--rule-2)}
   table.book.members tr:last-child{border-bottom:0}
   table.book.members td{border:0;padding:3px 0;white-space:normal}
-  /* 길잡이 — 폰에서는 화면을 많이 가린다. 작게 두고, 옆에 적는 말도
+  /* 수증이 — 폰에서는 화면을 많이 가린다. 작게 두고, 옆에 적는 말도
      남은 자리에 맞춘다. 42vw는 320픽셀 화면에서 134픽셀이라 글자가
      세로로 한 줄씩 떨어진다. */
   .helper{transform:scale(.72);transform-origin:100% 100%}

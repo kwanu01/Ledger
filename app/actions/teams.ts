@@ -12,6 +12,7 @@ import {
 } from '../../lib/access.ts';
 import { currentUser } from '../../lib/auth-client.ts';
 import { db } from '../../lib/db/client.ts';
+import { dropLedgerImages } from '../../lib/db/images.ts';
 import { CURRENCIES, type CurrencyCode } from '../../lib/domain/money.ts';
 
 /**
@@ -485,6 +486,14 @@ export async function deleteTeam(args: { ledgerId: string }): Promise<Result> {
       // 데이터베이스가 영어로 돌려주는 말을 그대로 화면에 올리지 않는다.
       console.error('delete_team', error);
       return { ok: false, message: '장부를 지우지 못했습니다. 잠시 뒤에 다시 시도해 주세요.' };
+    }
+
+    // 줄은 지워졌지만 사진은 저장소에 남는다. 장부가 없어졌으니 그 사진을
+    // 볼 수 있는 사람도 없다. 못 지워도 장부 삭제는 이미 끝났으므로 막지 않는다.
+    try {
+      await dropLedgerImages(args.ledgerId);
+    } catch (err) {
+      console.error('drop images', err);
     }
 
     revalidatePath('/teams');

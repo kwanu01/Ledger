@@ -1,5 +1,6 @@
 import { getLang } from '../../../../lib/lang.ts';
 import LedgerShell from '../LedgerShell.tsx';
+import { imageSrc } from '../../../../lib/img.ts';
 import AdSlot from '../../../AdSlot.tsx';
 import GoodsGrid, { type Good } from './Goods.tsx';
 import { requireLedgerAccess } from '../../../../lib/access.ts';
@@ -53,7 +54,7 @@ export default async function Goods({ params }: { params: Promise<{ ledgerId: st
     category: e.category || T('etc'),
     vendor: e.vendor,
     productLink: e.productLink,
-    image: e.representativeImage ?? e.receiptImage,
+    image: firstImage(ledgerId, e.representativeImage ?? e.receiptImage),
     dup: (counts.get(e.productLink || e.title) ?? 0) > 1,
   }));
 
@@ -80,4 +81,9 @@ export default async function Goods({ params }: { params: Promise<{ ledgerId: st
       <AdSlot />
     </main>
   );
+}
+
+/** 저장소 경로가 있으면 화면이 쓸 주소로 바꾼다. 없으면 그대로 비운다. */
+function firstImage(ledgerId: string, path?: string) {
+  return path ? imageSrc(ledgerId, path) : undefined;
 }
