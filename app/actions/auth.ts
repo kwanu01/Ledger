@@ -41,15 +41,31 @@ export async function rememberNext(next: string | undefined): Promise<void> {
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 900, // 15분. 로그인 한 번에 쓰고 버린다.
+    // 메일을 열기까지 걸리는 시간이다. 15분은 짧았다 — 알림을 나중에 본 사람은
+    // 이 값이 지워진 뒤에 들어와 팀 목록으로 떨어졌다.
+    maxAge: 3600,
   });
 }
 
-/** Supabase가 영어로 돌려주는 말을 그대로 보여 주지 않는다. */
+/**
+ * Supabase가 영어로 돌려주는 말을 그대로 보여 주지 않는다.
+ *
+ * 메일이 안 나가는 이유는 크게 둘이고, 사람이 할 일이 서로 다르다.
+ *
+ *   방금 눌렀다  — 같은 주소로는 1분에 한 번만 보낸다. 기다리면 된다.
+ *   한도를 넘었다 — 보낸 메일 수가 시간당 한도에 걸렸다. 기다려도 한참이다.
+ *                  이때는 구글로 들어가는 길을 알려 주는 편이 낫다.
+ *
+ * 둘을 "잠시 뒤에 다시" 한마디로 뭉뚱그리면, 한도에 걸린 사람은 될 때까지
+ * 계속 누른다. 누를수록 한도는 더 밀린다.
+ */
 function readable(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('rate limit') || m.includes('too many') || m.includes('security purposes')) {
-    return '잠시 뒤에 다시 시도해 주세요.';
+  if (m.includes('security purposes') || m.includes('only request this after')) {
+    return '방금 보냈습니다. 1분쯤 뒤에 다시 눌러 주세요.';
+  }
+  if (m.includes('rate limit') || m.includes('too many')) {
+    return '지금은 메일을 더 보낼 수 없습니다. 구글로 계속하기를 써 주세요.';
   }
   if (m.includes('not authorized') || m.includes('error sending')) {
     return '메일을 보내지 못했습니다. 구글로 계속하기를 써 주세요.';
@@ -57,7 +73,21 @@ function readable(message: string): string {
   if (m.includes('signups not allowed') || m.includes('disabled')) {
     return '지금은 이 방법으로 들어올 수 없습니다.';
   }
-  return message;
+  return '메일을 보내지 못했습니다. 구글로 계속하기를 써 주세요.';
+}
+
+/**
+ * 돌아갈 자리를 링크에 실어 준다.
+ *
+ * 쿠키에만 적어 두면 메일 앱이 자기 창에서 링크를 열었을 때 그 값이 없다.
+ * 초대받은 사람은 팀 목록으로 떨어지고, 목록은 비어 있다. 링크에도 같이 적는다.
+ * (돌아온 쪽에서 이 사이트 안의 경로인지 다시 확인한다 — app/auth/callback)
+ */
+function callbackUrl(origin: string, next: string | undefined): string {
+  const ok = next && next.startsWith('/') && !next.startsWith('//') ? next : '/teams';
+  // 갈 데가 없어도 ?next= 는 항상 붙인다. 메일 서식이 이 주소 뒤에 토큰을
+  // '&' 로 이어 붙이기 때문이다. 물음표가 없는 날이 있으면 그날 링크가 깨진다.
+  return `${origin}/auth/callback?next=${encodeURIComponent(ok)}`;
 }
 
 /** 이메일로 로그인 링크 보내기. 가입과 로그인이 같은 동작이다. */
@@ -65,12 +95,13 @@ export async function sendEmailLink(formData: FormData): Promise<AuthResult> {
   const email = String(formData.get('email') ?? '').trim();
   if (!email || !email.includes('@')) return { ok: false, message: '이메일 주소를 확인해 주세요.' };
 
-  await rememberNext(String(formData.get('next') ?? '') || undefined);
+  const next = String(formData.get('next') ?? '') || undefined;
+  await rememberNext(next);
 
   const supabase = await authClient();
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${await siteOrigin()}/auth/callback` },
+    options: { emailRedirectTo: callbackUrl(await siteOrigin(), next) },
   });
 
   if (error) return { ok: false, message: readable(error.message) };
@@ -84,7 +115,7 @@ export async function signInWith(provider: Provider, next?: string): Promise<voi
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${await siteOrigin()}/auth/callback`,
+      redirectTo: callbackUrl(await siteOrigin(), next),
       // 다시 고를 수 있게 계정 선택 화면을 띄운다. 공용 컴퓨터에서 남의 계정으로
       // 그냥 들어가 버리는 일을 막는다.
       queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined,

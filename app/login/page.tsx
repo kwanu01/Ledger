@@ -3,6 +3,7 @@ import AuthForm from './AuthForm.tsx';
 import { currentUser } from '../../lib/auth-client.ts';
 import { signInWith } from '../actions/auth.ts';
 import { getLang } from '../../lib/lang.ts';
+import { translator, type Key } from '../../lib/i18n.ts';
 import { Say } from '../helper/HelperContext.tsx';
 import Logo from '../Logo.tsx';
 
@@ -19,13 +20,28 @@ import Logo from '../Logo.tsx';
 export default async function Login({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; why?: string; next?: string }>;
 }) {
   const q = await searchParams;
   const next = q.next && q.next.startsWith('/') && !q.next.startsWith('//') ? q.next : undefined;
 
   if (await currentUser()) redirect(next ?? '/teams');
   const lang = await getLang();
+  const T = translator(lang);
+
+  /**
+   * 로그인 링크가 안 통했을 때.
+   *
+   * 돌아오는 자리(app/auth/callback)는 짧은 말만 붙여 보낸다. 화면에 적는 문장은
+   * 여기서 고른다 — 사람이 읽는 말은 언어를 따라가야 하고, 주소창에 문장이
+   * 그대로 실려 있으면 그 문장을 밖에서 바꿔 넣을 수 있다.
+   */
+  const WHY: Record<string, Key> = {
+    expired: 'linkExpired',
+    otherBrowser: 'linkOtherBrowser',
+    failed: 'linkFailed',
+  };
+  const why = q.why && WHY[q.why] ? T(WHY[q.why]) : undefined;
 
   async function google() {
     'use server';
@@ -41,7 +57,7 @@ export default async function Login({
     <main className="landing">
       <Logo plain />
 
-      <Say text={q.error} />
+      <Say text={why ?? q.error} />
       {/*
         카카오는 Supabase가 account_email 을 반드시 요구하고, 그 동의항목은
         비즈앱으로 전환해야 켤 수 있다. 준비가 끝나면 NEXT_PUBLIC_KAKAO_LOGIN=1 로 켠다.

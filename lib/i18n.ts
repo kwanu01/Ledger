@@ -46,6 +46,8 @@ export type Key =
   | 'currencyLocked' | 'create' | 'back'
   // 초대
   | 'inviteDead' | 'inviteDeadWhy' | 'openBook'
+  // 로그인 링크가 안 통했을 때
+  | 'linkExpired' | 'linkOtherBrowser' | 'linkFailed'
   // 탭
   | 'tabHome' | 'tabBook' | 'tabGoods' | 'tabSettle' | 'tabArchive' | 'tabTeam' | 'addExpense'
   // 홈
@@ -115,6 +117,9 @@ const ko: Record<Key, string> = {
   inviteDead: '이 초대 링크는 더 이상 쓸 수 없습니다',
   inviteDeadWhy: '만료되었거나 회수된 링크입니다. 장부를 만든 사람에게 새 링크를 요청하세요.',
   openBook: '이 장부 열기',
+  linkExpired: '링크가 만료되었습니다. 아래에서 다시 보내 주세요.',
+  linkOtherBrowser: '이 링크는 메일을 요청한 브라우저에서 열어야 합니다. 주소를 길게 눌러 복사한 뒤 사파리나 크롬에 붙여넣거나, 아래에서 다시 보내 주세요.',
+  linkFailed: '들어오지 못했습니다. 아래에서 다시 시도해 주세요.',
 
   tabHome: '홈', tabBook: '장부', tabGoods: '품목', tabSettle: '정산 내역',
   tabArchive: '아카이브', tabTeam: '팀', addExpense: '＋ 지출 기입',
@@ -233,6 +238,9 @@ const en: Record<Key, string> = {
   inviteDead: 'This invite link no longer works',
   inviteDeadWhy: 'It expired or was revoked. Ask whoever created the ledger for a new link.',
   openBook: 'Open this ledger',
+  linkExpired: 'That link has expired. Send a new one below.',
+  linkOtherBrowser: 'This link has to open in the browser that asked for the email. Copy the address and paste it into Safari or Chrome, or send a new one below.',
+  linkFailed: 'Sign-in did not go through. Try again below.',
 
   tabHome: 'Home', tabBook: 'Ledger', tabGoods: 'Items', tabSettle: 'Settlements',
   tabArchive: 'Archive', tabTeam: 'Team', addExpense: '＋ Add expense',
@@ -351,6 +359,9 @@ const ja: Record<Key, string> = {
   inviteDead: 'この招待リンクはもう使えません',
   inviteDeadWhy: '期限切れか、取り消されたリンクです。帳簿を作った人に新しいリンクを頼んでください。',
   openBook: 'この帳簿を開く',
+  linkExpired: 'リンクの有効期限が切れています。下からもう一度送ってください。',
+  linkOtherBrowser: 'このリンクはメールを申し込んだブラウザで開く必要があります。アドレスをコピーして Safari や Chrome に貼るか、下からもう一度送ってください。',
+  linkFailed: '入れませんでした。下からもう一度お試しください。',
 
   tabHome: 'ホーム', tabBook: '帳簿', tabGoods: '品目', tabSettle: '精算履歴',
   tabArchive: 'アーカイブ', tabTeam: 'チーム', addExpense: '＋ 支出を記入',
@@ -468,6 +479,9 @@ const zh: Record<Key, string> = {
   inviteDead: '该邀请链接已失效',
   inviteDeadWhy: '链接已过期或被撤回。请向创建账本的人索取新链接。',
   openBook: '打开此账本',
+  linkExpired: '链接已过期，请在下方重新发送。',
+  linkOtherBrowser: '此链接需要在申请邮件的那个浏览器中打开。请复制地址粘贴到 Safari 或 Chrome，或在下方重新发送。',
+  linkFailed: '未能登录，请在下方重试。',
 
   tabHome: '首页', tabBook: '账本', tabGoods: '品项', tabSettle: '结算记录',
   tabArchive: '归档', tabTeam: '团队', addExpense: '＋ 记一笔',
@@ -588,6 +602,9 @@ const es: Record<Key, string> = {
   inviteDead: 'Este enlace de invitación ya no sirve',
   inviteDeadWhy: 'Caducó o fue revocado. Pide un enlace nuevo a quien creó el libro.',
   openBook: 'Abrir este libro',
+  linkExpired: 'El enlace ha caducado. Envía otro abajo.',
+  linkOtherBrowser: 'Este enlace debe abrirse en el navegador desde el que pediste el correo. Copia la dirección y pégala en Safari o Chrome, o envía otro abajo.',
+  linkFailed: 'No se pudo entrar. Inténtalo de nuevo abajo.',
 
   tabHome: 'Inicio', tabBook: 'Libro', tabGoods: 'Artículos', tabSettle: 'Liquidaciones',
   tabArchive: 'Archivo', tabTeam: 'Equipo', addExpense: '＋ Añadir gasto',
@@ -708,6 +725,9 @@ const vi: Record<Key, string> = {
   inviteDead: 'Liên kết mời này không còn dùng được',
   inviteDeadWhy: 'Liên kết đã hết hạn hoặc bị thu hồi. Hãy xin người tạo sổ một liên kết mới.',
   openBook: 'Mở sổ này',
+  linkExpired: 'Liên kết đã hết hạn. Hãy gửi lại bên dưới.',
+  linkOtherBrowser: 'Liên kết này phải mở trong trình duyệt đã yêu cầu email. Hãy sao chép địa chỉ và dán vào Safari hoặc Chrome, hoặc gửi lại bên dưới.',
+  linkFailed: 'Chưa đăng nhập được. Hãy thử lại bên dưới.',
 
   tabHome: 'Trang chính', tabBook: 'Sổ', tabGoods: 'Món đồ', tabSettle: 'Lịch sử chia',
   tabArchive: 'Lưu trữ', tabTeam: 'Nhóm', addExpense: '＋ Ghi chi tiêu',
