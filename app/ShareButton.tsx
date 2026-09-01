@@ -10,9 +10,11 @@ import type { Locale } from '../lib/domain/money.ts';
  *
  * 세 갈래로 시도한다. 앞의 것이 없으면 다음으로 내려간다.
  *
- *   1. 카카오 JS SDK — 키가 있으면 카카오톡 공유창이 바로 열린다. 어느 방에
- *      보낼지는 카카오톡이 묻는다. 우리는 방 목록을 알지 못하고 알 필요도 없다.
- *   2. 브라우저 공유 — 휴대폰에서는 이 목록에 카카오톡이 들어 있다.
+ *   1. 운영체제 공유 목록 — 폰에는 이게 있고, 그 안에 카카오톡이 있다.
+ *      앱 키도 도메인 등록도 필요 없어서 제일 안 깨진다.
+ *   2. 카카오 JS SDK — 공유 목록이 없는 자리(대개 PC)에서 쓴다. 카카오톡
+ *      공유창이 열리고, 어느 방에 보낼지는 카카오톡이 묻는다. 우리는 방
+ *      목록을 알지 못하고 알 필요도 없다.
  *   3. 복사 — 둘 다 없으면 글을 복사해 준다. 붙여 넣으면 그만이다.
  *
  * 어느 쪽이든 사람이 보내는 것이지 서버가 대신 보내지 않는다. 서버가 보내는
@@ -30,6 +32,18 @@ import type { Locale } from '../lib/domain/money.ts';
  */
 
 const JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+
+/**
+ * 보내는 주소는 **늘 이 사이트의 정식 주소**다.
+ *
+ * 지금 열려 있는 창의 주소를 쓰면 미리보기 배포(...vercel.app)나 개발용
+ * localhost 주소가 그대로 카카오톡에 실려 나간다. 받은 사람은 못 여는
+ * 주소를 받게 되고, 카카오도 등록되지 않은 도메인이라며 거절한다
+ * (에러 4019 — 개발자 콘솔에 등록한 사이트 도메인과 맞아야 한다).
+ *
+ * 그래서 우리가 적어 둔 값을 먼저 쓴다. 서버 쪽 lib/origin.ts 와 같은 규칙이다.
+ */
+const SITE = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, '');
 
 type Kakao = {
   isInitialized: () => boolean;
@@ -62,12 +76,13 @@ export default function ShareButton({
   const [done, setDone] = useState(false);
   const [ready, setReady] = useState(false);
 
-  const target = () =>
-    typeof window === 'undefined'
-      ? ''
-      : href
-        ? new URL(href, window.location.origin).toString()
-        : window.location.href;
+  const target = () => {
+    if (typeof window === 'undefined') return '';
+    const base = SITE || window.location.origin;
+    // 주소를 안 받았으면 지금 보고 있는 자리. 다만 도메인은 정식 주소로 바꾼다.
+    const path = href ?? window.location.pathname + window.location.search;
+    return new URL(path, base).toString();
+  };
 
   const body = () => (withLink ? `${text}\n\n${target()}` : text);
 
@@ -81,36 +96,58 @@ export default function ShareButton({
     }
   }
 
-  async function share() {
+  /**
+   * 손에 들고 쓰는 기기인가.
+   *
+   * 폰에는 운영체제가 주는 공유 목록이 있고, 그 안에 카카오톡이 들어 있다.
+   * 그 길은 **앱 키도 도메인 등록도 필요 없다.** 카카오 SDK 는 개발자
+   * 콘솔에 사이트 도메인이 등록되어 있어야 하고, 안 되어 있으면 sharer 가
+   * "잘못된 요청입니다" 한 장을 띄우고 끝난다 — 돌아올 길도 없다.
+   *
+   * 실제로 그 화면을 봤다. 그래서 순서를 뒤집는다. 폰에서는 운영체제에
+   * 먼저 맡기고, 그게 없는 자리(대개 PC)에서만 SDK 로 간다.
+   */
+  function handheld() {
+    return (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.share === 'function' &&
+      (navigator.maxTouchPoints ?? 0) > 0
+    );
+  }
+
+  async function osShare() {
+    if (typeof navigator.share !== 'function') return false;
+    try {
+      await navigator.share({ text: body() });
+      return true;
+    } catch {
+      // 사용자가 닫았거나 기기가 못 하겠다고 하면 다음 길로.
+      return false;
+    }
+  }
+
+  function kakaoShare() {
     const w = window as unknown as { Kakao?: Kakao };
-
-    if (JS_KEY && ready && w.Kakao) {
-      try {
-        if (!w.Kakao.isInitialized()) w.Kakao.init(JS_KEY);
-        // 본문에도 주소를 넣는다. 카드의 링크가 막혀도 이건 눌린다.
-        w.Kakao.Share.sendDefault({
-          objectType: 'text',
-          text: body(),
-          link: { webUrl: target(), mobileWebUrl: target() },
-          buttonTitle: T('openBook'),
-        });
-        onSent?.();
-        return;
-      } catch {
-        // 공유창이 안 열리면 아래로 내려간다.
-      }
+    if (!JS_KEY || !ready || !w.Kakao) return false;
+    try {
+      if (!w.Kakao.isInitialized()) w.Kakao.init(JS_KEY);
+      // 본문에도 주소를 넣는다. 카드의 링크가 막혀도 이건 눌린다.
+      w.Kakao.Share.sendDefault({
+        objectType: 'text',
+        text: body(),
+        link: { webUrl: target(), mobileWebUrl: target() },
+        buttonTitle: T('openBook'),
+      });
+      return true;
+    } catch {
+      return false;
     }
+  }
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: body() });
-        onSent?.();
-        return;
-      } catch {
-        // 사용자가 닫았거나 지원하지 않으면 복사로 내려간다.
-      }
-    }
-
+  async function share() {
+    if (handheld() && (await osShare())) return onSent?.();
+    if (kakaoShare()) return onSent?.();
+    if (await osShare()) return onSent?.();
     await copy();
     onSent?.();
   }

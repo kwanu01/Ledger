@@ -13,6 +13,7 @@ import {
   loadLedger,
   removeExpense,
   editExpense,
+  relabelExpense,
 } from '../../lib/db/repo.ts';
 import { currentRoster } from '../../lib/domain/settlement.ts';
 import { failed } from '../../lib/fail.ts';
@@ -214,6 +215,46 @@ export async function editExpenseLine(input: {
       amount: input.amount,
       payerId: input.payerId,
       allocation: input.allocation,
+      vendor: input.vendor?.trim() || undefined,
+      category: input.category?.trim() || undefined,
+      productLink: input.productLink?.trim() || undefined,
+      note: input.note?.trim() || undefined,
+    });
+
+    revalidatePath(`/l/${input.ledgerId}`, 'layout');
+    return { ok: true };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/**
+ * 이름표 고치기 (§12)
+ *
+ * 정산이 끝난 줄에도 **분류는 붙일 수 있어야 한다.** 한 학기가 끝나고
+ * 아카이브를 보면서 "이건 식비가 아니라 재료비였네" 하는 순간이 온다.
+ * 그때 장부가 굳어 있으면 남는 것은 틀린 기록이다.
+ *
+ * 고칠 수 있는 것은 계산에 들어가지 않는 것들뿐이다. 금액·날짜·결제자·부담
+ * 방식은 이 함수의 인자에 아예 없다. 확정된 정산의 숫자는 끝까지 그대로다.
+ */
+export async function relabelExpenseLine(input: {
+  ledgerId: string;
+  expenseId: string;
+  title: string;
+  vendor?: string;
+  category?: string;
+  productLink?: string;
+  note?: string;
+}): Promise<Result> {
+  try {
+    await requireLedgerAccess(input.ledgerId);
+    if (!input.title.trim()) return { ok: false, message: '항목 이름을 입력하세요.' };
+
+    await relabelExpense({
+      expenseId: input.expenseId,
+      ledgerId: input.ledgerId,
+      title: input.title.trim(),
       vendor: input.vendor?.trim() || undefined,
       category: input.category?.trim() || undefined,
       productLink: input.productLink?.trim() || undefined,

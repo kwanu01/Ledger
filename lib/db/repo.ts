@@ -144,6 +144,40 @@ export async function editExpense(args: {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * 이름표만 고친다 (§12)
+ *
+ * 정산이 끝난 뒤에도 고칠 수 있는 것들 — 항목 이름, 판매처, 분류, 메모,
+ * 구매 링크. 어느 것도 정산에 들어가지 않는다.
+ *
+ * 숫자에 닿는 칸(금액·날짜·결제자·부담 방식)은 여기에 아예 없다. 있는데
+ * 안 쓰는 것이 아니라 **없다.** 실수로 섞여 들어갈 자리를 만들지 않는 편이,
+ * 섞여 들어가지 않도록 조심하는 것보다 낫다. DB 에도 같은 규칙이 걸려 있다
+ * (0013_relabel_settled.sql).
+ */
+export async function relabelExpense(args: {
+  expenseId: string;
+  ledgerId: string;
+  title: string;
+  vendor?: string;
+  category?: string;
+  productLink?: string;
+  note?: string;
+}): Promise<void> {
+  const { error } = await db
+    .from('expenses')
+    .update({
+      title: args.title,
+      vendor: args.vendor ?? null,
+      category: args.category ?? null,
+      product_link: args.productLink ?? null,
+      note: args.note ?? null,
+    })
+    .eq('id', args.expenseId)
+    .eq('ledger_id', args.ledgerId);
+  if (error) throw new Error(error.message);
+}
+
 export async function insertAdjustment(args: {
   ledgerId: string;
   targetId: string;

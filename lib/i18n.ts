@@ -79,6 +79,8 @@ export type Key =
   | 'productLink' | 'noteField' | 'writeToBook' | 'giveUp' | 'perPerson'
   | 'photoReads' | 'photoReadsV' | 'photoKinds' | 'photoKindsV' | 'photoHow' | 'photoHowV'
   | 'photoShort' | 'photoSentTo2'
+  | 'closedMark'
+  | 'relabelEntry' | 'relabelOnly'
   | 'photoSentTo' | 'chargedIn' | 'paidIn' | 'foreignNote' | 'uploaded'
   // 팀
   | 'membersN' | 'me' | 'gone' | 'markGone' | 'bringBack'
@@ -129,15 +131,20 @@ const ko: Record<Key, string> = {
   leaveTeam: '팀에서 나가기',
   leaveWarn: '이 팀에서 내 이름이 지워집니다. 되돌릴 수 없습니다.',
   leaveForReal: '나가기',
-  deleteEntry: '이 줄 지우기',
-  deleteEntryWarn: '‘{title}’을(를) 지웁니다. 되돌릴 수 없습니다.',
+  deleteEntry: '내역 삭제',
+  deleteEntryWarn:
+    '‘{title}’ 한 줄이 장부에서 사라집니다. 전표 번호는 다시 매겨지고, 이 줄에 올린 영수증·품목 사진도 함께 지워집니다. 되돌릴 수 없습니다.',
   addReceiptHere: '영수증 사진 올리기',
   addItemPhotoHere: '산 물건 사진 올리기',
   noSettleNeeded: '정산 불필요',
   moreFields: '+ 판매처 · 분류 · 링크 · 메모',
-  editEntry: '이 줄 고치기',
+  editEntry: '내역 수정',
+  relabelEntry: '분류·메모 수정',
+  relabelOnly:
+    '정산이 끝난 줄이라 금액·날짜·결제자·부담 방식은 바꿀 수 없습니다. 확정된 정산의 숫자를 지키기 위해서입니다. 금액을 바로잡아야 한다면 보정 항목을 새로 적어 주세요.',
   saveEdit: '고친 대로 저장',
-  deleteSettledWarn: '‘{title}’을(를) 지우면 이 줄이 든 정산도 함께 취소됩니다. 나머지 지출은 미정산으로 돌아갑니다.',
+  deleteSettledWarn:
+    '‘{title}’은 이미 정산에 들어간 줄입니다. 지우면 그 정산 회차가 통째로 취소되고, 같은 회차의 다른 지출들은 전부 미정산으로 돌아갑니다. 확정됐던 송금 금액도 사라지므로 다시 정산해야 합니다. 되돌릴 수 없습니다.',
   allocSelf: '개인',
 
   tabHome: '홈', tabBook: '장부', tabGoods: '품목', tabSettle: '정산 내역',
@@ -155,6 +162,7 @@ const ko: Record<Key, string> = {
   colNo: '번호', colDate: '날짜', colItem: '항목', colPayer: '결제', colAmount: '금액',
   colBears: '부담', colState: '상태',
   doneStamp: '완료', settledStamp: '정산 완료', closing: '{label} 마감',
+  closedMark: '마감',
   eachBears: '각자 부담하는 금액', vendor: '판매처', category: '분류',
   splitBasis: '나눈 기준', basisMembers: '기입할 때의 팀원 {n}명',
   laterChanges: '이후 변동', actualAmount: '실제 금액 {amount}', memo: '메모',
@@ -210,7 +218,7 @@ const ko: Record<Key, string> = {
   yourTransfers: '내 송금',
   allSettled: '정산 완료', openN: '미정산 {n}건', close: '닫기',
   deleteBook: '이 장부 지우기', deleteWarn: '지출과 정산 기록이 모두 사라집니다. 되돌릴 수 없습니다.',
-  deleteForReal: '지웁니다', gotAll: '{n}건 전부 받았어요',
+  deleteForReal: '삭제합니다', gotAll: '{n}건 전부 받았어요',
   notLinked: '계정 연결 전', contact: '문의', privacy: '개인정보 처리방침', sendOneByOne: '한 사람씩 보내기', rename: '바꾸기',
   receipt: '영수증', itemPhoto: '품목 사진', addPhoto: '사진 올리기', replacePhoto: '사진 바꾸기', deletePhoto: '사진 지우기',
   reallyDelete: '정말 지웁니다', noReceipt: '영수증 없음', noPhoto: '사진 없음',
@@ -267,15 +275,20 @@ const en: Record<Key, string> = {
   leaveTeam: 'Leave this team',
   leaveWarn: 'Your name will be removed from this team. This cannot be undone.',
   leaveForReal: 'Leave',
-  deleteEntry: 'Delete this entry',
-  deleteEntryWarn: '“{title}” will be deleted. This cannot be undone.',
+  deleteEntry: 'Delete entry',
+  deleteEntryWarn:
+    '“{title}” disappears from the ledger. Slip numbers are renumbered, and any receipt or item photo on this line is deleted with it. This cannot be undone.',
   addReceiptHere: 'Add receipt photo',
   addItemPhotoHere: 'Add a photo of the item',
   noSettleNeeded: 'Nothing to settle',
   moreFields: '+ Vendor, category, link, memo',
-  editEntry: 'Edit this entry',
+  editEntry: 'Edit entry',
+  relabelEntry: 'Edit category & notes',
+  relabelOnly:
+    'This line is already settled, so amount, date, payer and split cannot change — that keeps the confirmed settlement honest. If the amount was wrong, record a correction instead.',
   saveEdit: 'Save changes',
-  deleteSettledWarn: 'Deleting “{title}” also cancels the settlement it belongs to. The other expenses go back to outstanding.',
+  deleteSettledWarn:
+    '“{title}” is already in a settlement. Deleting it cancels that whole round, and every other expense in it goes back to outstanding. The transfer amounts that were fixed there are gone, so you will have to settle again. This cannot be undone.',
   allocSelf: 'Personal',
 
   tabHome: 'Home', tabBook: 'Ledger', tabGoods: 'Items', tabSettle: 'Settlements',
@@ -293,6 +306,7 @@ const en: Record<Key, string> = {
   colNo: 'No.', colDate: 'Date', colItem: 'Item', colPayer: 'Paid by', colAmount: 'Amount',
   colBears: 'Split', colState: 'State',
   doneStamp: 'DONE', settledStamp: 'SETTLED', closing: '{label} closed',
+  closedMark: 'closed',
   eachBears: 'What each one bears', vendor: 'Vendor', category: 'Category',
   splitBasis: 'Split across', basisMembers: '{n} members at time of entry',
   laterChanges: 'Later changes', actualAmount: 'Actual {amount}', memo: 'Note',
@@ -349,7 +363,7 @@ const en: Record<Key, string> = {
   yourTransfers: 'yours',
   allSettled: 'settled', openN: '{n} open', close: 'Close',
   deleteBook: 'Delete this ledger', deleteWarn: 'Every expense and settlement goes with it. This cannot be undone.',
-  deleteForReal: 'Delete', gotAll: 'Received all {n}',
+  deleteForReal: 'Yes, delete', gotAll: 'Received all {n}',
   notLinked: 'not linked yet', contact: 'Contact', privacy: 'Privacy', sendOneByOne: 'Send one by one', rename: 'Rename',
   receipt: 'Receipt', itemPhoto: 'Item photo', addPhoto: 'Add a photo', replacePhoto: 'Replace photo', deletePhoto: 'Delete photo',
   reallyDelete: 'Delete for real', noReceipt: 'No receipt', noPhoto: 'No photo',
@@ -405,15 +419,20 @@ const ja: Record<Key, string> = {
   leaveTeam: 'チームから抜ける',
   leaveWarn: 'このチームから名前が消えます。元に戻せません。',
   leaveForReal: '抜ける',
-  deleteEntry: 'この行を削除',
-  deleteEntryWarn: '「{title}」を削除します。元に戻せません。',
+  deleteEntry: '記録を削除',
+  deleteEntryWarn:
+    '「{title}」の一行が帳簿から消えます。伝票番号は振り直され、この行に上げたレシート・品目の写真も一緒に削除されます。元に戻せません。',
   addReceiptHere: 'レシート写真を追加',
   addItemPhotoHere: '買ったものの写真を追加',
   noSettleNeeded: '精算不要',
   moreFields: '+ 販売元 · 分類 · リンク · メモ',
-  editEntry: 'この行を直す',
+  editEntry: '記録を直す',
+  relabelEntry: '分類・メモを直す',
+  relabelOnly:
+    '精算が終わった行なので、金額・日付・支払者・負担のしかたは変えられません。確定した精算の数字を守るためです。金額を直したい場合は補正項目を新しく記録してください。',
   saveEdit: '直した内容を保存',
-  deleteSettledWarn: '「{title}」を削除すると、この行が入っている精算も取り消されます。残りの支出は未精算に戻ります。',
+  deleteSettledWarn:
+    '「{title}」はすでに精算に入っている行です。削除するとその回の精算がまるごと取り消され、同じ回の他の支出はすべて未精算に戻ります。確定していた送金額も消えるので、精算をやり直すことになります。元に戻せません。',
   allocSelf: '個人',
 
   tabHome: 'ホーム', tabBook: '帳簿', tabGoods: '品目', tabSettle: '精算履歴',
@@ -431,6 +450,7 @@ const ja: Record<Key, string> = {
   colNo: '番号', colDate: '日付', colItem: '項目', colPayer: '支払', colAmount: '金額',
   colBears: '負担', colState: '状態',
   doneStamp: '完了', settledStamp: '精算完了', closing: '{label} 締め',
+  closedMark: '締め',
   eachBears: '各自の負担額', vendor: '販売元', category: '分類',
   splitBasis: '分けた基準', basisMembers: '記入時のメンバー{n}人',
   laterChanges: 'その後の変動', actualAmount: '実際の金額 {amount}', memo: 'メモ',
@@ -542,15 +562,20 @@ const zh: Record<Key, string> = {
   leaveTeam: '退出这个团队',
   leaveWarn: '你的名字会从这个团队中移除，无法撤销。',
   leaveForReal: '退出',
-  deleteEntry: '删除这一行',
-  deleteEntryWarn: '将删除“{title}”，无法撤销。',
+  deleteEntry: '删除记录',
+  deleteEntryWarn:
+    '“{title}”这一行将从账本中消失。传票号会重新排列，这一行上传的小票和物品照片也会一并删除。无法撤销。',
   addReceiptHere: '上传收据照片',
   addItemPhotoHere: '上传物品照片',
   noSettleNeeded: '无需结算',
   moreFields: '+ 商家 · 分类 · 链接 · 备注',
-  editEntry: '修改这一行',
+  editEntry: '修改记录',
+  relabelEntry: '修改分类和备注',
+  relabelOnly:
+    '这一行已结算，金额、日期、付款人和分摊方式不能更改，以保住已确定的结算数字。金额有误请另记一笔更正。',
   saveEdit: '保存修改',
-  deleteSettledWarn: '删除“{title}”会同时取消它所在的结算，其余支出将回到未结算。',
+  deleteSettledWarn:
+    '“{title}”已经进入结算。删除它会整轮取消该次结算，同一轮的其他支出全部回到未结算。已确定的转账金额也会消失，需要重新结算。无法撤销。',
   allocSelf: '个人',
 
   tabHome: '首页', tabBook: '账本', tabGoods: '品项', tabSettle: '结算记录',
@@ -568,6 +593,7 @@ const zh: Record<Key, string> = {
   colNo: '编号', colDate: '日期', colItem: '项目', colPayer: '付款', colAmount: '金额',
   colBears: '分担', colState: '状态',
   doneStamp: '完成', settledStamp: '已结算', closing: '{label} 结账',
+  closedMark: '已结账',
   eachBears: '各自分担金额', vendor: '商家', category: '分类',
   splitBasis: '分摊依据', basisMembers: '记录时的成员 {n}人',
   laterChanges: '后续变动', actualAmount: '实际金额 {amount}', memo: '备注',
@@ -682,15 +708,20 @@ const es: Record<Key, string> = {
   leaveTeam: 'Salir del equipo',
   leaveWarn: 'Tu nombre se borrará de este equipo. No se puede deshacer.',
   leaveForReal: 'Salir',
-  deleteEntry: 'Borrar esta línea',
-  deleteEntryWarn: 'Se borrará «{title}». No se puede deshacer.',
+  deleteEntry: 'Borrar apunte',
+  deleteEntryWarn:
+    '«{title}» desaparece del libro. Los números de apunte se renumeran y las fotos de recibo y del artículo de esta línea se borran con ella. No se puede deshacer.',
   addReceiptHere: 'Subir foto del recibo',
   addItemPhotoHere: 'Subir foto del artículo',
   noSettleNeeded: 'Nada que ajustar',
   moreFields: '+ Vendedor, categoría, enlace, nota',
-  editEntry: 'Editar esta línea',
+  editEntry: 'Editar apunte',
+  relabelEntry: 'Editar categoría y notas',
+  relabelOnly:
+    'Esta línea ya está liquidada, así que el importe, la fecha, quién pagó y el reparto no se pueden cambiar: así la liquidación confirmada sigue siendo cierta. Si el importe estaba mal, anota una corrección.',
   saveEdit: 'Guardar cambios',
-  deleteSettledWarn: 'Borrar «{title}» también cancela el ajuste al que pertenece. Los demás gastos vuelven a pendientes.',
+  deleteSettledWarn:
+    '«{title}» ya está en una liquidación. Borrarlo cancela esa ronda entera y todos los demás gastos vuelven a pendientes. Los envíos que se habían fijado desaparecen, así que habrá que liquidar de nuevo. No se puede deshacer.',
   allocSelf: 'Personal',
 
   tabHome: 'Inicio', tabBook: 'Libro', tabGoods: 'Artículos', tabSettle: 'Liquidaciones',
@@ -708,6 +739,7 @@ const es: Record<Key, string> = {
   colNo: 'N.º', colDate: 'Fecha', colItem: 'Concepto', colPayer: 'Pagó', colAmount: 'Importe',
   colBears: 'Reparto', colState: 'Estado',
   doneStamp: 'HECHO', settledStamp: 'LIQUIDADO', closing: '{label} cerrado',
+  closedMark: 'cerrado',
   eachBears: 'Lo que asume cada uno', vendor: 'Comercio', category: 'Categoría',
   splitBasis: 'Repartido entre', basisMembers: '{n} integrantes al anotarlo',
   laterChanges: 'Cambios posteriores', actualAmount: 'Importe real {amount}', memo: 'Nota',
@@ -822,15 +854,20 @@ const vi: Record<Key, string> = {
   leaveTeam: 'Rời nhóm',
   leaveWarn: 'Tên bạn sẽ bị xóa khỏi nhóm này. Không thể hoàn tác.',
   leaveForReal: 'Rời',
-  deleteEntry: 'Xóa dòng này',
-  deleteEntryWarn: 'Sẽ xóa “{title}”. Không thể hoàn tác.',
+  deleteEntry: 'Xóa ghi chép',
+  deleteEntryWarn:
+    '“{title}” sẽ biến mất khỏi sổ. Số phiếu được đánh lại, ảnh hóa đơn và ảnh món đồ trên dòng này cũng bị xóa theo. Không thể hoàn tác.',
   addReceiptHere: 'Thêm ảnh hóa đơn',
   addItemPhotoHere: 'Thêm ảnh món đồ',
   noSettleNeeded: 'Không cần chia',
   moreFields: '+ Nơi bán · phân loại · liên kết · ghi chú',
-  editEntry: 'Sửa dòng này',
+  editEntry: 'Sửa ghi chép',
+  relabelEntry: 'Sửa phân loại & ghi chú',
+  relabelOnly:
+    'Dòng này đã chia tiền xong nên không đổi được số tiền, ngày, người trả và cách chia — để giữ đúng con số đã chốt. Nếu số tiền sai, hãy ghi một khoản điều chỉnh mới.',
   saveEdit: 'Lưu thay đổi',
-  deleteSettledWarn: 'Xóa “{title}” sẽ hủy luôn đợt chia tiền chứa dòng này. Các khoản còn lại trở về chưa chia.',
+  deleteSettledWarn:
+    '“{title}” đã nằm trong một đợt chia tiền. Xóa nó sẽ hủy cả đợt đó, mọi khoản khác trong đợt quay lại chưa chia. Số tiền chuyển đã chốt cũng mất, nên phải chia lại. Không thể hoàn tác.',
   allocSelf: 'Cá nhân',
 
   tabHome: 'Trang chính', tabBook: 'Sổ', tabGoods: 'Món đồ', tabSettle: 'Lịch sử chia',
@@ -848,6 +885,7 @@ const vi: Record<Key, string> = {
   colNo: 'Số', colDate: 'Ngày', colItem: 'Khoản', colPayer: 'Người trả', colAmount: 'Số tiền',
   colBears: 'Chia', colState: 'Trạng thái',
   doneStamp: 'XONG', settledStamp: 'ĐÃ CHIA', closing: 'Chốt {label}',
+  closedMark: 'đã chốt',
   eachBears: 'Phần mỗi người chịu', vendor: 'Nơi bán', category: 'Phân loại',
   splitBasis: 'Chia theo', basisMembers: '{n} thành viên lúc ghi',
   laterChanges: 'Thay đổi sau đó', actualAmount: 'Số tiền thực {amount}', memo: 'Ghi chú',

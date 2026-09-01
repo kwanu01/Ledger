@@ -567,11 +567,25 @@ table.balances tr.checksum td{
   color:var(--ink-3);font-size:12.5px;background:var(--hl)}
 
 /* ── 디더링 사진 ─────────────────────────────────────────────────── */
-/* 점으로 찍힌 그림이 기본. 마우스를 올리면 원본이 그 자리에 뜬다. */
+/* 점으로 찍힌 그림이 기본. 마우스를 올리면 원본이 그 자리에 뜬다.
+ *
+ * 사진의 모양은 **찍은 그대로** 둔다 (§7)
+ *
+ * 처음에는 자리를 4:3으로 고정하고 사진을 그 안에 꽉 채웠다(cover). 격자에
+ * 늘어놓았을 때 줄이 맞아서 보기 좋았다. 그런데 영수증은 대부분 세로로 길다.
+ * 세로 사진을 가로 칸에 꽉 채우면 **위아래가 잘린다** — 잘리는 자리가 하필
+ * 가게 이름과 합계다. 장부에 남긴 영수증에서 합계가 안 보이면 남긴 이유가
+ * 없어진다.
+ *
+ * 그래서 칸이 사진에 맞춘다. 줄은 조금 어긋나지만, 어긋난 줄은 눈에 거슬릴
+ * 뿐이고 잘린 합계는 기록을 못 쓰게 만든다. */
 .dither{position:relative;display:block;border:1px solid var(--rule);
-  aspect-ratio:4/3;overflow:hidden;background:var(--paper)}
-.dither canvas,.dither img{
-  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  overflow:hidden;background:var(--paper);line-height:0}
+/* 점그림이 칸의 크기를 정한다. 그릴 때 원본 비율 그대로 잡아 둔 것이다
+   (app/Dithered.tsx). 원본 사진은 그 위에 겹쳐 두고 같은 비율로 덮는다. */
+.dither canvas{display:block;width:100%;height:auto}
+.dither img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
 .dither canvas{image-rendering:pixelated;opacity:0;transition:opacity .12s}
 .dither.on canvas{opacity:1}
 .dither img{opacity:0;transition:opacity .12s}
@@ -954,8 +968,12 @@ footer a:hover{color:var(--ink)}
   gap:26px 30px;justify-content:center;margin-top:20px}
 .photoslot{display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center}
 .photoslot .caption{color:var(--ink-2)}
+/* 방금 찍은 사진의 미리보기. 여기서도 자르지 않는다 — 무엇을 남기는지
+   보고 정하는 자리인데 잘린 것을 보여 주면 보고 정할 수가 없다.
+   세로로 아주 긴 영수증만 높이를 한 번 눌러 준다. 화면을 다 먹으면
+   그 아래 칸들이 있다는 것을 모른 채 지나간다. */
 .photoslot-img{
-  display:block;width:100%;aspect-ratio:4/3;object-fit:cover;
+  display:block;width:auto;max-width:100%;max-height:320px;
   border:1px solid var(--rule);background:var(--hl)}
 /* 빈 자리가 곧 단추다. imgfield 안이 아니어도 같은 생김새를 쓴다. */
 .photoslot .empty-plate{
@@ -991,6 +1009,9 @@ footer a:hover{color:var(--ink)}
 .shot{
   appearance:none;background:none;border:0;padding:0;margin:0;
   display:block;line-height:0;flex:none;width:106px;cursor:zoom-in}
+/* 점을 못 찍었을 때(형식을 못 읽거나 불러오기에 실패했을 때)는 원본을 그대로
+   보여 준다. 그때도 칸을 넘지 않게, 그리고 모양은 그대로. */
+.shot > img{display:block;width:100%;height:auto;border:1px solid var(--rule)}
 .shot-label{
   display:block;padding:3px 5px;border:1px solid var(--rule);border-top:0;
   font-size:11px;line-height:1.3;color:var(--ink-3);text-align:left;white-space:nowrap}

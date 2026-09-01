@@ -2,7 +2,7 @@ import { getLang } from '../../../../lib/lang.ts';
 import LedgerShell from '../LedgerShell.tsx';
 import AdSlot from '../../../AdSlot.tsx';
 import { requireLedgerAccess } from '../../../../lib/access.ts';
-import { loadLedger } from '../../../../lib/db/repo.ts';
+import { loadLedger, openTransfers } from '../../../../lib/db/repo.ts';
 import { summarizeLedger } from '../../../../lib/domain/settlement.ts';
 import { formatMoney } from '../../../../lib/domain/money.ts';
 import { translator } from '../../../../lib/i18n.ts';
@@ -17,7 +17,7 @@ export default async function Archive({ params }: { params: Promise<{ ledgerId: 
   const { ledgerId } = await params;
   const pass = await requireLedgerAccess(ledgerId);
   const lang = await getLang();
-  const ledger = await loadLedger(ledgerId);
+  const [ledger, open] = await Promise.all([loadLedger(ledgerId), openTransfers(ledgerId)]);
   const currency = ledger.currency ?? 'KRW';
   const cash = (n: number) => formatMoney(n, currency, lang);
   const T = translator(lang);
@@ -40,7 +40,20 @@ export default async function Archive({ params }: { params: Promise<{ ledgerId: 
   const sorted = [...cat.entries()].sort((a, b) => b[1] - a[1]);
   const peak = sorted.length ? sorted[0][1] : 1;
 
-  const closed = s.unsettledAmount === 0 && ledger.settlements.length > 0;
+  /*
+   * 이 장부에 큰 도장을 찍을 것인가.
+   *
+   * 조건이 둘이었다 — 미정산 지출이 없고, 정산을 한 번이라도 했을 것.
+   * 그런데 그 둘이 다 맞아도 **돈은 아직 안 갔을 수 있다.** 정산은 숫자를
+   * 확정하는 일이고, 송금은 그 뒤에 사람이 하는 일이다.
+   *
+   * 아카이브는 이 장부의 마지막 장이다. 여기 찍힌 도장은 "이 팀의 돈 문제가
+   * 끝났다"로 읽힌다. 아직 받을 돈이 남은 사람이 이 화면을 보고 끝났다고
+   * 믿으면, 그 사람은 못 받는다. 그래서 셋째 조건을 더한다 — 남은 송금이
+   * 하나도 없을 것.
+   */
+  const closed =
+    s.unsettledAmount === 0 && ledger.settlements.length > 0 && open.length === 0;
   const last = ledger.settlements[ledger.settlements.length - 1];
 
   return (

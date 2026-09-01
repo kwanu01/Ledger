@@ -24,6 +24,7 @@ import { useHelper } from '../../../helper/HelperContext.tsx';
 import ImageField from '../../../ImageField.tsx';
 import DeleteExpense from './DeleteExpense.tsx';
 import EditExpense from './EditExpense.tsx';
+import Relabel from './Relabel.tsx';
 
 /**
  * 장부 (§21.3)
@@ -34,7 +35,22 @@ import EditExpense from './EditExpense.tsx';
 
 type SortKey = 'date' | 'amount';
 
-export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Locale }) {
+export default function BookTable({
+  ledger,
+  lang,
+  openSeqs = [],
+}: {
+  ledger: Ledger;
+  lang: Locale;
+  /**
+   * 아직 확인되지 않은 송금이 남아 있는 정산 회차.
+   *
+   * 도장은 "숫자를 확정했다"가 아니라 **"돈이 다 오갔다"**는 표시다.
+   * 확정과 송금 완료는 다른 사실이고, 장부에 다른 사실을 같은 표시로
+   * 적으면 그 장부는 못 믿는 물건이 된다.
+   */
+  openSeqs?: number[];
+}) {
   const router = useRouter();
   // 경고는 도우미 말풍선 한 자리로 모인다(app/helper).
   const { say } = useHelper();
@@ -80,6 +96,17 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
   const closings = chronological
     ? [...ledger.settlements].sort((a, b) => (a.date < b.date ? -1 : 1))
     : [];
+
+  /* 지출 한 줄이 어느 회차에 들어갔는지. 그 회차의 송금이 다 끝났을 때만
+     그 줄에 도장이 찍힌다. */
+  const seqOf = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const st of ledger.settlements) {
+      for (const id of st.snapshot.expenseIds) m.set(id, st.seq);
+    }
+    return m;
+  }, [ledger]);
+  const waiting = (seq: number | undefined) => seq !== undefined && openSeqs.includes(seq);
 
   const pickable = list.filter((e) => !settled.has(e.id)).map((e) => e.id);
 
@@ -167,13 +194,21 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
           <b>{T('closing', { label: s.label })}</b>
           <span className="close-sum">
             <span className="num total">{cash(s.snapshot.totalAmount)}</span>
-            <span
-              className="mark sm"
-              aria-hidden="true"
-              style={{ transform: `rotate(${-11 + ((s.seq * 7) % 9)}deg)` }}
-            >
-              <span className="big">{T('settledStamp')}</span>
-            </span>
+            {/* 구획이 닫힌 것과 돈이 다 오간 것은 다른 사실이다.
+                송금이 남아 있으면 도장 대신 몇 건이 남았는지 적는다. */}
+            {openSeqs.includes(s.seq) ? (
+              <span className="waiting">
+                {T('waitingN', { n: s.snapshot.transfers.length })}
+              </span>
+            ) : (
+              <span
+                className="mark sm"
+                aria-hidden="true"
+                style={{ transform: `rotate(${-11 + ((s.seq * 7) % 9)}deg)` }}
+              >
+                <span className="big">{T('settledStamp')}</span>
+              </span>
+            )}
           </span>
         </div>
       </td>
@@ -222,7 +257,12 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
         <td className="muted bears">{allocationLabel(e, ledger.members, lang)}</td>
         <td className="state">
           {nothingToSettle && <span className="muted">{T('noSettleNeeded')}</span>}
-          {done && (
+          {/* 정산에 들어갔지만 아직 송금이 안 끝난 줄. 닫힌 것은 맞으므로
+              그렇게만 적고, 도장은 돈이 다 오간 뒤에 찍는다. */}
+          {done && waiting(seqOf.get(e.id)) && (
+            <span className="muted">{T('closedMark')}</span>
+          )}
+          {done && !waiting(seqOf.get(e.id)) && (
             <span
               className="done-mark"
               style={
@@ -362,16 +402,26 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
 
               {/* 고치는 자리는 이 줄 안에서 열린다. 어느 줄을 고치는 중인지
                   눈에서 놓치지 않고, 고치면 바로 그 줄이 바뀌는 것이 보인다. */}
-              {editing === e.id && (
-                <EditExpense
-                  ledgerId={ledger.id}
-                  expense={e}
-                  members={ledger.members}
-                  currency={ledger.currency ?? 'KRW'}
-                  lang={lang}
-                  onDone={() => setEditing(null)}
-                />
-              )}
+              {editing === e.id &&
+                (done ? (
+                  /* 정산이 끝난 줄에서는 이름표만 고친다. 분류를 나중에
+                     바로잡는 일은 흔하고, 그건 계산과 아무 상관이 없다. */
+                  <Relabel
+                    ledgerId={ledger.id}
+                    expense={e}
+                    lang={lang}
+                    onDone={() => setEditing(null)}
+                  />
+                ) : (
+                  <EditExpense
+                    ledgerId={ledger.id}
+                    expense={e}
+                    members={ledger.members}
+                    currency={ledger.currency ?? 'KRW'}
+                    lang={lang}
+                    onDone={() => setEditing(null)}
+                  />
+                ))}
 
               <div className="row" style={{ marginTop: 18, gap: 20 }}>
                 {e.productLink && (
@@ -380,11 +430,21 @@ export default function BookTable({ ledger, lang }: { ledger: Ledger; lang: Loca
                   </a>
                 )}
 
-                {/* 정산에 들어간 줄은 고치지 않는다. 확정된 숫자를 건드리지
-                    않으려고 보정 항목이 따로 있다. */}
-                {!done && editing !== e.id && (
+                {/*
+                  고치는 자리.
+
+                  정산 전에는 다 고친다. 정산 뒤에는 **이름표만** 고친다 —
+                  항목 이름, 판매처, 분류, 메모. 금액과 날짜와 결제자와 부담
+                  방식은 확정된 정산의 근거라서 건드리지 않는다. 그걸 바로잡는
+                  길은 보정 항목이 따로 맡는다.
+
+                  분류를 나중에 고치는 일은 흔하다. 학기가 끝나고 아카이브를
+                  보면서 "이건 식비가 아니라 재료비였네" 하는 순간이 온다.
+                  그때 장부가 굳어 있으면 남는 것은 틀린 기록이다.
+                */}
+                {editing !== e.id && (
                   <button className="plain" onClick={() => setEditing(e.id)}>
-                    {T('editEntry')}
+                    {T(done ? 'relabelEntry' : 'editEntry')}
                   </button>
                 )}
 
