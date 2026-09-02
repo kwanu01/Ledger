@@ -517,7 +517,20 @@ export default function BookTable({
                 */}
                 {editing !== e.id && (
                   <button className="plain" onClick={() => setEditing(e.id)}>
-                    {T(done ? 'relabelEntry' : 'editEntry')}
+                    {/*
+                      정산에 들어간 줄이든 아니든 **같은 말**이다.
+
+                      전에는 정산된 줄에만 '카테고리·메모 수정'이라고 달리
+                      적었다. 무엇이 고쳐지는지 미리 알려 주려던 것인데,
+                      한 표 안에서 같은 자리의 단추가 줄마다 다른 말을 하니
+                      두 가지 기능이 있는 것처럼 보였다. 실제로는 하나다 —
+                      그 줄을 고치는 자리다.
+
+                      무엇을 못 고치는지는 열고 나서 첫 줄이 말한다
+                      (Relabel.tsx 의 relabelOnly). 고치려다 없는 것을 찾는
+                      것보다, 열자마자 아는 편이 낫다.
+                    */}
+                    {T('editEntry')}
                   </button>
                 )}
 

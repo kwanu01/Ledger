@@ -80,7 +80,7 @@ export type Key =
   | 'photoReads' | 'photoReadsV' | 'photoKinds' | 'photoKindsV' | 'photoHow' | 'photoHowV'
   | 'photoShort' | 'photoSentTo2'
   | 'closedMark'
-  | 'relabelEntry' | 'relabelOnly'
+  | 'relabelOnly'
   | 'ownerTag' | 'handOver' | 'handOverWarn' | 'handOverDo' | 'goneWarn' | 'goneDo' | 'myBooks' | 'joinedBooks' | 'makeBook' | 'bookNamePlaceholder' | 'rateOn' | 'rateSays' | 'useRate' | 'helperWhat' | 'helperChat' | 'helperAskOpen' | 'settleAll' | 'dropSelected' | 'dropSelectedWarn' | 'droppedN' | 'confirmFor' | 'confirmForWarn' | 'waitedDays' | 'saysSentDays'
   | 'photoSentTo' | 'chargedIn' | 'paidIn' | 'foreignNote' | 'uploaded'
   // 팀
@@ -144,7 +144,6 @@ const ko: Record<Key, string> = {
   noSettleNeeded: '정산 불필요',
   moreFields: '+ 판매처 · 분류 · 링크 · 메모',
   editEntry: '내역 수정',
-  relabelEntry: '카테고리·메모 수정',
   relabelOnly:
     '정산이 끝난 줄이라 금액·날짜·결제자·부담 방식은 바꿀 수 없습니다. 확정된 정산의 숫자를 지키기 위해서입니다. 금액을 바로잡아야 한다면 보정 항목을 새로 적어 주세요.',
   saveEdit: '고친 대로 저장',
@@ -327,7 +326,6 @@ const en: Record<Key, string> = {
   noSettleNeeded: 'Nothing to settle',
   moreFields: '+ Vendor, category, link, memo',
   editEntry: 'Edit entry',
-  relabelEntry: 'Edit category & notes',
   relabelOnly:
     'This line is already settled, so amount, date, payer and split cannot change — that keeps the confirmed settlement honest. If the amount was wrong, record a correction instead.',
   saveEdit: 'Save changes',
@@ -510,7 +508,6 @@ const ja: Record<Key, string> = {
   noSettleNeeded: '精算不要',
   moreFields: '+ 販売元 · 分類 · リンク · メモ',
   editEntry: '記録を直す',
-  relabelEntry: '分類・メモを直す',
   relabelOnly:
     '精算が終わった行なので、金額・日付・支払者・負担のしかたは変えられません。確定した精算の数字を守るためです。金額を直したい場合は補正項目を新しく記録してください。',
   saveEdit: '直した内容を保存',
@@ -692,7 +689,6 @@ const zh: Record<Key, string> = {
   noSettleNeeded: '无需结算',
   moreFields: '+ 商家 · 分类 · 链接 · 备注',
   editEntry: '修改记录',
-  relabelEntry: '修改分类和备注',
   relabelOnly:
     '这一行已结算，金额、日期、付款人和分摊方式不能更改，以保住已确定的结算数字。金额有误请另记一笔更正。',
   saveEdit: '保存修改',
@@ -877,7 +873,6 @@ const es: Record<Key, string> = {
   noSettleNeeded: 'Nada que ajustar',
   moreFields: '+ Vendedor, categoría, enlace, nota',
   editEntry: 'Editar apunte',
-  relabelEntry: 'Editar categoría y notas',
   relabelOnly:
     'Esta línea ya está liquidada, así que el importe, la fecha, quién pagó y el reparto no se pueden cambiar: así la liquidación confirmada sigue siendo cierta. Si el importe estaba mal, anota una corrección.',
   saveEdit: 'Guardar cambios',
@@ -1062,7 +1057,6 @@ const vi: Record<Key, string> = {
   noSettleNeeded: 'Không cần chia',
   moreFields: '+ Nơi bán · phân loại · liên kết · ghi chú',
   editEntry: 'Sửa ghi chép',
-  relabelEntry: 'Sửa phân loại & ghi chú',
   relabelOnly:
     'Dòng này đã chia tiền xong nên không đổi được số tiền, ngày, người trả và cách chia — để giữ đúng con số đã chốt. Nếu số tiền sai, hãy ghi một khoản điều chỉnh mới.',
   saveEdit: 'Lưu thay đổi',
