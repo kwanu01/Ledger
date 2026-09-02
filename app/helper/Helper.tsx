@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { usePathname } from 'next/navigation';
 import { useHelperLine } from './HelperContext.tsx';
 import AskPanel from './AskPanel.tsx';
+import type { Turn } from '../../lib/ai/ask.ts';
 import { translator, type Key } from '../../lib/i18n.ts';
 import type { Locale } from '../../lib/domain/money.ts';
 
@@ -362,6 +363,18 @@ export default function Helper({ lang }: { lang: Locale }) {
   const [menu, setMenu] = useState(false);
   const [open, setOpen] = useState(false);
   const [asking, setAsking] = useState(false);
+  /*
+   * 오간 말 (§21.10)
+   *
+   * 창이 아니라 여기에 둔다. 창은 닫으면 사라지는 것이라, 창 안에 두면 닫는
+   * 순간 대화도 같이 지워졌다 — 잘못 눌러 닫은 사람은 물어본 것을 다 잃었다.
+   * 수증이는 화면이 바뀌어도 서 있으므로, 대화도 그동안 남는다.
+   *
+   * 장부를 옮기면 지운다. 다른 장부의 숫자에 대한 문답이 새 장부의 문맥으로
+   * 딸려 들어가면, 사람이 헷갈리기 전에 대답부터 헷갈린다.
+   */
+  const [chat, setChat] = useState<Turn[]>([]);
+  const lastBook = useRef<string | null>(null);
   const [tip, setTip] = useState<Key | null>(null);
   /** 안내는 한 번에 한 줄씩. 지금 몇 번째 줄인가. -1이면 쉬는 참. */
   const [tipAt, setTipAt] = useState(-1);
@@ -596,6 +609,14 @@ export default function Helper({ lang }: { lang: Locale }) {
     setTipAt(0);
     setOpen((was) => (menuRef.current ? was : false));
   }, [path, play]);
+
+  /* 장부가 바뀌면 오간 말을 비운다. 같은 장부 안에서 탭만 옮긴 것은 그대로 둔다. */
+  useEffect(() => {
+    if (lastBook.current === ledgerId) return;
+    const first = lastBook.current === null;
+    lastBook.current = ledgerId;
+    if (!first) setChat([]);
+  }, [ledgerId]);
 
   /**
    * 할 말.
@@ -903,8 +924,10 @@ export default function Helper({ lang }: { lang: Locale }) {
                 로그인하지 않은 사람도 여는 자리라서, 실을 것이 있으면 그것부터
                 새어 나간다.
               */}
+              {/* 하던 얘기가 있으면 그렇게 말한다. 창을 닫아도 남아 있다는 것을
+                  여기서 알려 주지 않으면, 남아 있는 줄을 아무도 모른다. */}
               <button className="plain" onClick={() => { setAsking(true); setOpen(false); }}>
-                {T(ledgerId ? 'helperAsk' : 'helperAskOpen')}
+                {T(chat.length ? 'helperAskMore' : ledgerId ? 'helperAsk' : 'helperAskOpen')}
               </button>
 
               {/*
@@ -962,6 +985,8 @@ export default function Helper({ lang }: { lang: Locale }) {
         <AskPanel
           ledgerId={ledgerId ?? undefined}
           lang={lang}
+          history={chat}
+          onHistory={(next) => setChat(next)}
           onClose={() => { setAsking(false); play('stand', 'nod', 620); }}
           onBusy={(state) => {
             lastSeen.current = Date.now();

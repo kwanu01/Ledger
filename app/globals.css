@@ -1359,21 +1359,40 @@ a.mail-addr:hover{text-decoration-color:var(--ink)}
    뒤의 장부는 가라앉히고, 지금 할 일이 하나임을 분명히 한다.
 */
 .ask-over{
-  position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);
+  position:fixed;inset:0;
+  z-index:200;background:rgba(0,0,0,.55);
   display:flex;align-items:flex-start;justify-content:center;
-  padding:14vh 20px 20px;animation:bubble-in .16s ease-out}
+  padding:10vh 20px 20px;animation:bubble-in .16s ease-out}
 .ask-panel{
-  width:100%;max-width:620px;background:var(--paper);color:var(--ink);
+  width:100%;max-width:620px;max-height:100%;min-height:0;
+  background:var(--paper);color:var(--ink);
   border:1px solid var(--rule-hard);box-shadow:5px 5px 0 rgba(0,0,0,.28);
-  padding:18px;cursor:default;display:flex;flex-direction:column;gap:14px}
+  padding:14px 18px 18px;cursor:default;display:flex;flex-direction:column;gap:12px}
+/* 누구와 말하는 중인지, 그리고 나가는 문. 바깥을 눌러도 닫히지만 폰에는
+   바깥이 없다 — 창이 화면을 다 덮으므로 닫는 자리가 보여야 한다. */
+.ask-head{
+  flex:none;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--rule-2);padding-bottom:10px}
+.ask-who{
+  margin-right:auto;font-size:12.5px;letter-spacing:.06em;color:var(--ink-2)}
+.ask-wipe{font-size:12.5px}
+.ask-x{
+  appearance:none;background:none;border:0;padding:8px;margin:-8px -8px -8px 0;
+  color:var(--ink-2);cursor:pointer;line-height:0;
+  transition:color .16s ease,transform .22s cubic-bezier(.19,1,.22,1)}
+.ask-x:hover{color:var(--ink);transform:rotate(90deg)}
+.ask-x:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 .ask-line{
   width:100%;font:inherit;font-size:19px;padding:12px 14px;
   border:1px solid var(--rule-hard);background:var(--field);color:var(--ink)}
 .ask-line::placeholder{color:var(--ink-3)}
 .ask-log{
-  max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;
+  flex:1 1 auto;min-height:96px;max-height:46vh;overflow-y:auto;
+  display:flex;flex-direction:column;gap:14px;
   border-bottom:1px solid var(--rule-2);padding-bottom:16px;
   font-size:14.5px;line-height:1.62}
+/* 아직 아무것도 안 물었을 때. 빈 칸만 있으면 무엇을 물어도 되는지 알 수 없다. */
+.ask-empty{margin:0;font-size:13.5px}
 /* 물은 말은 들여쓰고, 대답은 왼쪽에 붙는다. 장부의 문답도 결국 두 사람의 말이다. */
 .ask-log .asked{
   color:var(--ink-2);padding-left:16px;border-left:2px solid var(--rule);
@@ -1853,24 +1872,30 @@ a.mail-addr:hover{text-decoration-color:var(--ink)}
   .helper-say{max-width:calc(100vw - 150px);font-size:12.5px}
   .helper-bubble{max-width:calc(100vw - 60px)}
   /*
-    묻는 창 — 폰에서는 아래에서 올라오는 판으로 둔다.
+    묻는 창 — 폰에서는 화면을 다 쓴다.
 
-    가운데 띄우는 창은 자판이 올라오는 순간 무너진다. 화면의 절반이 자판에
-    덮이고, 창은 그 아래에 반쯤 잠긴 채 남는다. 묻는 칸이 안 보이면 물을 수가
-    없다.
+    반쯤 걸친 판으로 두었더니 두 가지가 어긋났다. 뒤의 장부가 계속 보이니
+    지금 하는 일이 하나로 안 읽혔고, 자판이 올라오면 남는 자리가 손바닥만
+    해져서 오간 말이 두 줄쯤만 보였다. 대화는 앞에 한 말을 보면서 하는 것이다.
 
-    아래에 붙여 두면 자판이 올라와도 묻는 칸이 자판 바로 위에 남는다. 오간
-    말은 그 위로 쌓이고, 넘치면 그 안에서 구른다. 화면 높이는 100dvh 로 잡는다
-    — 주소창이 접혔다 펴져도 값이 따라 움직이는 단위다.
+    그래서 창이 화면 전체다. 위에 이름과 닫는 문, 가운데에 오간 말, 아래에
+    묻는 칸.
+
+    높이는 dvh 가 아니라 visualViewport 로 잡는다. dvh 는 주소창이 접히는
+    것까지는 세지만 **자판은 안 센다.** 묻는 칸을 누르면 자판이 화면의 절반을
+    먹는데, dvh 로 잡은 창은 그대로 있으니 아래쪽 — 하필 묻는 칸 — 이 자판
+    밑으로 들어갔다. 자판까지 세는 자는 visualViewport 뿐이라 그 값을 받아
+    쓴다(app/helper/AskPanel.tsx). 못 받으면 100dvh 로 돈다.
   */
   .ask-over{
-    padding:0;align-items:flex-end;
+    padding:0;align-items:stretch;
+    top:var(--vv-top,0px);bottom:auto;height:var(--vv-h,100dvh);
     animation:sheet-up .2s cubic-bezier(.2,.8,.3,1)}
   .ask-panel{
-    max-width:none;border-left:0;border-right:0;border-bottom:0;box-shadow:none;
-    padding:14px 16px calc(14px + env(safe-area-inset-bottom));
-    max-height:88dvh;gap:12px}
-  .ask-log{max-height:none;flex:1;min-height:0}
+    max-width:none;max-height:none;height:100%;
+    border:0;box-shadow:none;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));gap:10px}
+  .ask-log{max-height:none;min-height:0;flex:1 1 auto}
   .ask-line{font-size:16px;padding:11px 12px}
   .ask-foot .act{padding-left:16px;padding-right:16px}
   /* 자판이 올라오면 힌트 한 줄이 자리를 다툰다. 없어도 되는 줄이다. */

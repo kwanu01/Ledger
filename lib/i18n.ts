@@ -102,9 +102,9 @@ export type Key =
   | 'accountGoes1' | 'accountGoes2' | 'accountBooks' | 'accountEntries' | 'accountAlone'
   | 'accountShared' | 'withdrawTitle' | 'withdraw' | 'withdrawWarn' | 'withdrawBlocked'
   | 'withdrawDone' | 'handOverFirst' | 'backHome' | 'noReceipt' | 'noPhoto' | 'keepReceipt'
-  | 'helperTitle' | 'helperAsk' | 'helperAskWhat' | 'helperAskGo' | 'helperReading'
+  | 'helperTitle' | 'helperAsk' | 'helperAskMore' | 'helperAskWhat' | 'helperAskGo' | 'helperReading'
   | 'helperHide' | 'helperShow'
-  | 'sortBy' | 'etc'  | 'askHint' | 'chat' | 'settledNow' | 'sendItNow' | 'settleEndsWhen' | 'waitingN'
+  | 'sortBy' | 'etc'  | 'askHint' | 'askClear' | 'askOpener' | 'chat' | 'settledNow' | 'sendItNow' | 'settleEndsWhen' | 'waitingN'
   | 'tipLanding' | 'tipHome' | 'tipBook' | 'tipGoods' | 'tipSettle' | 'tipArchive' | 'tipTeam'
   | 'tipAdd' | 'tipTeams' | 'tipLogin'
   | 'accountTitle' | 'accountName' | 'accountEmail' | 'accountNoEmail'
@@ -261,7 +261,7 @@ const ko: Record<Key, string> = {
   backHome: '돌아가기',
   noReceipt: '영수증 없음', noPhoto: '사진 없음',
   keepReceipt: '이 영수증 사진을 장부에 남기기',
-  helperTitle: '수증이', helperAsk: '장부에 대해 묻기', helperAskWhat: '무엇이 궁금한가요',
+  helperTitle: '수증이', helperAsk: '장부에 대해 묻기', helperAskMore: '하던 얘기 이어서', helperAskWhat: '무엇이 궁금한가요',
   helperWhat: '여기서 뭘 하나요?', helperChat: '다른 얘기 해 주세요',
   helperAskOpen: '수증이에게 물어보기', settleAll: '전체 정산',
   dropSelected: '고른 것 삭제',
@@ -273,6 +273,7 @@ const ko: Record<Key, string> = {
   settleEndsWhen: '정산은 글을 보냈다고 끝나지 않습니다. 보낸 사람이 ‘보냈어요’를, 받은 사람이 ‘받았어요’를 눌러 송금이 전부 확인되면 그때 도장이 찍힙니다.',
   waitingN: '송금 {n}건 확인 중',
   askHint: 'Enter로 묻고, Esc로 닫아요.',
+  askClear: '지운다', askOpener: '이 장부에 대해 물어보세요. 나눈 말은 창을 닫아도 남아요.',
   chat: '저는 수증이예요. 영수증이라 바람에는 좀 약해요.\n저 위의 점을 누르시면 제가 할 수 있는 일이 나와요.\n구겨져도 적힌 건 안 없어져요.\n계산은 제가 하는 게 아니라 장부가 해요. 저는 읽어 드릴 뿐이에요.\n저를 끌어서 아무 데나 놓으셔도 돼요.\n돈 얘기는 미루면 더 어려워지더라고요.\n영수증은 버리면 끝이지만, 장부는 남아요.\n가끔은 접혀서 자고 싶어요.\n천천히 보셔도 돼요. 저는 여기 있을게요.\n잉크가 마르면 글씨가 흐려져요. 저희는 원래 그래요.\n누가 얼마 냈는지는 제가 안 잊어요.\n숫자가 안 맞으면 제가 먼저 놀랄 거예요.\n…나는 영수증 유령이다.\n오셨네요. 장부는 그대로 있어요.\n주머니에 오래 있으면 이렇게 말려요.\n오늘은 좀 눌린 것 같아요.\n똑바로 서 있는 게 생각보다 어려워요.\n여기 접어 두면 나중에 그 자리부터 펴져요.\n비에 젖었다 마르면 이렇게 돼요. 글씨는 남았어요.\n잠깐만 기대 있을게요. 금방 일어날게요.\n오래 말려 있으면 펴도 자꾸 돌아가요.\n조용하면 저는 잠깐 자요. 부르시면 일어나요.\n눌려도 괜찮아요. 숫자는 안 눌려요.\n영수증은 원래 남으라고 만든 게 아닌데, 저는 남았네요.',
   tipLanding: '안녕하세요, 저는 수증이예요. 여기는 팀이 함께 쓴 돈을 적어 두는 곳이에요.\n팀플 하다 보면 누가 뭘 샀는지 흩어지잖아요. 그걸 한 장부에 모아 둬요.\n정산할 때가 되면 누가 누구에게 얼마를 보낼지 제가 계산해 드려요.\n카카오톡으로 보내면 팀원들이 각자 확인하고요.\n가입 없이 한 번만 나눠 볼 수도 있어요. ‘바로 나누기’를 눌러 보세요.\n학기가 끝나도 장부는 남아요. 그게 이 서비스가 하는 일이에요.',
   tipHome: '전체 지출이랑 당신의 몫이 맨 위에 있어요.\n보내셨으면 ‘보냈어요’를 눌러 주세요.\n궁금한 건 AI인 저에게 물어보셔도 돼요.',
@@ -444,7 +445,7 @@ const en: Record<Key, string> = {
   backHome: 'Go back',
   noReceipt: 'No receipt', noPhoto: 'No photo',
   keepReceipt: 'Keep this receipt photo in the ledger',
-  helperTitle: 'Receipt', helperAsk: 'Ask about this ledger', helperAskWhat: 'What would you like to know',
+  helperTitle: 'Receipt', helperAsk: 'Ask about this ledger', helperAskMore: 'Back to our talk', helperAskWhat: 'What would you like to know',
   helperWhat: 'What happens here?', helperChat: 'Tell me something else',
   helperAskOpen: 'Ask me anything', settleAll: 'Settle everything',
   dropSelected: 'Delete selected',
@@ -456,6 +457,7 @@ const en: Record<Key, string> = {
   settleEndsWhen: 'Sending the message does not close it. The stamp goes on once every transfer is confirmed — the sender taps “I sent it”, the receiver taps “Got it”.',
   waitingN: '{n} transfers pending',
   askHint: 'Enter to ask, Esc to close.',
+  askClear: 'Clear', askOpener: 'Ask about this ledger. What you say here stays when the window closes.',
   chat: 'I am a receipt. Paper, so not great with wind.\nTap the dot above me to see what I can do.\nCrumple me and the writing still stays.\nThe ledger does the arithmetic, not me. I just read it out.\nYou can drag me anywhere you like.\nMoney talk only gets harder the longer you leave it.\nA receipt ends when you throw it away. A ledger stays.\nSometimes I would like to fold up and nap.\nTake your time. I will be here.\nWhen the ink dries we go faint. That is just how receipts are.\nI do not forget who paid what.\nIf the numbers stop adding up, I will be startled first.\n…I am the ghost of a receipt.\nOh, you are back. The ledger stayed put.\nLeave me in a pocket too long and I curl like this.\nI feel a little pressed today.\nStanding up straight is harder than it looks.\nFold a corner here and it opens from that corner later.\nThis is what rain and then drying does. The writing held.\nLet me lean here a moment. I will get up.\nRolled up long enough, I keep rolling back.\nWhen it is quiet I nap. Call and I am up.\nBeing flattened is fine. The numbers do not flatten.\nReceipts were not made to last. Somehow I did.',
   tipLanding: 'Hello, I am a receipt. This is where a team writes down what it spent together.\nOn group projects it scatters — who bought what, who owes whom.\nWhen it is time to settle, I work out who sends what to whom.\nSend it over KakaoTalk and everyone confirms their part.\nYou can also split once without signing up. Try “Quick split”.\nThe ledger stays after the term ends. That is the point of this.',
   tipHome: 'Your total and your share are up top.\nSent money? Tap “I sent it”.\nAsk me anything — I am the AI here.',
@@ -625,7 +627,7 @@ const ja: Record<Key, string> = {
   backHome: '戻る',
   noReceipt: 'レシートなし', noPhoto: '写真なし',
   keepReceipt: 'このレシート写真を帳簿に残す',
-  helperTitle: 'レシート', helperAsk: '帳簿について聞く', helperAskWhat: '何が知りたいですか',
+  helperTitle: 'レシート', helperAsk: '帳簿について聞く', helperAskMore: '話の続き', helperAskWhat: '何が知りたいですか',
   helperWhat: 'ここは何をする所ですか', helperChat: '他の話をしてください',
   helperAskOpen: 'レシートに聞いてみる', settleAll: '全部を精算',
   dropSelected: '選んだものを削除',
@@ -637,6 +639,7 @@ const ja: Record<Key, string> = {
   settleEndsWhen: '送っただけでは終わりません。送った人が「送りました」、受け取った人が「受け取りました」を押して、すべての送金が確認されたときに判が押されます。',
   waitingN: '送金 {n}件 確認中',
   askHint: 'Enterで質問、Escで閉じます。',
+  askClear: '消す', askOpener: 'この帳簿について聞いてください。閉じても話は残ります。',
   chat: '紙なので、風には少し弱いんです。\n上の点を押すと、わたしにできることが出ます。\nくしゃくしゃになっても、書かれたものは消えません。\n計算はわたしではなく帳簿がします。わたしは読むだけです。\nわたしをどこへでも引っ張って置いていいですよ。\nお金の話は、後回しにするほど難しくなります。\nレシートは捨てたら終わりですが、帳簿は残ります。\nたまには折りたたんで眠りたいです。\nゆっくりで大丈夫です。ここにいますから。\nインクが乾くと薄くなります。レシートはそういうものです。\n誰がいくら出したかは忘れません。\n数が合わなかったら、わたしが先に驚きます。\n…わたしはレシートの幽霊だ。\nいらっしゃい。帳簿はそのままありますよ。\nポケットに長くいると、こう丸まるんです。\n今日はちょっと押しつぶされた感じです。\nまっすぐ立つのは、思ったより難しいです。\nここを折っておくと、あとでそこから開きます。\n雨に濡れて乾くとこうなります。字は残りました。\n少しだけ寄りかかりますね。すぐ起きます。\n長く丸まっていると、伸ばしても戻ってしまいます。\n静かだと少し眠ります。呼べば起きますよ。\nつぶれても平気です。数はつぶれません。\nレシートは残るために作られてないのに、残ってしまいました。',
   tipLanding: 'こんにちは、レシートです。ここはチームで使ったお金を書き留める場所です。\n共同作業だと誰が何を買ったか散らばりますよね。それを一冊にまとめます。\n精算のときは、誰が誰にいくら送るかをわたしが計算します。\n登録なしで一度だけ割ることもできます。\n学期が終わっても帳簿は残ります。それがこのサービスです。',
   tipHome: '全体の支出とあなたの分が上にあります。\n送ったら「送りました」を押してくださいね。\n気になることはAIのわたしに聞いてください。',
@@ -806,7 +809,7 @@ const zh: Record<Key, string> = {
   backHome: '返回',
   noReceipt: '没有收据', noPhoto: '没有照片',
   keepReceipt: '把这张收据照片留在账本里',
-  helperTitle: '收据', helperAsk: '询问这本账本', helperAskWhat: '想知道什么',
+  helperTitle: '收据', helperAsk: '询问这本账本', helperAskMore: '接着刚才的话', helperAskWhat: '想知道什么',
   helperWhat: '这里是做什么的？', helperChat: '说点别的吧',
   helperAskOpen: '问问收据', settleAll: '全部结算',
   dropSelected: '删除所选',
@@ -818,6 +821,7 @@ const zh: Record<Key, string> = {
   settleEndsWhen: '发出去并不算结束。付款方点“已转账”、收款方点“已收到”，所有转账都确认之后才会盖章。',
   waitingN: '{n} 笔转账待确认',
   askHint: '按 Enter 提问，Esc 关闭。',
+  askClear: '清空', askOpener: '问问这本账本。关掉窗口，说过的话还在。',
   chat: '我是纸做的，怕风。\n按一下我头上的点，就能看到我会做什么。\n就算被揉皱了，写下的东西也不会消失。\n算数是账本做的，不是我。我只负责读给你听。\n你可以把我拖到任何地方。\n钱的事，越往后拖越难说。\n收据扔了就没了，账本会留下来。\n偶尔也想折起来睡一觉。\n慢慢看就好，我在这儿。\n墨干了字就淡了。收据本来就这样。\n谁付了多少，我不会忘。\n要是数字对不上，我会先吓一跳。\n…我是收据的幽灵。\n你回来了。账本还在原处。\n在口袋里待久了，就会这样卷起来。\n今天感觉有点被压扁了。\n站直比想象中难。\n在这儿折一个角，以后就会从那儿翻开。\n淋了雨再干就成这样了。字还在。\n让我靠一会儿，马上就起来。\n卷久了，展开也会卷回去。\n安静的时候我会打个盹。叫我就醒。\n被压扁没关系，数字压不扁。\n收据本来不是为了留下来做的，我却留下来了。',
   tipLanding: '你好，我是收据。这里是把团队一起花的钱记下来的地方。\n做小组作业时，谁买了什么很容易散掉。我们把它收在一本账里。\n该结算的时候，谁该给谁多少，我来算。\n不注册也可以只分一次账。\n学期结束后账本还留着。这就是这个服务做的事。',
   tipHome: '总支出和你的份额都在上面。\n转出了就点“已转账”。\n有不明白的，问我这个 AI 就好。',
@@ -992,7 +996,7 @@ const es: Record<Key, string> = {
   backHome: 'Volver',
   noReceipt: 'Sin recibo', noPhoto: 'Sin foto',
   keepReceipt: 'Guardar esta foto del recibo en el libro',
-  helperTitle: 'Recibo', helperAsk: 'Preguntar sobre el libro', helperAskWhat: 'Qué quieres saber',
+  helperTitle: 'Recibo', helperAsk: 'Preguntar sobre el libro', helperAskMore: 'Seguir la charla', helperAskWhat: 'Qué quieres saber',
   helperWhat: '¿Qué se hace aquí?', helperChat: 'Cuéntame otra cosa',
   helperAskOpen: 'Pregúntame lo que sea', settleAll: 'Liquidar todo',
   dropSelected: 'Eliminar lo seleccionado',
@@ -1004,6 +1008,7 @@ const es: Record<Key, string> = {
   settleEndsWhen: 'Enviar el mensaje no lo cierra. El sello llega cuando cada envío queda confirmado: quien paga marca «Lo envié» y quien recibe marca «Recibido».',
   waitingN: '{n} envíos pendientes',
   askHint: 'Enter para preguntar, Esc para cerrar.',
+  askClear: 'Borrar', askOpener: 'Pregunta sobre este libro. Lo dicho queda al cerrar la ventana.',
   chat: 'Soy de papel, el viento no me sienta bien.\nToca el punto de arriba para ver lo que sé hacer.\nAunque me arrugues, lo escrito sigue ahí.\nLas cuentas las hace el libro, no yo. Yo solo las leo.\nPuedes arrastrarme a donde quieras.\nHablar de dinero solo se pone más difícil cuanto más se deja.\nUn recibo se acaba al tirarlo; un libro se queda.\nA veces me gustaría doblarme y dormir un rato.\nTómate tu tiempo. Aquí estaré.\nCuando la tinta se seca nos volvemos pálidos. Es lo que hay.\nNo olvido quién puso cuánto.\nSi los números dejan de cuadrar, me asustaré yo primero.\n…soy el fantasma de un recibo.\nHas vuelto. El libro sigue donde estaba.\nSi me dejas mucho en un bolsillo, me enrollo así.\nHoy me siento un poco aplastado.\nMantenerse derecho cuesta más de lo que parece.\nDobla una esquina aquí y luego se abrirá por ahí.\nEsto es lo que pasa al mojarse y secarse. La letra aguantó.\nDéjame apoyarme un momento. Ya me levanto.\nEnrollado mucho tiempo, vuelvo a enrollarme solo.\nCuando hay silencio echo una cabezada. Llámame y me levanto.\nQue me aplasten está bien. Los números no se aplastan.\nLos recibos no se hacen para quedarse. Yo me quedé.',
   tipLanding: 'Hola, soy un recibo. Aquí un equipo anota lo que gastó junto.\nEn los trabajos en grupo se dispersa: quién compró qué, quién debe a quién.\nCuando toca ajustar cuentas, yo calculo quién envía qué a quién.\nTambién puedes dividir una vez sin registrarte.\nEl libro queda cuando acaba el curso. De eso se trata.',
   tipHome: 'El total y tu parte están arriba.\n¿Enviaste dinero? Toca «Lo envié».\nPregúntame lo que sea: la IA soy yo.',
@@ -1175,7 +1180,7 @@ const vi: Record<Key, string> = {
   backHome: 'Quay lại',
   noReceipt: 'Không có hóa đơn', noPhoto: 'Không có ảnh',
   keepReceipt: 'Giữ ảnh hóa đơn này trong sổ',
-  helperTitle: 'Hóa đơn', helperAsk: 'Hỏi về sổ này', helperAskWhat: 'Bạn muốn biết gì',
+  helperTitle: 'Hóa đơn', helperAsk: 'Hỏi về sổ này', helperAskMore: 'Nói tiếp', helperAskWhat: 'Bạn muốn biết gì',
   helperWhat: 'Ở đây làm gì vậy?', helperChat: 'Kể chuyện khác đi',
   helperAskOpen: 'Hỏi tôi bất cứ điều gì', settleAll: 'Chia tất cả',
   dropSelected: 'Xóa mục đã chọn',
@@ -1187,6 +1192,7 @@ const vi: Record<Key, string> = {
   settleEndsWhen: 'Gửi tin nhắn chưa phải là xong. Dấu chỉ đóng khi mọi khoản chuyển đều được xác nhận — người gửi bấm “Đã gửi”, người nhận bấm “Đã nhận”.',
   waitingN: 'Còn {n} khoản chờ xác nhận',
   askHint: 'Enter để hỏi, Esc để đóng.',
+  askClear: 'Xóa', askOpener: 'Hỏi về sổ này. Đóng cửa sổ thì lời đã nói vẫn còn.',
   chat: 'Mình bằng giấy nên hơi sợ gió.\nBấm vào chấm phía trên là thấy mình làm được gì.\nCó nhàu đi thì chữ vẫn còn.\nTính toán là do sổ làm, không phải mình. Mình chỉ đọc lại thôi.\nBạn kéo mình đi đâu cũng được.\nChuyện tiền nong càng để lâu càng khó nói.\nHóa đơn vứt đi là hết, còn sổ thì ở lại.\nThỉnh thoảng mình cũng muốn gấp lại ngủ một giấc.\nCứ từ từ, mình vẫn ở đây.\nMực khô là chữ nhạt đi. Hóa đơn vốn vậy.\nAi trả bao nhiêu, mình không quên đâu.\nNếu các con số không khớp, mình sẽ giật mình trước.\n…ta là hồn ma của một tờ hóa đơn.\nBạn quay lại rồi. Sổ vẫn nằm nguyên đó.\nĐể lâu trong túi là mình cuộn lại thế này.\nHôm nay mình thấy hơi bị ép dẹp.\nĐứng thẳng khó hơn mình tưởng.\nGấp một góc ở đây thì sau này sẽ mở ra từ chỗ đó.\nƯớt mưa rồi khô thì thành ra thế này. Chữ vẫn còn.\nCho mình tựa một chút thôi, mình dậy ngay.\nCuộn lâu quá thì mở ra vẫn cứ cuộn lại.\nYên tĩnh thì mình ngủ một lát. Gọi là mình dậy.\nBị ép dẹp cũng không sao. Con số thì không dẹp được.\nHóa đơn vốn không sinh ra để ở lại, vậy mà mình ở lại.',
   tipLanding: 'Xin chào, mình là một tờ hóa đơn. Đây là nơi cả nhóm ghi lại tiền đã tiêu chung.\nLàm bài nhóm thì ai mua gì hay bị tản mát. Mình gom hết vào một cuốn sổ.\nĐến lúc chia tiền, mình tính ai gửi cho ai bao nhiêu.\nBạn cũng có thể chia một lần mà không cần đăng ký.\nHết học kỳ sổ vẫn còn. Dịch vụ này làm việc đó.',
   tipHome: 'Tổng chi và phần của bạn ở trên cùng.\nGửi tiền rồi thì bấm “Đã gửi”.\nThắc mắc gì cứ hỏi mình — mình là AI.',
