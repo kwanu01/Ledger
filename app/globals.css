@@ -201,6 +201,18 @@ a.choice:hover{color:var(--paper)}
 .choice:hover{background:var(--ink);color:var(--paper)}
 .choice .sub{font-size:13px;color:var(--ink-2);white-space:nowrap}
 .choice:hover .sub{color:var(--paper);opacity:.75}
+/* 한 팀이 장부를 여럿 가진다. 팀 이름만 적으면 같은 이름이 여러 줄 반복되므로,
+   팀은 작게 위에 얹고 장부 이름이 그 줄의 제목이 된다. */
+.choice{flex-wrap:wrap;position:relative;padding-top:30px}
+.choice-team{
+  position:absolute;left:6px;top:9px;
+  font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 12px)}
+.choice:hover .choice-team{color:var(--paper);opacity:.7}
+/* 내가 만든 것과 초대받아 들어간 것 사이의 이름표. */
+.choice-head{margin-top:44px}
+.choice-head + .choices{margin-top:10px}
 .back{margin-top:34px}
 .calc-in{display:flex;flex-wrap:wrap;gap:18px 24px;align-items:flex-end}
 .calc-in label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--ink-2);font-weight:600}
@@ -222,6 +234,38 @@ header{padding:30px 0 0}
 .masthead{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px}
 .masthead .team{font-size:14px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
 .masthead .book{font-size:14px;color:var(--ink-2)}
+/* ── 장부 전환 (§5.2) ─────────────────────────────────────────────
+   한 팀이 장부를 여럿 가진다. 장부 이름이 곧 '지금 어디를 보고 있는가'이고,
+   그래서 바꾸는 손잡이도 그 이름이다. 새 자리를 만들지 않는다. */
+.bookpick{position:relative;display:inline-flex}
+.bookpick-now{
+  appearance:none;background:none;border:0;padding:0;margin:0;cursor:pointer;
+  font:inherit;color:var(--ink-2);display:inline-flex;align-items:baseline;gap:5px}
+.bookpick-now:hover{color:var(--ink)}
+.bookpick-caret{font-size:9px;line-height:1;color:var(--ink-3)}
+.bookpick-now[aria-expanded="true"]{color:var(--ink)}
+.bookpick-list{
+  position:absolute;top:calc(100% + 9px);left:0;z-index:70;
+  min-width:210px;max-width:min(320px,86vw);
+  background:var(--paper);border:1px solid var(--rule-hard);
+  box-shadow:0 10px 26px rgba(0,0,0,.14);padding:6px 0;
+  display:flex;flex-direction:column;text-align:left}
+.bookpick-item{
+  appearance:none;background:none;border:0;font:inherit;font-size:14px;
+  text-align:left;padding:8px 14px;color:var(--ink);cursor:pointer;
+  text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+a.bookpick-item,a.bookpick-item:visited{color:var(--ink)}
+.bookpick-item:hover{background:var(--hl)}
+/* 지금 보고 있는 장부. 누를 것이 없으니 손잡이로 만들지 않는다. */
+.bookpick-item.here{font-weight:700;cursor:default}
+.bookpick-item.here:hover{background:none}
+.bookpick-item.add{
+  color:var(--link);border-top:1px solid var(--rule-2);margin-top:5px;padding-top:11px}
+.bookpick-new{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px 12px;
+  border-top:1px solid var(--rule-2);margin-top:5px}
+.bookpick-new input{flex:1 1 130px;min-width:0}
+.bookpick-new select{flex:0 0 auto}
+.bookpick-new .acts{flex-basis:100%}
 .masthead .who,.topbar .who{margin-left:auto;font-size:13px;color:var(--ink-2);
   display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:6px 14px}
 .topbar .who .prefs{margin-left:0}
@@ -672,6 +716,9 @@ tr.left .subject{color:var(--ink-3)}
 pre.msg{font-family:var(--mono);font-size:13.5px;line-height:1.75;white-space:pre-wrap;
   border:1px solid var(--rule);padding:16px;margin:0;background:var(--field);overflow-x:auto}
 .ai-mark{font-size:11px;font-weight:400;color:var(--ink-2);border:1px solid var(--rule);padding:0 5px}
+/* 환율로 재 본 값. 칸 아래에 붙어 청구액과 나란히 읽힌다. */
+.fxnote{display:block;font-size:12.5px;font-weight:400;margin-top:5px;line-height:1.5}
+.fxnote .plain{font-size:12.5px}
 .scroll{overflow-x:auto}
 /* 만든 사람 — 화면 맨 아래 한 줄. 본문과 섞이지 않게 선 하나로 끊는다. */
 footer{

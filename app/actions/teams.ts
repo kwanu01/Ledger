@@ -64,6 +64,8 @@ export type MyLedger = {
   teamName: string;
   currency: CurrencyCode;
   archivedAt: string | null;
+  /** 이 팀의 소유자가 나인가. 목록에서 내 자리를 구분해 적는다. */
+  mine: boolean;
 };
 
 /** 내가 들어가 있는 팀의 장부 전부. 수업이 둘이면 팀도 둘이다. */
@@ -76,18 +78,22 @@ export async function myLedgers(): Promise<MyLedger[]> {
 
   const { data } = await db
     .from('ledgers')
-    .select('id, name, currency, archived_at, team_id, teams(name)')
+    .select('id, name, currency, archived_at, team_id, teams(name, owner_id)')
     .in('team_id', teamIds)
     .order('created_at');
 
-  return (data ?? []).map((l: Record<string, unknown>) => ({
-    ledgerId: l.id as string,
-    ledgerName: l.name as string,
-    teamId: l.team_id as string,
-    teamName: (l.teams as { name: string }).name,
-    currency: (l.currency as CurrencyCode) ?? 'KRW',
-    archivedAt: (l.archived_at as string) ?? null,
-  }));
+  return (data ?? []).map((l: Record<string, unknown>) => {
+    const team = l.teams as { name: string; owner_id: string | null };
+    return {
+      ledgerId: l.id as string,
+      ledgerName: l.name as string,
+      teamId: l.team_id as string,
+      teamName: team.name,
+      currency: (l.currency as CurrencyCode) ?? 'KRW',
+      archivedAt: (l.archived_at as string) ?? null,
+      mine: Boolean(team.owner_id) && team.owner_id === user.id,
+    };
+  });
 }
 
 /**
@@ -141,6 +147,67 @@ export async function createTeamAndLedger(input: {
   } catch (e) {
     return failed(e);
   }
+}
+
+/**
+ * 한 팀 안에 장부 하나 더 (§5.2)
+ *
+ * 팀과 장부는 처음부터 다른 것이었다. 팀은 사람의 묶음이고 장부는 돈의
+ * 묶음이다. DB 도 그렇게 되어 있었는데(ledgers.team_id), 화면에서는 팀을
+ * 만들 때 장부 하나를 같이 만들고 그걸로 끝이었다.
+ *
+ * 그런데 한 수업에서 과제가 셋이면 장부도 셋이어야 한다. 사람은 그대로고
+ * 돈만 갈라지는 것이다. 같은 사람들끼리 팀을 세 번 만들고 초대 링크를 세 번
+ * 돌리는 것은 같은 일을 세 번 하는 것이다.
+ *
+ * 그래서 장부만 더한다. **팀원 명단도 초대 링크도 그대로 쓴다.**
+ *
+ * 통화는 장부마다 정한다. 한 장부는 통화 하나만 쓰기 때문이다(0005).
+ * 만드는 것은 소유자만 한다 — 장부가 늘면 팀원 모두의 화면에 늘어난다.
+ */
+export async function addLedgerToTeam(args: {
+  ledgerId: string;
+  name: string;
+  currency: CurrencyCode;
+}): Promise<Result<{ ledgerId: string }>> {
+  try {
+    const pass = await requireLedgerAccess(args.ledgerId);
+    if (!(await isOwner(pass))) {
+      return { ok: false, message: '장부는 이 팀을 만든 사람만 더할 수 있습니다.' };
+    }
+    if (!args.name.trim()) return { ok: false, message: '장부 이름을 적어 주세요.' };
+    if (!CURRENCIES[args.currency]) return { ok: false, message: '쓸 수 없는 통화입니다.' };
+
+    const { data, error } = await db
+      .from('ledgers')
+      .insert({ team_id: pass.teamId, name: args.name.trim(), currency: args.currency })
+      .select('id')
+      .single();
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/teams');
+    revalidatePath(`/l/${args.ledgerId}`, 'layout');
+    return { ok: true, value: { ledgerId: data.id as string } };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/** 이 팀이 가진 장부 전부. 머리글의 장부 전환 자리가 쓴다. */
+export async function teamLedgers(
+  ledgerId: string,
+): Promise<{ id: string; name: string; here: boolean }[]> {
+  const pass = await requireLedgerAccess(ledgerId);
+  const { data } = await db
+    .from('ledgers')
+    .select('id, name')
+    .eq('team_id', pass.teamId)
+    .order('created_at');
+  return (data ?? []).map((l) => ({
+    id: l.id as string,
+    name: l.name as string,
+    here: (l.id as string) === ledgerId,
+  }));
 }
 
 /**

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { recordExpense } from '../../../actions/ledger.ts';
 import { attachImage } from '../../../actions/images.ts';
 import { analyzeReceipt } from '../../../actions/receipt.ts';
+import { lookUpRate } from '../../../actions/fx.ts';
 import { splitEvenly } from '../../../../lib/domain/settlement.ts';
 import { translator } from '../../../../lib/i18n.ts';
 import {
@@ -66,6 +67,18 @@ export default function ExpenseForm({
   const [productLink, setProductLink] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  /**
+   * 그날의 환율 (§21.14)
+   *
+   * 장부에 적히는 것은 언제나 **실제로 청구된 금액**이다. 카드사가 이미
+   * 환산해서 청구했고, 그 환율은 우리가 보는 것과 다르다 — 전신환매도율에
+   * 해외 수수료가 붙고 매입일도 며칠 어긋난다. 우리가 계산한 숫자를 넣으면
+   * 통장에서 빠져나간 금액과 다른 숫자가 팀원들 사이에 나뉜다.
+   *
+   * 그래서 환율은 두 가지만 한다 — 청구액을 모르면 **미리 채워 주고**,
+   * 적었으면 얼마나 벌어지는지 **알려만 준다.** 막지 않는다.
+   */
+  const [fx, setFx] = useState<{ rate: number; on: string } | null>(null);
 
   // 사진 먼저, 폼은 그다음. 손으로 적겠다고 하면 곧장 빈 폼으로 간다.
   const [step, setStep] = useState<'photo' | 'reading' | 'form'>('photo');
@@ -175,8 +188,31 @@ export default function ExpenseForm({
 
   const name = (id: string) => members.find((m) => m.id === id)?.name ?? id;
 
+  /* 통화나 날짜가 달라지면 그날 환율을 다시 묻는다. 지난달에 산 것을 오늘
+     적을 수도 있고, 그때는 오늘 환율이 아니라 그날 환율로 재야 한다. */
+  useEffect(() => {
+    if (!foreign) return setFx(null);
+    let alive = true;
+    setFx(null);
+    lookUpRate({ ledgerId, from: curr, to: currency, date })
+      .then((r) => alive && setFx(r))
+      .catch(() => alive && setFx(null));
+    return () => {
+      alive = false;
+    };
+  }, [foreign, curr, currency, date, ledgerId]);
+
   // 장부에 적히는 금액은 언제나 장부의 통화다. 해외 결제면 청구액 칸이 그 자리를 대신한다.
   const booked = foreign ? parseMoney(charged, currency) : parseMoney(amount, currency);
+
+  /* 환율로 재 본 값. 적어 넣은 청구액과 나란히 두면 자릿수 실수가 눈에 띈다. */
+  const paidAbroad = parseMoney(amount, curr);
+  const guess =
+    fx && paidAbroad > 0
+      ? Math.round((paidAbroad / 10 ** (CURRENCIES[curr]?.decimals ?? 0)) * fx.rate *
+          10 ** (CURRENCIES[currency]?.decimals ?? 0))
+      : 0;
+  const gap = guess > 0 && booked > 0 ? ((booked - guess) / guess) * 100 : null;
 
   const bearers =
     kind === 'all' ? roster : kind === 'partial' ? participants : [ownerId];
@@ -473,10 +509,24 @@ export default function ExpenseForm({
           />
         </label>
 
-        {/* 환율은 우리가 계산하지 않는다. 카드사가 청구한 금액을 그대로 받아 적는다. */}
+        {/*
+          환율은 우리가 계산하지 않는다. 카드사가 청구한 금액을 그대로 받아
+          적는다. 다만 **그 숫자가 그럴듯한지는 재 준다.**
+
+          비어 있으면 그날 환율로 계산한 값을 눌러서 채울 수 있다. 채운 뒤에도
+          고칠 수 있다 — 카드 명세서가 오면 그 숫자가 맞다.
+
+          적었으면 얼마나 벌어지는지 적어 준다. 5% 안쪽은 정상이다(해외 이용
+          수수료 1~2% + 매입일 차이). 그보다 크게 벌어지면 자릿수를 의심할
+          만하니 붉게 적는다. 막지는 않는다 — 실제 청구액이 우리 계산보다 늘
+          옳다.
+        */}
         {foreign && (
           <label className="field">
-            <span className="lab">{T('chargedIn', { code: currency })}</span>
+            <span className="lab">
+              {T('chargedIn', { code: currency })}
+              {fx && <span className="ai-mark">{T('rateOn', { date: fx.on })}</span>}
+            </span>
             <input
               type="text"
               inputMode="decimal"
@@ -484,6 +534,26 @@ export default function ExpenseForm({
               value={charged}
               onChange={(e) => setCharged(e.target.value)}
             />
+            {guess > 0 && (
+              <span className="fxnote">
+                {booked > 0 ? (
+                  <span className={gap !== null && Math.abs(gap) > 5 ? 'debit' : 'muted'}>
+                    {T('rateSays', {
+                      amount: formatMoney(guess, currency, lang),
+                      gap: gap === null ? '0' : (gap > 0 ? '+' : '') + gap.toFixed(1),
+                    })}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="plain"
+                    onClick={() => setCharged(formatNumber(guess, currency, lang))}
+                  >
+                    {T('useRate', { amount: formatMoney(guess, currency, lang) })}
+                  </button>
+                )}
+              </span>
+            )}
           </label>
         )}
 

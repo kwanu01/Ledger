@@ -834,6 +834,40 @@ export default function Helper({ lang }: { lang: Locale }) {
                   {T('helperAsk')}
                 </button>
               )}
+
+              {/*
+                장부 밖에서도 할 수 있는 것 (§21.10)
+
+                '장부에 대해 묻기'는 장부가 있어야 한다. 그래서 첫 화면과
+                로그인 화면에서는 말풍선을 열어도 '치우기' 하나뿐이었다 —
+                말을 걸 수 있게 생겨서 눌렀는데 나갈 문만 있는 셈이다.
+
+                화면마다 할 말은 이미 있다(tipFor). 스스로 한 줄씩 흘려 보내는
+                그 말을 **사람이 부를 수 있게** 한다. 새 글을 쓰는 것이 아니라,
+                이미 있는 말의 손잡이를 다는 것이다.
+              */}
+              <button
+                className="plain"
+                onClick={() => {
+                  setMenu(false);
+                  hushUntil.current = 0; // 불렀으니 쉬는 참은 끝이다
+                  setTipAt(0); // 이 화면의 첫 줄부터 다시
+                }}
+              >
+                {T('helperWhat')}
+              </button>
+
+              <button
+                className="plain"
+                onClick={() => {
+                  setMenu(false);
+                  hushUntil.current = 0;
+                  // 화면 설명 뒤의 일상적인 말 쪽으로 건너뛴다.
+                  setTipAt(script.tips.length + Math.floor(Math.random() * 97));
+                }}
+              >
+                {T('helperChat')}
+              </button>
               <button
                 className="plain"
                 onClick={() => {

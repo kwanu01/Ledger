@@ -81,7 +81,7 @@ export type Key =
   | 'photoShort' | 'photoSentTo2'
   | 'closedMark'
   | 'relabelEntry' | 'relabelOnly'
-  | 'ownerTag' | 'handOver' | 'handOverWarn' | 'handOverDo' | 'goneWarn' | 'goneDo' | 'confirmFor' | 'confirmForWarn' | 'waitedDays' | 'saysSentDays'
+  | 'ownerTag' | 'handOver' | 'handOverWarn' | 'handOverDo' | 'goneWarn' | 'goneDo' | 'myBooks' | 'joinedBooks' | 'makeBook' | 'bookNamePlaceholder' | 'rateOn' | 'rateSays' | 'useRate' | 'helperWhat' | 'helperChat' | 'confirmFor' | 'confirmForWarn' | 'waitedDays' | 'saysSentDays'
   | 'photoSentTo' | 'chargedIn' | 'paidIn' | 'foreignNote' | 'uploaded'
   // 팀
   | 'membersN' | 'me' | 'gone' | 'markGone' | 'bringBack'
@@ -145,7 +145,7 @@ const ko: Record<Key, string> = {
     '정산이 끝난 줄이라 금액·날짜·결제자·부담 방식은 바꿀 수 없습니다. 확정된 정산의 숫자를 지키기 위해서입니다. 금액을 바로잡아야 한다면 보정 항목을 새로 적어 주세요.',
   saveEdit: '고친 대로 저장',
   deleteSettledWarn:
-    '‘{title}’은 이미 정산에 들어간 줄입니다. 지우면 그 정산 회차가 통째로 취소되고, 같은 회차의 다른 지출들은 전부 미정산으로 돌아갑니다. 확정됐던 송금 금액도 사라지므로 다시 정산해야 합니다. 되돌릴 수 없습니다.',
+    '‘{title}’은 정산에 들어간 줄입니다.\n지우면 그 정산 회차가 통째로 사라집니다 — 확인된 송금 기록까지요.\n실제로 오간 돈은 되돌아오지 않습니다.',
   allocSelf: '개인',
 
   tabHome: '홈', tabBook: '장부', tabGoods: '품목', tabSettle: '정산 내역',
@@ -202,6 +202,9 @@ const ko: Record<Key, string> = {
   membersN: '팀원 {n}명', me: '나',
   gone: '나감', markGone: '탈퇴', bringBack: '다시 넣기',
   ownerTag: '소유자', handOver: '소유권 넘기기',
+  myBooks: '내가 만든 장부', joinedBooks: '초대받아 들어간 장부',
+  makeBook: '만듭니다', bookNamePlaceholder: '새 장부 이름',
+  rateOn: '{date} 환율', rateSays: '환율로는 {amount} ({gap}%)', useRate: '{amount}으로 채우기',
   handOverWarn: '{who}님이 소유자가 됩니다.\n되돌리려면 그분이 다시 넘겨야 해요.',
   goneWarn: '{who}님을 나간 것으로 표시합니다.\n지난 지출에는 그대로 남고, 앞으로의 공동 지출에서만 빠져요.',
   goneDo: '탈퇴합니다',
@@ -234,6 +237,7 @@ const ko: Record<Key, string> = {
   reallyDelete: '정말 지웁니다', noReceipt: '영수증 없음', noPhoto: '사진 없음',
   keepReceipt: '이 영수증 사진을 장부에 남기기',
   helperTitle: '수증이', helperAsk: '장부에 대해 묻기', helperAskWhat: '무엇이 궁금한가요',
+  helperWhat: '여기서 뭘 하나요?', helperChat: '다른 얘기 해 주세요',
   helperAskGo: '묻기', helperReading: '읽는 중', helperHide: '버리기', helperShow: '수증이',
   sortBy: '순서', etc: '기타',
   settledNow: '정산했습니다', sendItNow: '이 글을 팀에게 보내세요.',
@@ -298,7 +302,7 @@ const en: Record<Key, string> = {
     'This line is already settled, so amount, date, payer and split cannot change — that keeps the confirmed settlement honest. If the amount was wrong, record a correction instead.',
   saveEdit: 'Save changes',
   deleteSettledWarn:
-    '“{title}” is already in a settlement. Deleting it cancels that whole round, and every other expense in it goes back to outstanding. The transfer amounts that were fixed there are gone, so you will have to settle again. This cannot be undone.',
+    '“{title}” is in a settlement.\nDeleting it removes that whole round — including confirmed transfers.\nMoney that actually moved does not come back.',
   allocSelf: 'Personal',
 
   tabHome: 'Home', tabBook: 'Ledger', tabGoods: 'Items', tabSettle: 'Settlements',
@@ -356,6 +360,9 @@ const en: Record<Key, string> = {
   membersN: '{n} members', me: 'you',
   gone: 'left', markGone: 'Leave', bringBack: 'Bring back',
   ownerTag: 'owner', handOver: 'Hand over ownership',
+  myBooks: 'Books I made', joinedBooks: 'Books I joined',
+  makeBook: 'Create', bookNamePlaceholder: 'New book name',
+  rateOn: 'rate of {date}', rateSays: 'by rate {amount} ({gap}%)', useRate: 'Use {amount}',
   handOverWarn: '{who} becomes the owner.\nOnly they can hand it back.',
   goneWarn: '{who} is marked as left.\nPast expenses keep them; future shared ones will not.',
   goneDo: 'Leave',
@@ -388,6 +395,7 @@ const en: Record<Key, string> = {
   reallyDelete: 'Delete for real', noReceipt: 'No receipt', noPhoto: 'No photo',
   keepReceipt: 'Keep this receipt photo in the ledger',
   helperTitle: 'Receipt', helperAsk: 'Ask about this ledger', helperAskWhat: 'What would you like to know',
+  helperWhat: 'What happens here?', helperChat: 'Tell me something else',
   helperAskGo: 'Ask', helperReading: 'Reading', helperHide: 'Throw away', helperShow: 'Receipt',
   sortBy: 'Order', etc: 'Other',
   settledNow: 'Settled', sendItNow: 'Send this to the team.',
@@ -451,7 +459,7 @@ const ja: Record<Key, string> = {
     '精算が終わった行なので、金額・日付・支払者・負担のしかたは変えられません。確定した精算の数字を守るためです。金額を直したい場合は補正項目を新しく記録してください。',
   saveEdit: '直した内容を保存',
   deleteSettledWarn:
-    '「{title}」はすでに精算に入っている行です。削除するとその回の精算がまるごと取り消され、同じ回の他の支出はすべて未精算に戻ります。確定していた送金額も消えるので、精算をやり直すことになります。元に戻せません。',
+    '「{title}」は精算に入っている行です。\n削除するとその回の精算がまるごと消えます — 確認済みの送金記録も。\n実際に動いたお金は戻りません。',
   allocSelf: '個人',
 
   tabHome: 'ホーム', tabBook: '帳簿', tabGoods: '品目', tabSettle: '精算履歴',
@@ -508,6 +516,9 @@ const ja: Record<Key, string> = {
   membersN: 'メンバー {n}人', me: '自分',
   gone: '離脱', markGone: '離脱', bringBack: '戻す',
   ownerTag: 'オーナー', handOver: 'オーナー権を渡す',
+  myBooks: '自分が作った帳簿', joinedBooks: '招待されて入った帳簿',
+  makeBook: '作ります', bookNamePlaceholder: '新しい帳簿の名前',
+  rateOn: '{date}のレート', rateSays: 'レートでは {amount}（{gap}%）', useRate: '{amount} で埋める',
   handOverWarn: '{who}さんがオーナーになります。\n戻すにはその方が渡し返す必要があります。',
   goneWarn: '{who}さんを離脱として記録します。\n過去の支出には残り、今後の共同支出から外れます。',
   goneDo: '離脱にします',
@@ -540,6 +551,7 @@ const ja: Record<Key, string> = {
   reallyDelete: '本当に削除', noReceipt: 'レシートなし', noPhoto: '写真なし',
   keepReceipt: 'このレシート写真を帳簿に残す',
   helperTitle: 'レシート', helperAsk: '帳簿について聞く', helperAskWhat: '何が知りたいですか',
+  helperWhat: 'ここは何をする所ですか', helperChat: '他の話をしてください',
   helperAskGo: '聞く', helperReading: '読み中', helperHide: '捨てる', helperShow: 'レシート',
   sortBy: '順序', etc: 'その他',
   settledNow: '精算しました', sendItNow: 'この文をチームに送ってください。',
@@ -603,7 +615,7 @@ const zh: Record<Key, string> = {
     '这一行已结算，金额、日期、付款人和分摊方式不能更改，以保住已确定的结算数字。金额有误请另记一笔更正。',
   saveEdit: '保存修改',
   deleteSettledWarn:
-    '“{title}”已经进入结算。删除它会整轮取消该次结算，同一轮的其他支出全部回到未结算。已确定的转账金额也会消失，需要重新结算。无法撤销。',
+    '“{title}”已进入结算。\n删除会连整轮结算一起消失 — 包括已确认的转账记录。\n实际转出的钱不会回来。',
   allocSelf: '个人',
 
   tabHome: '首页', tabBook: '账本', tabGoods: '品项', tabSettle: '结算记录',
@@ -660,6 +672,9 @@ const zh: Record<Key, string> = {
   membersN: '成员 {n}人', me: '我',
   gone: '已退出', markGone: '退出', bringBack: '重新加入',
   ownerTag: '所有者', handOver: '转让所有权',
+  myBooks: '我创建的账本', joinedBooks: '受邀加入的账本',
+  makeBook: '创建', bookNamePlaceholder: '新账本名称',
+  rateOn: '{date} 汇率', rateSays: '按汇率为 {amount}（{gap}%）', useRate: '填入 {amount}',
   handOverWarn: '{who}将成为所有者。\n要收回只能由对方再转让回来。',
   goneWarn: '将{who}标记为已退出。\n过去的支出仍保留，今后的共同支出不再计入。',
   goneDo: '确认退出',
@@ -692,6 +707,7 @@ const zh: Record<Key, string> = {
   reallyDelete: '确认删除', noReceipt: '没有收据', noPhoto: '没有照片',
   keepReceipt: '把这张收据照片留在账本里',
   helperTitle: '收据', helperAsk: '询问这本账本', helperAskWhat: '想知道什么',
+  helperWhat: '这里是做什么的？', helperChat: '说点别的吧',
   helperAskGo: '问', helperReading: '读取中', helperHide: '丢掉', helperShow: '收据',
   sortBy: '排序', etc: '其他',
   settledNow: '已结算', sendItNow: '把这段发给团队。',
@@ -758,7 +774,7 @@ const es: Record<Key, string> = {
     'Esta línea ya está liquidada, así que el importe, la fecha, quién pagó y el reparto no se pueden cambiar: así la liquidación confirmada sigue siendo cierta. Si el importe estaba mal, anota una corrección.',
   saveEdit: 'Guardar cambios',
   deleteSettledWarn:
-    '«{title}» ya está en una liquidación. Borrarlo cancela esa ronda entera y todos los demás gastos vuelven a pendientes. Los envíos que se habían fijado desaparecen, así que habrá que liquidar de nuevo. No se puede deshacer.',
+    '«{title}» está en una liquidación.\nBorrarlo elimina esa ronda entera, incluidos los envíos confirmados.\nEl dinero que ya se movió no vuelve.',
   allocSelf: 'Personal',
 
   tabHome: 'Inicio', tabBook: 'Libro', tabGoods: 'Artículos', tabSettle: 'Liquidaciones',
@@ -817,6 +833,9 @@ const es: Record<Key, string> = {
   membersN: '{n} integrantes', me: 'tú',
   gone: 'salió', markGone: 'Salir', bringBack: 'Volver a añadir',
   ownerTag: 'propietario', handOver: 'Ceder la propiedad',
+  myBooks: 'Libros que creé', joinedBooks: 'Libros a los que me uní',
+  makeBook: 'Crear', bookNamePlaceholder: 'Nombre del nuevo libro',
+  rateOn: 'cambio del {date}', rateSays: 'al cambio {amount} ({gap}%)', useRate: 'Usar {amount}',
   handOverWarn: '{who} pasa a ser propietario.\nSolo esa persona puede devolverlo.',
   goneWarn: 'Se marca que {who} salió.\nSigue en los gastos pasados; no entra en los futuros.',
   goneDo: 'Marcar salida',
@@ -849,6 +868,7 @@ const es: Record<Key, string> = {
   reallyDelete: 'Eliminar de verdad', noReceipt: 'Sin recibo', noPhoto: 'Sin foto',
   keepReceipt: 'Guardar esta foto del recibo en el libro',
   helperTitle: 'Recibo', helperAsk: 'Preguntar sobre el libro', helperAskWhat: 'Qué quieres saber',
+  helperWhat: '¿Qué se hace aquí?', helperChat: 'Cuéntame otra cosa',
   helperAskGo: 'Preguntar', helperReading: 'Leyendo', helperHide: 'Tirar', helperShow: 'Recibo',
   sortBy: 'Orden', etc: 'Otros',
   settledNow: 'Liquidado', sendItNow: 'Envía esto al equipo.',
@@ -913,7 +933,7 @@ const vi: Record<Key, string> = {
     'Dòng này đã chia tiền xong nên không đổi được số tiền, ngày, người trả và cách chia — để giữ đúng con số đã chốt. Nếu số tiền sai, hãy ghi một khoản điều chỉnh mới.',
   saveEdit: 'Lưu thay đổi',
   deleteSettledWarn:
-    '“{title}” đã nằm trong một đợt chia tiền. Xóa nó sẽ hủy cả đợt đó, mọi khoản khác trong đợt quay lại chưa chia. Số tiền chuyển đã chốt cũng mất, nên phải chia lại. Không thể hoàn tác.',
+    '“{title}” nằm trong một đợt chia tiền.\nXóa nó sẽ xóa cả đợt đó — kể cả các khoản chuyển đã xác nhận.\nTiền đã chuyển thật thì không quay lại.',
   allocSelf: 'Cá nhân',
 
   tabHome: 'Trang chính', tabBook: 'Sổ', tabGoods: 'Món đồ', tabSettle: 'Lịch sử chia',
@@ -971,6 +991,9 @@ const vi: Record<Key, string> = {
   membersN: '{n} thành viên', me: 'tôi',
   gone: 'đã rời', markGone: 'Rời đi', bringBack: 'Thêm lại',
   ownerTag: 'chủ sổ', handOver: 'Chuyển quyền chủ sổ',
+  myBooks: 'Sổ tôi tạo', joinedBooks: 'Sổ tôi được mời',
+  makeBook: 'Tạo', bookNamePlaceholder: 'Tên sổ mới',
+  rateOn: 'tỷ giá {date}', rateSays: 'theo tỷ giá {amount} ({gap}%)', useRate: 'Dùng {amount}',
   handOverWarn: '{who} sẽ thành chủ sổ.\nMuốn lấy lại thì người đó phải chuyển ngược.',
   goneWarn: 'Đánh dấu {who} đã rời.\nVẫn còn trong các khoản cũ, không tính vào khoản chung sau này.',
   goneDo: 'Xác nhận rời',
@@ -1003,6 +1026,7 @@ const vi: Record<Key, string> = {
   reallyDelete: 'Xóa thật', noReceipt: 'Không có hóa đơn', noPhoto: 'Không có ảnh',
   keepReceipt: 'Giữ ảnh hóa đơn này trong sổ',
   helperTitle: 'Hóa đơn', helperAsk: 'Hỏi về sổ này', helperAskWhat: 'Bạn muốn biết gì',
+  helperWhat: 'Ở đây làm gì vậy?', helperChat: 'Kể chuyện khác đi',
   helperAskGo: 'Hỏi', helperReading: 'Đang đọc', helperHide: 'Vứt đi', helperShow: 'Hóa đơn',
   sortBy: 'Thứ tự', etc: 'Khác',
   settledNow: 'Đã chia xong', sendItNow: 'Gửi đoạn này cho nhóm.',

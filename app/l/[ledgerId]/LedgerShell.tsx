@@ -6,6 +6,8 @@ import { currentUser } from '../../../lib/auth-client.ts';
 import { translator } from '../../../lib/i18n.ts';
 import type { Locale } from '../../../lib/domain/money.ts';
 import Logo from '../../Logo.tsx';
+import BookSwitch from './BookSwitch.tsx';
+import { amOwner, teamLedgers } from '../../actions/teams.ts';
 
 /**
  * 장부 화면의 머리글 (§21.2)
@@ -48,6 +50,11 @@ export default async function LedgerShell({
   // 계정으로 들어온 사람에게는 '지금 누구로 들어와 있는지'를 함께 보여 준다.
   // 통행증(초대 링크)으로만 들어온 사람에게는 계정이 없으니 이 자리도 비운다.
   const me = signedIn ? await currentUser().catch(() => null) : null;
+  // 이 팀이 가진 장부들과, 내가 소유자인지. 장부 전환 자리가 쓴다.
+  const [books, owner] = await Promise.all([
+    teamLedgers(ledgerId).catch(() => []),
+    amOwner(ledgerId).catch(() => false),
+  ]);
 
   return (
     <header>
@@ -74,9 +81,17 @@ export default async function LedgerShell({
         </span>
       </div>
 
+      {/* 팀 이름과 장부 이름. 한 팀이 장부를 여럿 가지므로, 장부 이름은
+          '지금 어디를 보고 있는가'이면서 동시에 바꾸는 손잡이다. */}
       <div className="masthead" style={{ marginTop: 22 }}>
         <span className="team">{teamName}</span>
-        <span className="book">{bookName}</span>
+        <BookSwitch
+          ledgerId={ledgerId}
+          bookName={bookName}
+          books={books}
+          owner={owner}
+          lang={lang}
+        />
       </div>
       <div className="rule-double" />
 

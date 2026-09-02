@@ -61,6 +61,8 @@ export default async function Teams() {
       return {
         ledgerId: l.ledgerId,
         teamName: l.teamName,
+        ledgerName: l.ledgerName,
+        mine: l.mine,
         currency: l.currency,
         net,
         openCount: Math.max(0, (total ?? 0) - (settled ?? 0)),
