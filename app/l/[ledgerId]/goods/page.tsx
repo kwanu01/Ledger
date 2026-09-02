@@ -5,7 +5,7 @@ import AdSlot from '../../../AdSlot.tsx';
 import GoodsGrid, { type Good } from './Goods.tsx';
 import { requireLedgerAccess } from '../../../../lib/access.ts';
 import { loadLedger } from '../../../../lib/db/repo.ts';
-import { effectiveAmount, nameOf } from '../../../../lib/domain/settlement.ts';
+import { byEntryOrder, effectiveAmount, nameOf } from '../../../../lib/domain/settlement.ts';
 import { allocationLabel } from '../../../../lib/labels.ts';
 import { translator } from '../../../../lib/i18n.ts';
 import type { CurrencyCode } from '../../../../lib/domain/money.ts';
@@ -33,7 +33,7 @@ export default async function Goods({ params }: { params: Promise<{ ledgerId: st
   // 다시 찾을 수 있다. 그래서 보정·환불까지 포함한 시간 순서로 매긴다.
   const slips = new Map<string, string>();
   [...ledger.expenses]
-    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1))
+    .sort(byEntryOrder)
     .forEach((e, i) => slips.set(e.id, String(i + 1).padStart(3, '0')));
 
   const counts = new Map<string, number>();

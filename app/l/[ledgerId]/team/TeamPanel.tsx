@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   createInvite,
@@ -63,6 +63,10 @@ export default function TeamPanel({
   const [ask, setAsk] = useState<{ id: string; kind: 'hand' | 'leave' } | null>(null);
   const [newTeam, setNewTeam] = useState('');
   const [armed, setArmed] = useState(false);
+  /** 수증이가 이 단추 옆으로 걸어오게 하려면 그 자리를 알려 줘야 한다. */
+  const dropBtn = useRef<HTMLButtonElement>(null);
+  const armTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (armTimer.current) clearTimeout(armTimer.current); }, []);
   const [leaving, setLeaving] = useState(false);
 
   async function run(fn: () => Promise<{ ok: boolean; message?: string }>) {
@@ -360,30 +364,42 @@ export default function TeamPanel({
           </tbody>
         </table>
 
-        {/* 되돌릴 수 없는 일이라 두 번 눌러야 실행된다. 만든 사람만 지운다. */}
+        {/*
+          장부 지우기. 되돌릴 수 없어서 두 번 눌러야 실행된다.
+
+          되묻는 말을 이 줄 안에 넣었더니 두 가지가 어긋났다. 경고 문장과
+          단추 두 개가 한꺼번에 나타나 **줄이 늘어나면서 아래가 밀렸고**,
+          단추 글씨까지 '삭제합니다'로 바뀌어서 방금 누른 것이 어디로 갔는지
+          한 번 찾아야 했다.
+
+          그래서 단추는 **제자리에 그대로, 같은 글씨로** 둔다. 달라지는 것은
+          무게뿐이다(.sure). 무엇이 사라지는지는 수증이가 이 단추 옆으로
+          걸어와서 말한다 — 말하는 자리는 이 서비스에 하나뿐이다(§21.10).
+
+          5초 뒤 수증이의 말이 스스로 지나가므로, 겨눈 상태도 같이 풀린다.
+          눌러 놓고 잊은 단추가 빨간 채로 남아 있지 않게.
+        */}
         <div className="row" style={{ marginTop: 26, display: owner ? undefined : 'none' }}>
-          {armed ? (
-            <>
-              <span className="debit">{T('deleteWarn')}</span>
-              <button
-                  className="act small sure"
-                disabled={busy}
-                onClick={async () => {
-                  const r = await run(() => deleteTeam({ ledgerId }));
-                  if (r?.ok) router.push('/teams');
-                }}
-              >
-                {T('deleteForReal')}
-              </button>
-              <button className="plain" onClick={() => setArmed(false)}>
-                {T('close')}
-              </button>
-            </>
-          ) : (
-            <button className="plain" onClick={() => setArmed(true)}>
-              {T('deleteBook')}
-            </button>
-          )}
+          <button
+            ref={dropBtn}
+            className={`plain${armed ? ' arm' : ''}`}
+            disabled={busy}
+            onClick={async () => {
+              if (!armed) {
+                setArmed(true);
+                say(T('deleteWarn'), 'warn', dropBtn.current);
+                if (armTimer.current) clearTimeout(armTimer.current);
+                armTimer.current = setTimeout(() => setArmed(false), 5000);
+                return;
+              }
+              if (armTimer.current) clearTimeout(armTimer.current);
+              setArmed(false);
+              const r = await run(() => deleteTeam({ ledgerId }));
+              if (r?.ok) router.push('/teams');
+            }}
+          >
+            {T('deleteBook')}
+          </button>
         </div>
 
         {/*

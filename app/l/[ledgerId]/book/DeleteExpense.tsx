@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteExpense } from '../../../actions/ledger.ts';
 import { translator } from '../../../../lib/i18n.ts';
@@ -42,6 +42,9 @@ export default function DeleteExpense({
   const { say } = useHelper();
   const [asking, setAsking] = useState(false);
   const [pending, start] = useTransition();
+  /** 겨눈 상태를 스스로 푸는 시계. 수증이의 말과 같은 길이로 둔다. */
+  const bell = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (bell.current) clearTimeout(bell.current); }, []);
 
   function drop() {
     setAsking(false);
@@ -52,31 +55,33 @@ export default function DeleteExpense({
     });
   }
 
-  if (!asking) {
-    return (
-      <button
-        className="plain"
-        disabled={pending}
-        onClick={(e) => {
-          setAsking(true);
-          // 무엇이 함께 사라지는지는 수증이가 말한다. 이 자리에 문장을 넣으면
-          // 펼친 줄이 옆으로 벌어진다. 여기 남는 것은 단추뿐이다.
-          say(T(settled ? 'deleteSettledWarn' : 'deleteEntryWarn', { title }), 'warn', e.currentTarget);
-        }}
-      >
-        {pending ? T('working') : T('deleteEntry')}
-      </button>
-    );
-  }
-
+  /*
+   * 단추는 하나고, 제자리에 있고, 글씨도 바뀌지 않는다.
+   *
+   * 전에는 되묻는 동안 단추 두 개가 들어와서 펼친 줄이 옆으로 벌어졌고,
+   * 글씨가 '정말 지웁니다'로 바뀌어 방금 누른 것이 어디 갔는지 한 번 찾아야
+   * 했다. 달라지는 것은 **무게뿐**이다. 무엇이 사라지는지는 수증이가 이
+   * 단추 옆으로 걸어와서 말한다.
+   *
+   * 5초 뒤 그 말이 스스로 지나가면 겨눈 상태도 같이 풀린다 — 눌러 놓고 잊은
+   * 단추가 빨간 채로 줄에 남아 있지 않게.
+   */
   return (
-    <span className="acts">
-      <button className="act small sure" disabled={pending} onClick={drop}>
-        {T('deleteForReal')}
-      </button>
-      <button className="plain" onClick={() => setAsking(false)}>
-        {T('close')}
-      </button>
-    </span>
+    <button
+      className={`plain${asking ? ' arm' : ''}`}
+      disabled={pending}
+      onClick={(e) => {
+        if (asking) {
+          if (bell.current) clearTimeout(bell.current);
+          return drop();
+        }
+        setAsking(true);
+        say(T(settled ? 'deleteSettledWarn' : 'deleteEntryWarn', { title }), 'warn', e.currentTarget);
+        if (bell.current) clearTimeout(bell.current);
+        bell.current = setTimeout(() => setAsking(false), 5000);
+      }}
+    >
+      {pending ? T('working') : T('deleteEntry')}
+    </button>
   );
 }

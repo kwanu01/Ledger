@@ -135,6 +135,25 @@ const CHAT_POSES = [
 ] as const;
 
 /**
+ * 놓았을 때 내려앉는 방식.
+ *
+ * 한 가지만 두었더니 옮길 때마다 같은 동작이 나와서, 두어 번 만에 '반응'이
+ * 아니라 '재생'으로 보였다. 종이 한 장이 떨어지는 방식은 원래 한 가지가
+ * 아니다 — 눌리기도 하고, 공기를 타고 흐르기도 하고, 비틀렸다 풀리기도 한다.
+ *
+ * 자세와 몸짓은 한 짝이다. 미끄러지는 몸짓(slide)에는 미끄러지다 멈춘
+ * 자세(skid)를 붙여야 그림과 움직임이 같은 말을 한다.
+ */
+const LANDINGS = [
+  { pose: 'leap', trick: 'hop', ms: 760 },    // 지나쳤다가 돌아온다
+  { pose: 'squash', trick: 'thud', ms: 660 }, // 눌렸다 펴진다
+  { pose: 'sail', trick: 'glide', ms: 920 },  // 공기를 타고 흐른다
+  { pose: 'twist', trick: 'spin', ms: 780 },  // 비틀렸다 풀린다
+  { pose: 'skid', trick: 'slide', ms: 700 },  // 미끄러지다 선다
+  { pose: 'flop', trick: 'flap', ms: 880 },   // 폭 꺾였다 일어선다
+] as const;
+
+/**
  * 아무 말도 안 할 때의 자세. 여기서만 천천히 오간다.
  * 서 있는 모습 몇 가지라 팔의 위치만 달라지는 정도다.
  */
@@ -362,6 +381,15 @@ export default function Helper({ lang }: { lang: Locale }) {
   const menuRef = useRef(false);
   /** 지금 열려 있는 창을 수증이가 스스로 열었는가. 그러면 스스로 닫는다. */
   const spoke = useRef(false);
+  /** 직전에 쓴 착지. 연달아 같은 것이 나오면 안 고른 것처럼 보인다. */
+  const lastLand = useRef(-1);
+
+  const pickLanding = useCallback(() => {
+    let i = Math.floor(Math.random() * LANDINGS.length);
+    if (i === lastLand.current) i = (i + 1) % LANDINGS.length;
+    lastLand.current = i;
+    return i;
+  }, []);
   const restPose = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 버리는 중의 시계. 말하는 시계(timers)와 섞이면 도중에 지워진다. */
   const tossTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -791,8 +819,9 @@ export default function Helper({ lang }: { lang: Locale }) {
         dragging.current = false;
         dragPose.current = '';
         setHeld(false);
-        // 손을 놓으면 지나쳤다가 돌아온다. 스프링이 알아서 한다.
-        play('leap', 'hop', 760);
+        // 손을 놓으면 지나쳤다가 돌아온다. 어떻게 내려앉는지는 그때마다 다르다.
+        const land = LANDINGS[pickLanding()];
+        play(land.pose, land.trick, land.ms);
       } else {
         // 그냥 툭 건드린 것. 맞은 것처럼 팔로 얼굴을 가리며 움찔한다.
         play('tuck', 'wiggle', 620);

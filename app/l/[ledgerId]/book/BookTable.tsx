@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { settle } from '../../../actions/ledger.ts';
+import { deleteExpenses, settle } from '../../../actions/ledger.ts';
 import {
   adjustmentsFor,
   breakdownOf,
@@ -10,6 +10,7 @@ import {
   nameOf,
   settledExpenseIds,
   needsSettling,
+  byEntryOrder,
 } from '../../../../lib/domain/settlement.ts';
 import { adjustmentLabel, allocationLabel } from '../../../../lib/labels.ts';
 import { translator } from '../../../../lib/i18n.ts';
@@ -75,14 +76,14 @@ export default function BookTable({
   const slips = useMemo(() => {
     const map = new Map<string, string>();
     [...ledger.expenses]
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1))
+      .sort(byEntryOrder)
       .forEach((e, i) => map.set(e.id, String(i + 1).padStart(3, '0')));
     return map;
   }, [ledger]);
 
   const list = useMemo(() => {
     const chrono = [...ledger.expenses].sort((a, b) =>
-      a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1,
+      byEntryOrder(a, b),
     );
     if (key === 'amount') {
       const d = dir === 'asc' ? 1 : -1;
@@ -160,6 +161,35 @@ export default function BookTable({
     if (!r.ok) return say(r.message);
     setSelection(new Set());
     router.push(`/l/${ledger.id}/${r.value.archived ? 'archive' : 'settle'}`);
+    router.refresh();
+  }
+
+  /**
+   * 고른 줄들을 지운다.
+   *
+   * 고를 수 있는 줄(pickable)은 아직 정산에 안 들어간 줄뿐이라, 여기서
+   * 지워도 확정된 정산이 흔들리지 않는다. 그래서 되묻는 말은 짧다 —
+   * 몇 건이 사라지는지와, 되돌릴 수 없다는 것.
+   *
+   * 확인창을 쓰는 이유 — 되묻는 일이 단추 안에서 일어나면 무엇이 겨눠져
+   * 있는지 색으로만 알게 된다. 여기서 사라지는 것은 여러 줄이라 몇 건인지를
+   * 글로 말해야 한다.
+   */
+  async function dropSelected() {
+    const ids = [...selection];
+    if (ids.length === 0) return;
+    if (!window.confirm(T('dropSelectedWarn', { n: ids.length }))) return;
+
+    setBusy(true);
+    const r = await deleteExpenses({ ledgerId: ledger.id, expenseIds: ids });
+    setBusy(false);
+    if (!r.ok) return say(r.message);
+
+    setSelection(new Set());
+    setOpenRow(null);
+    setEditing(null);
+    // 몇 건이 지워졌는지 말한다. 일부만 지워졌을 때 조용히 넘어가지 않으려고.
+    say(T('droppedN', { n: r.value.removed }));
     router.refresh();
   }
 
@@ -585,6 +615,9 @@ export default function BookTable({
             </span>
             <button className="act small" onClick={() => settleThese([...selection])} disabled={busy}>
               {busy ? T('settling') : T('settleSelected')}
+            </button>
+            <button className="plain" onClick={dropSelected} disabled={busy}>
+              {T('dropSelected')}
             </button>
             <button className="plain" onClick={() => setSelection(new Set())}>
               {T('clearSelection')}

@@ -542,6 +542,21 @@ a.act,a.act:visited{color:var(--ink)}
   확인하는 쪽은 칠해진 덩어리. 둘은 애초에 다른 물건이라 헷갈릴 수가 없고,
   칠해져 있으니 무엇을 누르려던 참인지도 분명하다.
 */
+/*
+   겨눈 단추.
+
+   되돌릴 수 없는 일을 한 번 눌러 겨눈 상태다. 글씨도 자리도 그대로 두고
+   무게만 바꾼다 — 글씨가 바뀌면 방금 누른 것이 어디 갔는지 한 번 찾게 되고,
+   단추가 늘어나면 아래 줄이 밀린다. 무엇이 사라지는지는 수증이가 말한다.
+
+   밑줄을 지우는 이유는 이제 이것이 링크가 아니라 **겨눠진 단추**이기 때문이다.
+*/
+.plain.arm{
+  background:var(--debit);color:var(--paper);
+  padding:2px 9px;text-decoration:none;font-weight:700}
+.plain.arm:hover,.plain.arm:focus-visible{
+  background:var(--debit);color:var(--paper);text-decoration:none}
+
 .act.sure,.act.small.sure{
   background:var(--debit);color:var(--paper);border-color:var(--debit);font-weight:700}
 .act.sure:hover,a.act.sure:hover{background:var(--debit);color:var(--paper);opacity:.86}
@@ -771,7 +786,18 @@ pre.msg{font-family:var(--mono);font-size:13.5px;line-height:1.75;white-space:pr
 /* 환율로 재 본 값. 칸 아래에 붙어 청구액과 나란히 읽힌다. */
 .fxnote{display:block;font-size:12.5px;font-weight:400;margin-top:5px;line-height:1.5}
 .fxnote .plain{font-size:12.5px}
-.scroll{overflow-x:auto}
+/*
+   좁을 때만 옆으로 밀리는 자리.
+
+   밀 수는 있어야 하되 **막대는 보이지 않는다.** 표가 화면에 다 들어가는데도
+   윈도우·리눅스에서는 회색 막대가 표 아래에 늘 그려져서, 장부의 마지막 줄
+   밑에 줄이 하나 더 있는 것처럼 보였다. 장부에서 가로줄은 뜻이 있는
+   물건이라 그 자리에 뜻 없는 줄이 있으면 안 된다.
+
+   막대만 감춘다. 손가락으로도 트랙패드로도 미는 것은 그대로 된다.
+*/
+.scroll{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.scroll::-webkit-scrollbar{display:none}
 /* 만든 사람 — 화면 맨 아래 한 줄. 본문과 섞이지 않게 선 하나로 끊는다. */
 footer{
   margin-top:56px;padding:22px 0 30px;font-size:12.5px;color:var(--ink-3);
@@ -919,6 +945,13 @@ footer a:hover{color:var(--ink)}
 .helper-body.t-hop{animation:hop .76s cubic-bezier(.28,.9,.35,1)}
 .helper-body.t-nod{animation:nod .62s ease-out}
 .helper-body.t-wiggle{animation:wiggle .82s ease-in-out}
+/* 놓았을 때. 종이 한 장이 착지하는 방식은 한 가지가 아니다 — 어떻게 던져졌는지에
+   따라 눌리기도, 미끄러지기도, 한 바퀴 돌기도 한다(app/helper/Helper.tsx). */
+.helper-body.t-thud{animation:thud .66s cubic-bezier(.2,.9,.3,1)}
+.helper-body.t-glide{animation:glide .92s cubic-bezier(.22,.7,.3,1)}
+.helper-body.t-spin{animation:spin .78s cubic-bezier(.25,.85,.35,1)}
+.helper-body.t-slide{animation:slide .7s cubic-bezier(.15,.85,.3,1)}
+.helper-body.t-flap{animation:flap .88s ease-in-out}
 
 /* ── 버리기 ──────────────────────────────────────────────────────
    종이를 버릴 때는 그냥 없어지지 않는다. 한 번 구겨지고, 작아진 덩어리가
@@ -970,6 +1003,47 @@ footer a:hover{color:var(--ink)}
   20%{transform:rotate(-3.5deg)} 44%{transform:rotate(3deg)}
   68%{transform:rotate(-2deg)} 86%{transform:rotate(1deg)}
 }
+/* 눌렸다 펴진다. 위에서 툭 떨어뜨렸을 때. */
+@keyframes thud{
+  0%{transform:translateY(-9px) scale(1,1)}
+  30%{transform:translateY(0) scale(1.13,.84)}
+  55%{transform:translateY(-4px) scale(.95,1.07)}
+  78%{transform:translateY(0) scale(1.04,.97)}
+  100%{transform:translateY(0) scale(1,1)}
+}
+/* 공기를 타고 옆으로 흘렀다가 제자리로. 종이가 가장 종이답게 떨어지는 방식이다. */
+@keyframes glide{
+  0%{transform:translate(0,-7px) rotate(0)}
+  26%{transform:translate(9px,-3px) rotate(7deg)}
+  52%{transform:translate(-6px,1px) rotate(-5deg)}
+  76%{transform:translate(3px,0) rotate(2.5deg)}
+  100%{transform:translate(0,0) rotate(0)}
+}
+/* 한 바퀴 비틀렸다 풀린다. 모서리를 잡고 놓았을 때. */
+@keyframes spin{
+  0%{transform:rotate(0) scale(1,1)}
+  35%{transform:rotate(-14deg) scale(.96,1.04)}
+  65%{transform:rotate(9deg) scale(1.03,.97)}
+  85%{transform:rotate(-3deg) scale(1,1)}
+  100%{transform:rotate(0) scale(1,1)}
+}
+/* 바닥에 닿아 조금 미끄러진 뒤 선다. */
+@keyframes slide{
+  0%{transform:translateX(0) skewX(0)}
+  22%{transform:translateX(11px) skewX(-6deg)}
+  50%{transform:translateX(-4px) skewX(3deg)}
+  76%{transform:translateX(2px) skewX(-1.4deg)}
+  100%{transform:translateX(0) skewX(0)}
+}
+/* 앞으로 폭 꺾였다가 다시 일어선다. */
+@keyframes flap{
+  0%{transform:rotate(0) scaleY(1)}
+  24%{transform:rotate(-11deg) scaleY(.9)}
+  48%{transform:rotate(6deg) scaleY(1.05)}
+  72%{transform:rotate(-3.5deg) scaleY(.98)}
+  100%{transform:rotate(0) scaleY(1)}
+}
+
 @media (prefers-reduced-motion:reduce){
   .helper-body{animation:none!important}
 }
@@ -1014,13 +1088,36 @@ footer a:hover{color:var(--ink)}
 /* 머리 위 점 하나. 말풍선은 여기서만 열고 닫는다.
    검은 선에 하얀 속. 말풍선이 이 점에서 자라 나오고, 다시 누르면 도로 접힌다.
    몸은 잡아서 옮기는 자리라, 누르는 자리를 따로 둬야 둘이 안 부딪힌다. */
+/*
+   머리 위의 점.
+
+   **보이는 크기와 눌리는 크기를 나눈다.**
+
+   그려진 점은 13픽셀이다. 그 정도라야 말풍선을 가장 적게 줄인 모양으로
+   읽힌다 — 더 키우면 점이 아니라 단추가 되고, 수증이 머리 위에 단추가
+   얹힌 그림이 된다.
+
+   그런데 폰에서 13픽셀은 못 누른다. 손가락 끝이 닿는 넓이는 그보다 훨씬
+   넓어서, 몇 번 빗나가고 나면 '눌리지 않는 것'으로 여기게 된다.
+
+   그래서 단추(button)는 투명한 자리로 두고, 그 안의 i 가 보이는 점을
+   그린다. 눈에 들어오는 것은 점 하나뿐이고, 손가락이 닿는 것은 그 둘레까지다.
+
+   크기를 52로 잡은 것은 수증이 전체가 폰에서 0.72배로 줄어들기 때문이다.
+   여기 적는 값은 줄어들기 전의 값이라, 화면에서는 약 37픽셀이 된다.
+   손가락이 닿는 자리는 화면에 그려진 크기지 CSS에 적힌 숫자가 아니다.
+*/
 .helper-tab{
-  position:absolute;left:50%;top:6px;transform:translateX(-50%);
-  appearance:none;padding:0;cursor:pointer;z-index:2;
-  width:13px;height:13px;border-radius:50%;
+  position:absolute;left:50%;top:-14px;transform:translateX(-50%);
+  appearance:none;padding:0;margin:0;border:0;background:none;
+  cursor:pointer;z-index:2;
+  width:52px;height:52px;
+  display:flex;align-items:center;justify-content:center}
+.helper-tab > i{
+  display:block;width:13px;height:13px;border-radius:50%;
   background:var(--paper);border:1.5px solid var(--ink);
   transition:transform .16s ease,background .16s ease,border-color .16s ease}
-.helper-tab:hover{transform:translateX(-50%) scale(1.25)}
+.helper-tab:hover > i{transform:scale(1.25)}
 /* 점이 빨개지던 자리. 말은 스스로 나왔다가 스스로 지나가므로, 눌러서
    치워야 할 것이 남지 않는다 — 두드릴 일도 없다(app/helper/HelperContext.tsx). */
 /* 아래에서 올라오는 판. 폰의 묻는 창이 쓴다. */
@@ -1029,7 +1126,8 @@ footer a:hover{color:var(--ink)}
   to{opacity:1;transform:translateY(0)}
 }
 
-.helper-tab:focus-visible{outline:2px solid var(--link);outline-offset:3px}
+.helper-tab:focus-visible{outline:0}
+.helper-tab:focus-visible > i{outline:2px solid var(--link);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.helper-tab{animation:none!important}}
 
 /* 치웠을 때 돌아올 자리. 그림을 함께 둬야 무엇을 부르는 건지 안다. */
@@ -1237,6 +1335,19 @@ footer a:hover{color:var(--ink)}
    펴지는 자리로 보낸다. 표는 표로 남고, 읽을 것만 남는다.
    ══════════════════════════════════════════════════════════════════ */
 @media (max-width:640px){
+  /*
+     폰에서 누르는 것들 — 손가락 크기를 지킨다.
+
+     맨 아래 줄의 글자 링크와 화면 안에서 무언가를 여는 단추(.linky)는 높이가
+     17~22픽셀이었다. 마우스 화살표에는 넉넉하지만 손가락에는 아니다.
+     글자 크기는 그대로 두고 위아래 여백만 준다 — 줄이 벌어지되 글자는
+     그대로여서, 읽는 모양은 안 바뀌고 누르기만 쉬워진다.
+  */
+  footer a,
+  footer .linky,
+  .linky{padding-top:5px;padding-bottom:5px;display:inline-block}
+  footer{gap:2px 12px}
+
   body{padding:0 22px}
 
   /* ────────────────────────────────────────────────────────────────

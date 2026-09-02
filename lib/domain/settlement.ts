@@ -315,3 +315,28 @@ export function allocationLabel(expense: Expense, members: Member[]): string {
   }
 }
 
+
+/**
+ * 장부에서 두 줄의 앞뒤 (§13)
+ *
+ * 날짜가 먼저다. 같은 날이면 **적은 차례**다.
+ *
+ * 전에는 같은 날일 때 id 를 비교했다. id 는 무작위라서, 나중에 적은 것이
+ * 위로 올라오기도 하고 아래로 가기도 했다 — 같은 날 세 건을 적으면 그 셋의
+ * 순서가 매번 다르게 보였다. 장부에서 줄의 앞뒤는 뜻이 있는 정보다.
+ * 무엇을 먼저 적었는지가 곧 그 순서여야 한다.
+ *
+ * 화면에는 날짜만 적는다. 몇 시 몇 분에 적었는지는 정렬에만 쓰지, 사람이
+ * 읽을 것이 아니다 — 장부에 필요한 것은 지출이 일어난 날이지 타자를 친
+ * 시각이 아니다.
+ *
+ * createdAt 이 비어 있을 수 있는 옛 줄은 id 로 물러난다. 순서가 흔들리더라도
+ * 터지지는 않게.
+ */
+export function byEntryOrder(a: Expense, b: Expense): number {
+  if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+  const at = a.createdAt ?? '';
+  const bt = b.createdAt ?? '';
+  if (at !== bt) return at < bt ? -1 : 1;
+  return a.id < b.id ? -1 : 1;
+}

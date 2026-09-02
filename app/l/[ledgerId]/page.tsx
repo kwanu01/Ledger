@@ -3,7 +3,12 @@ import { getLang } from '../../../lib/lang.ts';
 import LedgerShell from './LedgerShell.tsx';
 import { requireLedgerAccess } from '../../../lib/access.ts';
 import { loadLedger, openTransfers } from '../../../lib/db/repo.ts';
-import { nameOf, summarizeLedger, unsettledExpenses } from '../../../lib/domain/settlement.ts';
+import {
+  byEntryOrder,
+  nameOf,
+  summarizeLedger,
+  unsettledExpenses,
+} from '../../../lib/domain/settlement.ts';
 import { adjustmentLabel, allocationLabel } from '../../../lib/labels.ts';
 import { translator } from '../../../lib/i18n.ts';
 import { formatEntryAmount, formatMoney } from '../../../lib/domain/money.ts';
@@ -55,7 +60,7 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
   // 전표 번호. 장부의 각 줄은 번호로 참조된다.
   const slips = new Map<string, string>();
   [...ledger.expenses]
-    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1))
+    .sort(byEntryOrder)
     .forEach((e, i) => slips.set(e.id, String(i + 1).padStart(3, '0')));
 
   return (

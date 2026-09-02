@@ -73,7 +73,7 @@ export type Key =
   // 아카이브
   | 'archiveTitle' | 'period' | 'days' | 'timesN' | 'settleCount' | 'whatOn' | 'settleHistory'
   // 지출 기입
-  | 'expenseEntry' | 'pickPhoto' | 'writeManually' | 'reading' | 'fromAI'
+  | 'expenseEntry' | 'pickPhoto' | 'writeManually' | 'reading' | 'stillReading' | 'readGaveUp' | 'fromAI'
   | 'itemName' | 'amount' | 'date' | 'payer' | 'whoSplits'
   | 'wholeTeam' | 'someOnly' | 'onePersonTakes' | 'whoTakes'
   | 'productLink' | 'noteField' | 'writeToBook' | 'giveUp' | 'perPerson'
@@ -81,7 +81,7 @@ export type Key =
   | 'photoShort' | 'photoSentTo2'
   | 'closedMark'
   | 'relabelEntry' | 'relabelOnly'
-  | 'ownerTag' | 'handOver' | 'handOverWarn' | 'handOverDo' | 'goneWarn' | 'goneDo' | 'myBooks' | 'joinedBooks' | 'makeBook' | 'bookNamePlaceholder' | 'rateOn' | 'rateSays' | 'useRate' | 'helperWhat' | 'helperChat' | 'helperAskOpen' | 'settleAll' | 'confirmFor' | 'confirmForWarn' | 'waitedDays' | 'saysSentDays'
+  | 'ownerTag' | 'handOver' | 'handOverWarn' | 'handOverDo' | 'goneWarn' | 'goneDo' | 'myBooks' | 'joinedBooks' | 'makeBook' | 'bookNamePlaceholder' | 'rateOn' | 'rateSays' | 'useRate' | 'helperWhat' | 'helperChat' | 'helperAskOpen' | 'settleAll' | 'dropSelected' | 'dropSelectedWarn' | 'droppedN' | 'confirmFor' | 'confirmForWarn' | 'waitedDays' | 'saysSentDays'
   | 'photoSentTo' | 'chargedIn' | 'paidIn' | 'foreignNote' | 'uploaded'
   // 팀
   | 'membersN' | 'me' | 'gone' | 'markGone' | 'bringBack'
@@ -182,7 +182,9 @@ const ko: Record<Key, string> = {
   timesN: '{n}회', settleCount: '정산', whatOn: '무엇에 썼나', settleHistory: '정산 이력',
 
   expenseEntry: '지출 기입', pickPhoto: '사진 고르기', writeManually: '직접 적기',
-  reading: '읽는 중', fromAI: '읽어옴',
+  reading: '읽는 중', stillReading: '조금 더 걸리고 있어요.',
+  readGaveUp: '읽는 데 너무 오래 걸려서 그만두었어요. 직접 적어 주세요.',
+  fromAI: '읽어옴',
   itemName: '항목 이름', amount: '금액', date: '날짜', payer: '결제한 사람',
   whoSplits: '나눠 낼 사람',
   wholeTeam: '팀 전체 {n}명', someOnly: '일부만', onePersonTakes: '한 사람이 가져감',
@@ -240,6 +242,9 @@ const ko: Record<Key, string> = {
   helperTitle: '수증이', helperAsk: '장부에 대해 묻기', helperAskWhat: '무엇이 궁금한가요',
   helperWhat: '여기서 뭘 하나요?', helperChat: '다른 얘기 해 주세요',
   helperAskOpen: '수증이에게 물어보기', settleAll: '전체 정산',
+  dropSelected: '고른 것 삭제',
+  dropSelectedWarn: '고른 {n}건을 장부에서 지웁니다. 없던 기록이 되고 되돌릴 수 없습니다.',
+  droppedN: '{n}건을 지웠습니다.',
   helperAskGo: '묻기', helperReading: '읽는 중', helperHide: '버리기', helperShow: '수증이',
   sortBy: '순서', etc: '기타',
   settledNow: '정산했습니다', sendItNow: '이 글을 팀에게 보내세요.',
@@ -342,7 +347,9 @@ const en: Record<Key, string> = {
   timesN: '{n}', settleCount: 'Settlements', whatOn: 'What it went on', settleHistory: 'Settlement history',
 
   expenseEntry: 'Add expense', pickPhoto: 'Choose a photo', writeManually: 'Type it myself',
-  reading: 'Reading', fromAI: 'read',
+  reading: 'Reading', stillReading: 'This is taking a little longer.',
+  readGaveUp: 'Reading took too long, so I stopped. Please type it in.',
+  fromAI: 'read',
   itemName: 'Item name', amount: 'Amount', date: 'Date', payer: 'Paid by',
   whoSplits: 'Who splits it',
   wholeTeam: 'Whole team, {n}', someOnly: 'Only some of us', onePersonTakes: 'One person keeps it',
@@ -400,6 +407,9 @@ const en: Record<Key, string> = {
   helperTitle: 'Receipt', helperAsk: 'Ask about this ledger', helperAskWhat: 'What would you like to know',
   helperWhat: 'What happens here?', helperChat: 'Tell me something else',
   helperAskOpen: 'Ask me anything', settleAll: 'Settle everything',
+  dropSelected: 'Delete selected',
+  dropSelectedWarn: 'This removes the {n} selected entries from the ledger. They are gone for good.',
+  droppedN: 'Deleted {n} entries.',
   helperAskGo: 'Ask', helperReading: 'Reading', helperHide: 'Throw away', helperShow: 'Receipt',
   sortBy: 'Order', etc: 'Other',
   settledNow: 'Settled', sendItNow: 'Send this to the team.',
@@ -500,7 +510,9 @@ const ja: Record<Key, string> = {
   timesN: '{n}回', settleCount: '精算', whatOn: '何に使ったか', settleHistory: '精算の履歴',
 
   expenseEntry: '支出を記入', pickPhoto: '写真を選ぶ', writeManually: '手で入力する',
-  reading: '読み取り中', fromAI: '読み取り',
+  reading: '読み取り中', stillReading: 'もう少しかかっています。',
+  readGaveUp: '読み取りに時間がかかりすぎたのでやめました。手で入力してください。',
+  fromAI: '読み取り',
   itemName: '項目名', amount: '金額', date: '日付', payer: '支払った人',
   whoSplits: '分けて払う人',
   wholeTeam: 'チーム全体 {n}人', someOnly: '一部だけ', onePersonTakes: '一人が引き取る',
@@ -558,6 +570,9 @@ const ja: Record<Key, string> = {
   helperTitle: 'レシート', helperAsk: '帳簿について聞く', helperAskWhat: '何が知りたいですか',
   helperWhat: 'ここは何をする所ですか', helperChat: '他の話をしてください',
   helperAskOpen: 'レシートに聞いてみる', settleAll: '全部を精算',
+  dropSelected: '選んだものを削除',
+  dropSelectedWarn: '選んだ{n}件を帳簿から削除します。元に戻せません。',
+  droppedN: '{n}件を削除しました。',
   helperAskGo: '聞く', helperReading: '読み中', helperHide: '捨てる', helperShow: 'レシート',
   sortBy: '順序', etc: 'その他',
   settledNow: '精算しました', sendItNow: 'この文をチームに送ってください。',
@@ -658,7 +673,9 @@ const zh: Record<Key, string> = {
   timesN: '{n}次', settleCount: '结算', whatOn: '钱花在哪', settleHistory: '结算历史',
 
   expenseEntry: '记一笔', pickPhoto: '选择照片', writeManually: '手动填写',
-  reading: '读取中', fromAI: '已读取',
+  reading: '读取中', stillReading: '还要再等一会儿。',
+  readGaveUp: '读取太久了，先停下来。请手动填写。',
+  fromAI: '已读取',
   itemName: '项目名称', amount: '金额', date: '日期', payer: '付款人',
   whoSplits: '由谁分担',
   wholeTeam: '全队 {n}人', someOnly: '仅部分人', onePersonTakes: '归一人所有',
@@ -716,6 +733,9 @@ const zh: Record<Key, string> = {
   helperTitle: '收据', helperAsk: '询问这本账本', helperAskWhat: '想知道什么',
   helperWhat: '这里是做什么的？', helperChat: '说点别的吧',
   helperAskOpen: '问问收据', settleAll: '全部结算',
+  dropSelected: '删除所选',
+  dropSelectedWarn: '将从账本中删除所选的 {n} 笔，无法恢复。',
+  droppedN: '已删除 {n} 笔。',
   helperAskGo: '问', helperReading: '读取中', helperHide: '丢掉', helperShow: '收据',
   sortBy: '排序', etc: '其他',
   settledNow: '已结算', sendItNow: '把这段发给团队。',
@@ -821,7 +841,9 @@ const es: Record<Key, string> = {
   settleHistory: 'Historial de liquidaciones',
 
   expenseEntry: 'Añadir gasto', pickPhoto: 'Elegir una foto', writeManually: 'Escribirlo yo',
-  reading: 'Leyendo', fromAI: 'leído',
+  reading: 'Leyendo', stillReading: 'Esto está tardando un poco más.',
+  readGaveUp: 'La lectura tardó demasiado y la detuve. Escríbelo a mano.',
+  fromAI: 'leído',
   itemName: 'Concepto', amount: 'Importe', date: 'Fecha', payer: 'Quién pagó',
   whoSplits: 'Quién lo reparte',
   wholeTeam: 'Todo el equipo, {n}', someOnly: 'Solo algunos', onePersonTakes: 'Se lo queda una persona',
@@ -879,6 +901,9 @@ const es: Record<Key, string> = {
   helperTitle: 'Recibo', helperAsk: 'Preguntar sobre el libro', helperAskWhat: 'Qué quieres saber',
   helperWhat: '¿Qué se hace aquí?', helperChat: 'Cuéntame otra cosa',
   helperAskOpen: 'Pregúntame lo que sea', settleAll: 'Liquidar todo',
+  dropSelected: 'Eliminar lo seleccionado',
+  dropSelectedWarn: 'Esto quita del libro los {n} apuntes seleccionados. No se puede deshacer.',
+  droppedN: 'Se eliminaron {n} apuntes.',
   helperAskGo: 'Preguntar', helperReading: 'Leyendo', helperHide: 'Tirar', helperShow: 'Recibo',
   sortBy: 'Orden', etc: 'Otros',
   settledNow: 'Liquidado', sendItNow: 'Envía esto al equipo.',
@@ -981,7 +1006,9 @@ const vi: Record<Key, string> = {
   settleHistory: 'Lịch sử chia tiền',
 
   expenseEntry: 'Ghi chi tiêu', pickPhoto: 'Chọn ảnh', writeManually: 'Tự nhập',
-  reading: 'Đang đọc', fromAI: 'đã đọc',
+  reading: 'Đang đọc', stillReading: 'Đang lâu hơn một chút.',
+  readGaveUp: 'Đọc lâu quá nên mình dừng lại. Bạn nhập tay giúp nhé.',
+  fromAI: 'đã đọc',
   itemName: 'Tên khoản', amount: 'Số tiền', date: 'Ngày', payer: 'Người trả',
   whoSplits: 'Ai cùng chia',
   wholeTeam: 'Cả nhóm {n} người', someOnly: 'Chỉ một số người', onePersonTakes: 'Một người giữ',
@@ -1039,6 +1066,9 @@ const vi: Record<Key, string> = {
   helperTitle: 'Hóa đơn', helperAsk: 'Hỏi về sổ này', helperAskWhat: 'Bạn muốn biết gì',
   helperWhat: 'Ở đây làm gì vậy?', helperChat: 'Kể chuyện khác đi',
   helperAskOpen: 'Hỏi tôi bất cứ điều gì', settleAll: 'Chia tất cả',
+  dropSelected: 'Xóa mục đã chọn',
+  dropSelectedWarn: 'Sẽ xóa {n} mục đã chọn khỏi sổ. Không thể hoàn tác.',
+  droppedN: 'Đã xóa {n} mục.',
   helperAskGo: 'Hỏi', helperReading: 'Đang đọc', helperHide: 'Vứt đi', helperShow: 'Hóa đơn',
   sortBy: 'Thứ tự', etc: 'Khác',
   settledNow: 'Đã chia xong', sendItNow: 'Gửi đoạn này cho nhóm.',

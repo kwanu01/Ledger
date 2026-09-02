@@ -183,6 +183,47 @@ export async function deleteExpense(args: {
 }
 
 /**
+ * 고른 줄들을 한꺼번에 지우기 (§12)
+ *
+ * 장부를 정리할 때는 한 줄이 아니라 여러 줄이 잘못돼 있다 — 시험 삼아 넣은
+ * 것, 두 번 적힌 것. 그걸 한 줄씩 지우게 하면 되묻는 창이 열 번 뜬다.
+ *
+ * 한 번에 보내는 이유는 왕복 횟수만이 아니다. 한 줄씩 보내면 중간에 회선이
+ * 끊겼을 때 **몇 줄까지 지워졌는지 사람도 화면도 모른다.** 여기서 한 번에
+ * 받고, 지운 수를 세어 돌려준다.
+ *
+ * 한 줄이 실패해도 나머지는 계속 지운다. 그리고 몇 줄이 남았는지 말한다 —
+ * 조용히 반쯤 지워 놓고 성공했다고 하는 것이 가장 나쁘다.
+ */
+export async function deleteExpenses(args: {
+  ledgerId: string;
+  expenseIds: string[];
+}): Promise<Result<{ removed: number; missed: number }>> {
+  try {
+    await requireLedgerAccess(args.ledgerId);
+    if (args.expenseIds.length === 0) return { ok: false, message: '지울 줄을 고르세요.' };
+
+    let removed = 0;
+    // 이름을 failed 로 두면 위에서 들여온 failed() 를 가린다.
+    let missed = 0;
+    for (const id of args.expenseIds) {
+      try {
+        await removeExpense(id, args.ledgerId);
+        removed += 1;
+      } catch {
+        missed += 1;
+      }
+    }
+
+    revalidatePath(`/l/${args.ledgerId}`, 'layout');
+    revalidatePath('/teams');
+    return { ok: true, value: { removed, missed } };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/**
  * 지출 한 줄 고치기 (§12)
  *
  * 아직 정산에 들어가지 않은 줄은 원본을 그대로 고친다. 잘못 적은 것을

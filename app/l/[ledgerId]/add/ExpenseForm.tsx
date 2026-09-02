@@ -82,6 +82,8 @@ export default function ExpenseForm({
 
   // 사진 먼저, 폼은 그다음. 손으로 적겠다고 하면 곧장 빈 폼으로 간다.
   const [step, setStep] = useState<'photo' | 'reading' | 'form'>('photo');
+  /** 읽기가 길어지고 있는가. 잠자코 기다리게 두지 않으려고 둔다. */
+  const [slow, setSlow] = useState(false);
   const [thumb, setThumb] = useState<string | null>(null);
   /* 읽은 뒤에도 파일을 들고 있는다. 남길지 말지는 저장할 때 정한다. */
   const [photo, setPhoto] = useState<File | null>(null);
@@ -127,10 +129,33 @@ export default function ExpenseForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
+  /*
+   * 기다림에 끝을 둔다 (client)
+   *
+   * 서버에도 끝이 있다(lib/ai/receipt.ts, 9초). 그런데 그 끝은 **모델을 부르는
+   * 구간**에만 걸린다. 사람이 실제로 기다리는 시간은 사진을 올려 보내는
+   * 시간까지 포함하고, 그 구간은 폰의 회선에 달렸다. 서버 쪽이 멀쩡히 끊겨도
+   * 그 대답이 돌아오지 못하면 화면에는 '읽는 중'만 남는다.
+   *
+   * 그래서 이쪽에도 끝을 둔다. 이쪽이 더 길다 — 서버가 스스로 끊고 이유를
+   * 말할 기회를 먼저 주고, 그 말조차 오지 않을 때만 여기서 끊는다.
+   */
+  const WAIT_MS = 15000;
+  /** 이만큼 지나면 '조금 더 걸린다'고 알린다. 잠자코 있으면 멈춘 줄 안다. */
+  const SLOW_MS = 6000;
+  /** 몇 번째 읽기인가. 사람이 먼저 나가 버린 뒤 도착한 대답을 버리는 데 쓴다. */
+  const runId = useRef(0);
+
   async function analyze(original: File) {
+    const mine = ++runId.current;
     say('');
+    setSlow(false);
     setThumb(URL.createObjectURL(original));
     setStep('reading');
+
+    const slowBell = setTimeout(() => {
+      if (runId.current === mine) setSlow(true);
+    }, SLOW_MS);
 
     /*
      * 올리기 전에 줄인다.
@@ -143,12 +168,36 @@ export default function ExpenseForm({
      * 저장소도 덜 쓴다.
      */
     const file = await shrinkImage(original);
+    if (runId.current !== mine) return;
     setPhoto(file);
 
     const fd = new FormData();
     fd.set('ledgerId', ledgerId);
     fd.set('image', file);
-    const r = await analyzeReceipt(fd);
+
+    /*
+     * 먼저 오는 쪽을 받는다 — 대답이거나, 우리가 정한 끝이거나.
+     *
+     * 서버 일을 실제로 멈출 수는 없다. 다만 그 결과를 **쓰지 않는다.**
+     * 값이 이미 손으로 적힌 칸을 늦게 도착한 대답이 덮어써 버리면,
+     * 사람이 방금 적은 것이 눈앞에서 바뀐다. 그것이 기다리는 것보다 나쁘다.
+     */
+    const r = await Promise.race([
+      analyzeReceipt(fd),
+      new Promise<null>((done) => setTimeout(() => done(null), WAIT_MS)),
+    ]);
+    clearTimeout(slowBell);
+
+    // 사람이 먼저 '직접 적기'로 나갔다. 이 대답은 버린다.
+    if (runId.current !== mine) return;
+
+    if (r === null) {
+      // 스스로 그만둔다. 사진은 남겨 두고 손으로 마저 적게 한다.
+      runId.current += 1;
+      say(T('readGaveUp'));
+      setStep('form');
+      return;
+    }
 
     if (!r.ok) {
       // 못 읽어도 막지 않는다. 사진은 남겨 두고 손으로 마저 적게 한다.
@@ -257,9 +306,10 @@ export default function ExpenseForm({
       productLink: productLink.trim() || undefined,
       note: note.trim() || undefined,
     });
-    setBusy(false);
-
-    if (!r.ok) return say(r.message);
+    if (!r.ok) {
+      setBusy(false);
+      return say(r.message);
+    }
 
     // 남기기로 했으면 지출이 만들어진 뒤에 사진을 붙인다. 사진을 못 붙여도
     // 지출은 이미 적혔으므로 막지 않는다. 사진은 장부에서 다시 올릴 수 있다.
@@ -276,8 +326,21 @@ export default function ExpenseForm({
     if (keepPhoto && photo) await put('receipt', photo);
     if (item) await put('item', item);
 
-    router.push(`/l/${ledgerId}/book`);
-    router.refresh();
+    /*
+     * 적고 나면 장부로 간다.
+     *
+     * 여기 push 뒤에 refresh 가 한 줄 더 있었다. 그 두 줄이 서로를 밟았다 —
+     * recordExpense 가 revalidatePath 로 이 장부의 layout 을 통째로 무르므로,
+     * push 로 시작한 이동이 끝나기 전에 refresh 가 **지금 있는 화면**을 다시
+     * 그린다. 그러면 이동이 취소되고 기입 화면에 그대로 남는다. 지출은 이미
+     * 적혔으니, 사람 눈에는 '눌렀는데 아무 일도 안 일어난' 것이 된다.
+     *
+     * 무르는 일은 서버가 이미 했다. 여기서는 옮기기만 하면 된다.
+     *
+     * replace 인 이유 — 다 적고 넘어간 기입 화면으로 뒤로 가기가 돌아오면
+     * 방금 적은 것을 또 적게 된다.
+     */
+    router.replace(`/l/${ledgerId}/book`);
   }
 
   // 먼저 사진을 받는다. 영수증 한 장이면 아래 칸들이 대부분 채워진다.
@@ -386,11 +449,23 @@ export default function ExpenseForm({
         <p className="muted" style={{ marginTop: 20, textAlign: 'center' }}>
           {T('reading')}
         </p>
+        {/* 길어지면 길어진다고 말한다. 아무 말도 없으면 멈춘 줄 안다. */}
+        {slow && (
+          <p className="faint" style={{ marginTop: 6, textAlign: 'center' }}>
+            {T('stillReading')}
+          </p>
+        )}
         {/* 막다른 골목을 두지 않는다. 오래 걸린다 싶으면 손으로 적으면 된다.
-            읽기가 끝나면 그때 채워지는 것이 아니라, 여기서 나간 사람은 그냥
-            빈 폼을 쓴다. 기다림이 강제가 되어서는 안 된다. */}
-        <p style={{ marginTop: 16 }}>
-          <button className="plain" onClick={() => setStep('form')}>
+            나가면서 runId 를 올린다 — 그래야 늦게 도착한 대답이 이미 손으로
+            적어 둔 칸을 덮어쓰지 못한다. */}
+        <p style={{ marginTop: 16, textAlign: 'center' }}>
+          <button
+            className="plain"
+            onClick={() => {
+              runId.current += 1;
+              setStep('form');
+            }}
+          >
             {T('writeManually')}
           </button>
         </p>
