@@ -57,6 +57,14 @@ export default function TeamPanel({
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  /*
+   * 지금 무엇을 하는 중인가 (§21.16)
+   *
+   * `busy` 하나로는 "무언가 돌고 있다"까지만 알 수 있다. 그러면 어느 단추가
+   * 일하는 중인지 그 단추 위에 적을 수가 없어서, 화면 전체가 잿빛이 될 뿐
+   * 기다리라는 말은 아무 데도 없다. 초대 링크를 만들 때가 그랬다.
+   */
+  const [doing, setDoing] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [editTeam, setEditTeam] = useState(false);
   /** 되묻는 중인 팀원과, 무엇을 되묻는지. 되돌리기 어려운 일이라 한 번 더 묻는다. */
@@ -69,10 +77,12 @@ export default function TeamPanel({
   useEffect(() => () => { if (armTimer.current) clearTimeout(armTimer.current); }, []);
   const [leaving, setLeaving] = useState(false);
 
-  async function run(fn: () => Promise<{ ok: boolean; message?: string }>) {
-        setBusy(true);
+  async function run(fn: () => Promise<{ ok: boolean; message?: string }>, tag?: string) {
+    setBusy(true);
+    if (tag) setDoing(tag);
     const r = await fn();
     setBusy(false);
+    setDoing(null);
     if (!r.ok) return say(r.message ?? '알 수 없는 오류가 발생했습니다.');
     router.refresh();
     return r;
@@ -296,13 +306,22 @@ export default function TeamPanel({
           {T('inviteHint')}
         </p>
 
+        {/*
+          만드는 데 시간이 든다. 서버가 열쇠를 하나 찍어서 넣고 오는 동안
+          화면에는 아무 일도 안 일어나므로, 안 먹은 줄 알고 또 누르게 된다.
+          글씨가 바뀌고 아래를 선 하나가 지나간다. 단추는 제자리다(.swap).
+        */}
         <div className="row" style={{ marginTop: 20 }}>
           <button
-            className="act small"
+            className={`act small${doing === 'invite' ? ' waiting' : ''}`}
             disabled={busy}
-            onClick={() => run(() => createInvite({ ledgerId }))}
+            aria-busy={doing === 'invite' || undefined}
+            onClick={() => run(() => createInvite({ ledgerId }), 'invite')}
           >
-            {T('makeInvite')}
+            <span className={`swap${doing === 'invite' ? ' on' : ''}`}>
+              <span className="rest">{T('makeInvite')}</span>
+              <span className="wait">{T('making')}</span>
+            </span>
           </button>
         </div>
       </section>

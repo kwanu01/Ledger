@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { addLedgerToTeam } from '../../actions/teams.ts';
 import { translator } from '../../../lib/i18n.ts';
@@ -40,6 +40,32 @@ export default function BookSwitch({
   const [name, setName] = useState('');
   const [curr, setCurr] = useState<CurrencyCode>('KRW');
   const [pending, start] = useTransition();
+  const box = useRef<HTMLSpanElement>(null);
+
+  /*
+   * 바깥을 누르면 닫힌다.
+   *
+   * 전에는 열어 둔 판을 닫으려면 이름을 다시 정확히 눌러야 했다. 열 때는
+   * 이름을 눌렀지만 닫을 때는 이미 볼 일이 끝난 뒤라, 그 자리를 다시 찾는
+   * 일이 성가시다. 화면 아무 데나 누르면 닫히는 것이 사람이 기대하는 쪽이다.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    // 이번 클릭이 그대로 잡히지 않게 다음 차례부터 듣는다.
+    const t = setTimeout(() => window.addEventListener('pointerdown', away), 0);
+    window.addEventListener('keydown', esc);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('pointerdown', away);
+      window.removeEventListener('keydown', esc);
+    };
+  }, [open]);
 
   // 고를 것도 만들 것도 없으면 그냥 이름이다.
   if (books.length < 2 && !owner) return <span className="book">{bookName}</span>;
@@ -57,7 +83,9 @@ export default function BookSwitch({
   }
 
   return (
-    <span className="bookpick">
+    <span className="bookpick" ref={box}>
+      {/* 이름이 곧 손잡이다. 뜻 없는 자국(삼각형)을 붙이지 않고, 마우스를
+          올리면 밑줄이 그어지는 것으로 알린다(globals.css). */}
       <button
         className="book bookpick-now"
         aria-expanded={open}
@@ -67,9 +95,6 @@ export default function BookSwitch({
         }}
       >
         {bookName}
-        <span className="bookpick-caret" aria-hidden="true">
-          ▾
-        </span>
       </button>
 
       {open && (
