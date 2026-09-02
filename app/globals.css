@@ -28,8 +28,20 @@
   --rule:#b4b4b4;       /* 괘선 */
   --rule-2:#dedede;     /* 보조 괘선 */
   --rule-hard:#000000;
-  --link:#0000ee;       /* 브라우저 기본 파랑 */
-  --link-v:#551a8b;
+  /*
+     누를 수 있는 것의 색.
+
+     브라우저 기본 파랑(#0000ee)을 쓰다가 바꿨다. 그 파랑은 어느 사이트에서나
+     같은 뜻이라 개성이 아니라 관성인데, 그렇다고 색을 지우면 누를 수 있는
+     것이 안 보인다. 그래서 **파랑은 남기되 채도를 내린다.**
+
+     쉬고 있을 때는 물러난 잉크다. 마우스를 올리면 그때 채도가 올라온다 —
+     색이 생기는 것이 아니라 **원래 있던 색이 진해지는** 것이라, 무엇이
+     바뀌었는지 눈이 따라가기 쉽다.
+  */
+  --link:#3f5580;       /* 쉬고 있을 때 — 채도를 내린 파랑 */
+  --link-on:#0f34c9;    /* 마우스를 올렸을 때 — 진한 파랑 */
+  --link-v:#5a5177;
   --debit:#cc0000;      /* 상태 색 — 보낼 돈, 환불 */
   --stamp:#cf3a2c;      /* 고무도장 잉크. 숫자가 아니라 종이 위에 얹힌 물건의 색이다 */
   --hl:#f4f4f4;
@@ -82,14 +94,18 @@
   :root:not([data-theme="light"]){
     --paper:#0e0e0d; --ink:#e4e2dd; --ink-2:#9b9892; --ink-3:#78756f;
     --rule:#3b3a37; --rule-2:#232320; --rule-hard:#c4c1bb;
-    --link:#e4e2dd; --link-v:#a9a6a0; --debit:#d98b80; --stamp:#c0584b;
+    /* 어두운 화면에서는 파랑이 그대로 튄다. 밝기를 올리고 채도는 낮춘 채로
+       두었다가, 마우스를 올리면 그때만 파랑 쪽으로 간다. */
+    --link:#9aa6c2; --link-on:#b9c8ff; --link-v:#8f8aa3;
+    --debit:#d98b80; --stamp:#c0584b;
     --hl:#1a1a18; --settled:#171715; --field:#131311;
   }
 }
 :root[data-theme="dark"]{
   --paper:#0e0e0d; --ink:#e4e2dd; --ink-2:#9b9892; --ink-3:#78756f;
   --rule:#3b3a37; --rule-2:#232320; --rule-hard:#c4c1bb;
-  --link:#e4e2dd; --link-v:#a9a6a0; --debit:#d98b80; --stamp:#c0584b;
+  --link:#9aa6c2; --link-on:#b9c8ff; --link-v:#8f8aa3;
+  --debit:#d98b80; --stamp:#c0584b;
   --hl:#1a1a18; --settled:#171715; --field:#131311;
 }
 
@@ -1548,7 +1564,24 @@ a.mail-addr:hover{text-decoration-color:var(--ink)}
   table.book.entries td.slip,
   table.book.entries td.day{
     font-size:12px;color:var(--ink-3);letter-spacing:.04em;width:auto}
+  /*
+     날짜는 줄의 오른쪽 끝에 선다.
+
+     여기 걸린 함정이 하나 있었다. 금액 칸이 3~4열을 걸쳐 놓여 있어서,
+     금액이 길면(1,000,000) 그 폭이 두 열에 나뉘어 4열이 넓어지고, 3열에
+     오른쪽 맞춤으로 서 있던 날짜가 그만큼 왼쪽으로 밀린다. 줄마다 격자가
+     따로 짜이므로 **금액 자릿수가 날짜 위치를 바꾼다.** 위아래 두 줄의
+     날짜가 서로 어긋나 보이던 것이 이것이다.
+
+     장부는 날짜로 읽는 기록이라 그 자리가 줄마다 흔들리면 안 된다.
+
+     도장이나 고르는 칸이 없는 줄(첫 화면의 '최근 기입')에서는 날짜가
+     마지막 열까지 뻗게 해서 오른쪽 끝에 못박는다. 도장이 있는 줄에서는
+     그 자리가 도장의 것이므로 지금처럼 그 왼쪽에 선다.
+  */
   table.book.entries td.day{justify-self:end}
+  table.book.entries tr.entry:not(:has(td.state)):not(:has(td.tick)) td.day{
+    grid-column:3 / -1}
 
   /* 가운데 줄 — 무엇을 샀는지. 이 기록에서 가장 먼저 읽혀야 하는 것이다. */
   table.book.entries td.item{
@@ -1876,8 +1909,18 @@ table.book tbody tr.entry{transition:background .18s ease}
    1.5)이 도장을 눌렀다 뗀 반동이다. both 를 주어 **한 번만** 찍힌다 —
    다시 그릴 때마다 또 찍히면 종이가 아니라 광고가 된다.
 */
-.mark,.done-mark{animation:stamp-press .34s cubic-bezier(.2,1.5,.4,1) both}
-@keyframes stamp-press{
+/*
+   이름을 mark-press 로 둔다.
+
+   처음에 이것도 stamp-press 라고 지었다가 **로고의 도장이 안 찍혔다.**
+   같은 이름의 @keyframes 가 둘이면 나중에 적힌 것이 이긴다. 이 파일 끝에
+   적은 한 줄짜리 정의가 위쪽에 있던 로고의 네 단계짜리 정의를 통째로
+   덮어썼고, 그 결과 로고 도장은 opacity 0 인 채로 끝나 눈에 보이지 않았다.
+
+   CSS 에서 @keyframes 이름은 전역이다. 셀렉터처럼 범위가 나뉘지 않는다.
+*/
+.mark,.done-mark{animation:mark-press .34s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes mark-press{
   from{opacity:0;transform:scale(1.5) rotate(-4deg)}
 }
 
@@ -1913,6 +1956,8 @@ input[type='text'],input[type='email'],input[type='number'],input[type='date'],s
   .mark,.done-mark,main > section,.masthead,.rule-double,nav{animation:none}
   .choice:hover{padding-left:6px}
   a,.plain,.linky,nav .tab,nav .tab::after{transition:none}
+  a:not(.act):not(.choice):not(.tab):not(.logo):not(.bookpick-item),
+  .plain,.linky{background-size:100% 1px,100% 1px}
   nav .tab[aria-current="page"]::after{animation:none}
 }
 
@@ -1940,44 +1985,68 @@ input[type='text'],input[type='email'],input[type='number'],input[type='date'],s
    새 자리에서 다시 그어진다 — 어디로 왔는지가 움직임으로 남는다.
 */
 
-/* 본문 링크 — 밑줄 굵기가 눌린다. */
-a{transition:text-decoration-thickness .18s ease,text-decoration-color .18s ease,color .18s ease}
-a:hover{text-decoration-thickness:2px}
-
 /*
-   단추꼴 링크 — 밑줄이 그어진다.
+   링크 — 밑줄이 그어지고, 색이 진해진다.
 
    쉬고 있을 때도 밑줄은 있다(둘째 층이 늘 100%). 위에 겹치는 첫째 층이
-   0에서 100%로 자라면서, 같은 자리에 더 진한 선이 덧그어진다.
-   누를 수 있다는 것은 마우스를 올려야 알 수 있는 사실이 아니다.
+   0에서 100%로 자라면서 같은 자리에 더 진한 선이 덧그어진다. 왼쪽에서
+   오른쪽으로 — 펜이 지나가는 방향이다.
+
+   누를 수 있다는 것은 마우스를 올려야 알 수 있는 사실이 아니다. 그래서
+   쉬는 상태에도 색과 밑줄이 다 있고, 올렸을 때 달라지는 것은 **진하기뿐**이다.
+
+   단추·갈림길·차례표·로고는 뺀다. 그것들은 링크처럼 생기지 않았고, 각자
+   다른 방식으로 눌린다.
 */
+a:not(.act):not(.choice):not(.tab):not(.logo):not(.bookpick-item),
 .plain,.linky{
   text-decoration:none;
   background-image:
-    linear-gradient(currentColor,currentColor),
+    linear-gradient(var(--link-on),var(--link-on)),
     linear-gradient(currentColor,currentColor);
   background-size:0 1px,100% 1px;
   background-position:0 100%,0 100%;
   background-repeat:no-repeat;
   padding-bottom:2px;
-  transition:background-size .3s cubic-bezier(.19,1,.22,1),color .18s ease}
-.linky{background-image:
-  linear-gradient(currentColor,currentColor),
-  linear-gradient(var(--rule),var(--rule))}
+  transition:background-size .3s cubic-bezier(.19,1,.22,1),color .2s ease}
+a:not(.act):not(.choice):not(.tab):not(.logo):not(.bookpick-item):hover,
+a:not(.act):not(.choice):not(.tab):not(.logo):not(.bookpick-item):focus-visible,
 .plain:hover,.plain:focus-visible,
-.linky:hover,.linky:focus-visible{background-size:100% 1px,100% 1px}
+.linky:hover,.linky:focus-visible{
+  background-size:100% 1px,100% 1px;
+  color:var(--link-on)}
+
+/* .linky 는 본문 링크가 아니라 화면 안에서 무언가를 여는 자리다.
+   쉬는 밑줄은 괘선 색으로 물러나 있다. */
+.linky{background-image:
+  linear-gradient(var(--link-on),var(--link-on)),
+  linear-gradient(var(--rule),var(--rule))}
 /* 겨눈 단추는 링크가 아니다. 밑줄을 걷는다. */
 .plain.arm{background-image:none;padding-bottom:2px}
 
-/* 차례표 — 지금 여기에만 막대가 그어진다. */
-nav .tab{position:relative;transition:color .18s ease}
+/*
+   차례표.
+
+   파란 밑줄이 여섯 개 나란히 있으면, 어느 탭을 보고 있는지보다 '누를 것이
+   여섯 개'라는 사실이 먼저 읽힌다. 색을 걷고 **지금 여기**만 먹으로 남긴다.
+   나머지는 물러난 잉크다.
+
+   보고 있는 탭 아래의 막대는 화면이 열릴 때 그어진다. 탭을 옮기면 새
+   자리에서 다시 그어진다 — 어디로 왔는지가 움직임으로 남는다.
+*/
+nav .tab{
+  position:relative;color:var(--ink-2);text-decoration:none;
+  background-image:none;padding-bottom:6px;
+  transition:color .2s ease}
+nav .tab:hover{color:var(--ink)}
 nav .tab::after{
-  content:'';position:absolute;left:0;right:0;bottom:0;height:3px;
-  background:var(--rule-hard);
+  content:'';position:absolute;left:0;right:0;bottom:0;height:2px;
+  background:var(--rule);
   transform:scaleX(0);transform-origin:0 50%;
   transition:transform .28s cubic-bezier(.19,1,.22,1)}
-nav .tab:hover::after{transform:scaleX(.4);background:var(--rule)}
-nav .tab[aria-current="page"]{box-shadow:none}
+nav .tab:hover::after{transform:scaleX(1)}
+nav .tab[aria-current="page"]{color:var(--ink);font-weight:700;box-shadow:none}
 nav .tab[aria-current="page"]::after{
-  transform:scaleX(1);animation:tab-draw .42s cubic-bezier(.19,1,.22,1)}
+  background:var(--ink);transform:scaleX(1);
+  animation:tab-draw .42s cubic-bezier(.19,1,.22,1)}
 @keyframes tab-draw{from{transform:scaleX(0)}}
