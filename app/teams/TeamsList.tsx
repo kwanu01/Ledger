@@ -60,14 +60,14 @@ export default function TeamsList({ rows, lang }: { rows: LedgerRow[]; lang: Loc
       {owned.length > 0 && (
         <>
           <div className="caption choice-head">{T('myBooks')}</div>
-          <div className="choices grouped">{owned.map(one)}</div>
+          <div className="choices">{owned.map(one)}</div>
         </>
       )}
 
       {joined.length > 0 && (
         <>
           <div className="caption choice-head">{T('joinedBooks')}</div>
-          <div className="choices grouped">{joined.map(one)}</div>
+          <div className="choices">{joined.map(one)}</div>
         </>
       )}
 

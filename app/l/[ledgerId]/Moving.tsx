@@ -193,7 +193,7 @@ export default function Moving({
                   {asking === t.transferId ? (
                     <span className="acts">
                       <button
-                        className="plain danger"
+                        className="act small sure"
                         disabled={busy}
                         onClick={() => {
                           setAsking(null);

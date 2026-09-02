@@ -118,7 +118,7 @@ export default function ImageField({
         )}
         {path &&
           (asking ? (
-            <button className="plain danger" disabled={pending} onClick={drop}>
+            <button className="act small sure" disabled={pending} onClick={drop}>
               {T('reallyDelete')}
             </button>
           ) : (

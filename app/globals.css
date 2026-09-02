@@ -210,17 +210,25 @@ a.choice:hover{color:var(--paper)}
   color:var(--ink-3);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 12px)}
 .choice:hover .choice-team{color:var(--paper);opacity:.7}
-/* 내가 만든 것과 초대받아 들어간 것 사이의 이름표. */
-.choice-head{margin-top:44px}
-.choice-head + .choices{margin-top:10px}
-/* 묶음을 닫는 짧은 선.
-   줄과 줄을 가르는 선은 칸을 다 쓰지만, 묶음을 닫는 선은 그러면 안 된다 —
-   같은 굵기로 같은 폭이면 그것도 줄 사이의 선으로 읽힌다. 위에 붙은 이름표
-   길이만큼만 긋는다. 이름표가 열고 이 선이 닫는 것이다. */
-.choices.grouped::after{
-  content:"";display:block;
-  font-size:13px;width:7em;
-  border-top:1px solid var(--rule-hard)}
+/* 내가 만든 것과 초대받아 들어간 것 사이의 이름표.
+
+   이름표 바로 밑에 **그 글자 길이만큼** 선을 긋는다. 줄과 줄을 가르는 선은
+   칸을 다 쓰지만 이 선은 그러면 안 된다 — 같은 폭이면 그것도 줄 사이의
+   선으로 읽힌다. 글자에 딸린 선이라는 것이 길이로 보여야 한다.
+
+   inline-block 이라 상자가 글자만큼만 넓어지고, 그 밑선이 곧 그 길이가 된다.
+   말이 길어지는 언어에서도 저절로 맞는다.
+
+   굵기와 색은 **아래 목록의 줄과 똑같다**(--rule). 다른 것은 길이뿐이다.
+   장부의 괘선은 한 종류면 된다 — 여기서만 굵기를 달리하면 그 선이 무슨
+   뜻인지 따로 배워야 한다. 짧다는 것만으로 '나누는 선'이 아니라 '이름표에
+   딸린 선'이라는 것이 충분히 보인다. */
+.choice-head{
+  display:inline-block;margin-top:44px;
+  padding-bottom:6px;border-bottom:1px solid var(--rule)}
+/* 이름표와 목록 사이. 밑선이 이름표에 딸린 것이지 첫 줄의 머리가 아니라는
+   것이 간격으로 보여야 한다. 붙여 두면 그 선이 첫 장부의 윗선처럼 읽힌다. */
+.choice-head + .choices{margin-top:18px}
 .back{margin-top:34px}
 .calc-in{display:flex;flex-wrap:wrap;gap:18px 24px;align-items:flex-end}
 .calc-in label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--ink-2);font-weight:600}
@@ -522,6 +530,26 @@ a.act,a.act:visited{color:var(--ink)}
 /* 되돌릴 수 없는 단추 */
 .act.danger{border-color:var(--debit);color:var(--debit)}
 .act.danger:hover{background:var(--debit);color:var(--paper)}
+/*
+  되묻고 나서 누르는 단추 (§21.6)
+
+  전에는 부르는 단추와 확인하는 단추가 **같은 생김새**였다. '내역 삭제'라는
+  글줄이 그 자리에서 '삭제합니다'로 바뀌기만 했다. 그러면 새 단추가 생긴 것이
+  아니라 아까 그 단추가 말을 바꾼 것처럼 읽힌다 — 방금 누른 것이 무엇이었는지
+  놓치고, 되돌릴 수 없는 일을 앞에 두고 그러면 안 된다.
+
+  글자가 아니라 **무게**를 바꾼다. 부르는 쪽은 글줄에 얹힌 조용한 링크,
+  확인하는 쪽은 칠해진 덩어리. 둘은 애초에 다른 물건이라 헷갈릴 수가 없고,
+  칠해져 있으니 무엇을 누르려던 참인지도 분명하다.
+*/
+.act.sure,.act.small.sure{
+  background:var(--debit);color:var(--paper);border-color:var(--debit);font-weight:700}
+.act.sure:hover,a.act.sure:hover{background:var(--debit);color:var(--paper);opacity:.86}
+a.act.sure,a.act.sure:visited{color:var(--paper)}
+/* 확인 단추 옆의 '닫기'만 물러난다. 나가는 문이지 하려던 일이 아니다.
+   되묻는 중이 아닐 때의 단추들은 원래 색 그대로 둔다. */
+.act.sure ~ .plain{color:var(--ink-3)}
+.act.sure ~ .plain:hover{color:var(--ink)}
 select,input[type=text],input[type=email],input[type=password],input[type=date],
 input[type=number],input[type=search],textarea{
   font:inherit;font-size:14.5px;background:var(--field);color:var(--ink);

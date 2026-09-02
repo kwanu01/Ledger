@@ -71,7 +71,7 @@ export default function DeleteExpense({
 
   return (
     <span className="acts">
-      <button className="plain danger" disabled={pending} onClick={drop}>
+      <button className="act small sure" disabled={pending} onClick={drop}>
         {T('deleteForReal')}
       </button>
       <button className="plain" onClick={() => setAsking(false)}>

@@ -164,7 +164,7 @@ export default function TeamPanel({
                       {ask?.id === m.id ? (
                         <>
                           <button
-                            className="plain danger"
+                            className="act small sure"
                             disabled={busy}
                             onClick={() => {
                               const go = ask.kind;
@@ -366,7 +366,7 @@ export default function TeamPanel({
             <>
               <span className="debit">{T('deleteWarn')}</span>
               <button
-                className="act small danger"
+                  className="act small sure"
                 disabled={busy}
                 onClick={async () => {
                   const r = await run(() => deleteTeam({ ledgerId }));
@@ -399,7 +399,7 @@ export default function TeamPanel({
               <>
                 <span className="debit">{T('leaveWarn')}</span>
                 <button
-                  className="act small danger"
+                    className="act small sure"
                   disabled={busy}
                   onClick={async () => {
                     const r = await run(() => leaveTeam({ ledgerId }));
