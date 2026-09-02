@@ -654,10 +654,28 @@ legend{
   white-space:nowrap;margin-left:9px;vertical-align:2px}
 
 /* ── 정산 · 검산 ─────────────────────────────────────────────────── */
+/*
+   송금 한 줄.
+
+   좌우 여백이 2픽셀이었다. 그래서 '내가 걸린 송금'에 깔리는 회색 띠가
+   글자에 딱 붙어, 글자가 띠에 눌린 것처럼 보였다.
+
+   글자의 시작점은 옮기지 않는다. 이 화면의 다른 줄들과 같은 선에 서 있어야
+   하기 때문이다. 대신 **띠를 바깥으로 넓힌다** — 여백을 14픽셀로 늘리고
+   그만큼 바깥으로 당긴다(-12px). 글자는 제자리에 있고 띠만 넓어진다.
+
+   당기는 것은 모든 줄에 건다. 띠가 있는 줄만 넓히면 밑줄 길이가 줄마다
+   달라져 표가 어긋나 보인다.
+*/
 button.remit{
   display:grid;grid-template-columns:1fr auto;gap:5px 16px;align-items:baseline;
-  width:100%;text-align:left;font:inherit;cursor:pointer;background:none;
-  border:0;border-bottom:1px solid var(--rule-2);padding:14px 2px}
+  /* button 은 인라인이라 width 를 주지 않으면 글자만큼만 줄어든다. 그러면
+     금액이 오른쪽 끝으로 가지 않는다. 바깥으로 당긴 만큼(24px)을 더해
+     정확히 원래 폭에 물리게 한다. */
+  width:calc(100% + 24px);
+  text-align:left;font:inherit;cursor:pointer;background:none;
+  border:0;border-bottom:1px solid var(--rule-2);
+  padding:14px;margin:0 -12px}
 button.remit:hover{background:var(--hl)}
 button.remit .who{font-size:16px}
 button.remit .sum{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:16px}
@@ -2027,26 +2045,32 @@ a:not(.act):not(.choice):not(.tab):not(.logo):not(.bookpick-item):focus-visible,
 /*
    차례표.
 
-   파란 밑줄이 여섯 개 나란히 있으면, 어느 탭을 보고 있는지보다 '누를 것이
-   여섯 개'라는 사실이 먼저 읽힌다. 색을 걷고 **지금 여기**만 먹으로 남긴다.
-   나머지는 물러난 잉크다.
+   밑줄이 여섯 개 나란히 그어져 있으면, 어느 탭을 보고 있는지보다 '누를 것이
+   여섯 개'라는 사실이 먼저 읽힌다. 그래서 밑줄을 걷고 **막대 하나만** 남긴다.
+
+   색은 파랑 그대로다. 여기는 누르는 자리이므로 누르는 것의 색이어야 한다.
+   다만 쉬고 있는 탭은 채도가 내려가 물러나 있고, **지금 보고 있는 탭만**
+   채도가 올라온다. 굵기와 막대가 거기에 겹친다 — 색 하나만으로 알리지
+   않는다. 색을 못 가리는 사람에게도 굵기와 막대는 보인다.
 
    보고 있는 탭 아래의 막대는 화면이 열릴 때 그어진다. 탭을 옮기면 새
    자리에서 다시 그어진다 — 어디로 왔는지가 움직임으로 남는다.
 */
 nav .tab{
-  position:relative;color:var(--ink-2);text-decoration:none;
+  position:relative;color:var(--link);text-decoration:none;
   background-image:none;padding-bottom:6px;
   transition:color .2s ease}
-nav .tab:hover{color:var(--ink)}
+nav .tab:hover{color:var(--link-on)}
 nav .tab::after{
   content:'';position:absolute;left:0;right:0;bottom:0;height:2px;
-  background:var(--rule);
+  background:var(--link);
   transform:scaleX(0);transform-origin:0 50%;
   transition:transform .28s cubic-bezier(.19,1,.22,1)}
-nav .tab:hover::after{transform:scaleX(1)}
-nav .tab[aria-current="page"]{color:var(--ink);font-weight:700;box-shadow:none}
+nav .tab:hover::after{transform:scaleX(1);background:var(--link-on)}
+/* 지금 보고 있는 탭. 채도가 올라온 파랑이고, 막대도 같은 색이다.
+   나머지는 같은 파랑이되 채도가 내려가 물러나 있다. */
+nav .tab[aria-current="page"]{color:var(--link-on);font-weight:700;box-shadow:none}
 nav .tab[aria-current="page"]::after{
-  background:var(--ink);transform:scaleX(1);
+  background:var(--link-on);transform:scaleX(1);
   animation:tab-draw .42s cubic-bezier(.19,1,.22,1)}
 @keyframes tab-draw{from{transform:scaleX(0)}}
