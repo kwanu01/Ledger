@@ -1069,7 +1069,7 @@ footer a:hover{color:var(--ink)}
 /* ── 사진 한 자리 ────────────────────────────────────────────────
    사진이 있을 때와 없을 때 크기가 달라지면 줄이 들썩인다. 빈 자리도
    같은 크기로 둔다. */
-.imgfield{display:flex;flex-direction:column;gap:8px;width:132px}
+.imgfield{display:flex;flex-direction:column;gap:8px;width:162px}
 .imgfield.wide{width:100%}
 /* 빈 자리가 곧 단추다. 점선은 '여기에 무언가 들어온다'는 표시다. */
 .imgfield .empty-plate{
@@ -1127,9 +1127,18 @@ footer a:hover{color:var(--ink)}
 .formbar .split-say{
   flex-basis:100%;font-size:13px;color:var(--ink-2);
   font-variant-numeric:tabular-nums}
-/* 사진 아래 줄. 사진 폭 안에서 가운데. 왼쪽으로 붙이면 사진과 어긋난다. */
-.imgfield-do{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:7px}
-.imgfield-do:empty{display:none;margin:0}
+/*
+   사진과 그 옆의 단추.
+
+   사진 아래에 가로로 놓아 봤더니, 세로로 긴 영수증과 가로로 긴 품목 사진의
+   단추 높이가 서로 달라져 두 칸이 어긋나 보였다. 옆에 세로로 세우면
+   사진의 모양과 상관없이 단추가 늘 같은 자리(사진 윗머리)에서 시작한다.
+   폰에서도 같다 — 단추 두 개는 세로로 세워도 사진 폭을 거의 안 먹는다.
+*/
+.imgfield-row{display:flex;align-items:flex-start;gap:4px}
+.imgfield-row > :first-child{flex:1 1 auto;min-width:0}
+.imgfield-do{display:flex;flex-direction:column;gap:2px;flex:none}
+.imgfield-do:empty{display:none}
 
 /*
    글자만 한 그림 단추.
@@ -1148,9 +1157,6 @@ footer a:hover{color:var(--ink)}
 .iconbtn:hover:not(:disabled){color:var(--ink)}
 .iconbtn:focus-visible{outline:1px solid var(--rule-hard);outline-offset:1px}
 .iconbtn:disabled{opacity:.4;cursor:default}
-/* 한 번 눌러 겨눈 상태. 다음 한 번에 지워진다 — 색으로만 말한다. */
-.iconbtn.armed{color:var(--paper);background:var(--debit)}
-.iconbtn.armed:hover:not(:disabled){color:var(--paper)}
 
 .shot{
   appearance:none;background:none;border:0;padding:0;margin:0;

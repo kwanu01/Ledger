@@ -48,7 +48,6 @@ export default function ImageField({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [asking, setAsking] = useState(false);
   const file = useRef<HTMLInputElement>(null);
 
   function pick(f: File | null) {
@@ -79,7 +78,14 @@ export default function ImageField({
   }
 
   function drop() {
-    setAsking(false);
+    /*
+     * 되묻는 일은 확인창에 맡긴다.
+     *
+     * 전에는 단추가 빨갛게 겨눠졌다가 한 번 더 눌러야 지워졌다. 같은 자리가
+     * 두 가지 일을 하니, 무엇이 겨눠져 있는지 색으로만 알 수 있었다.
+     * 확인창은 무엇을 지우는지 글로 말하고, 취소가 같은 자리에 있다.
+     */
+    if (!window.confirm(T('photoDropWarn'))) return;
     start(async () => {
       const r = await removeImage({ ledgerId, expenseId, kind });
       if (!r.ok) setError(r.message);
@@ -89,6 +95,8 @@ export default function ImageField({
 
   return (
     <div className={`imgfield${wide ? ' wide' : ''}`}>
+      {/* 사진과 그 옆의 단추는 한 줄이다. 오류 문구는 그 아래 제 줄에 온다. */}
+      <div className="imgfield-row">
       {path ? (
         <Lightbox src={imageSrc(ledgerId, path)} alt={alt} caption={caption} wide={wide} />
       ) : (
@@ -111,13 +119,17 @@ export default function ImageField({
       )}
 
       {/*
-        사진 아래의 두 가지 — 바꾸기와 지우기.
+        사진 옆의 두 가지 — 바꾸기와 지우기.
 
         글자로 두었더니 사진 밑에 파란 밑줄 두 줄이 왼쪽으로 붙어, 사진보다
         먼저 읽혔다. 사진이 주인공인 자리에서 그 밑의 곁다리가 더 눈에 띄면
         차례가 뒤집힌다. 그래서 **글자 크기만 한 그림 두 개**로 줄이고
-        사진 아래 가운데에 놓는다. 무엇인지는 눌러 보기 전에 알아야 하므로
-        같은 말을 title 과 aria-label 에 그대로 남긴다.
+        사진 오른쪽에 세로로 세운다 — 사진 아래에 두면 세로로 긴 영수증과
+        가로로 긴 품목 사진의 단추 높이가 서로 어긋난다. 옆에 세우면
+        어느 사진이든 단추가 같은 자리에서 시작한다.
+
+        무엇인지는 눌러 보기 전에 알아야 하므로 같은 말을 title 과
+        aria-label 에 그대로 남긴다.
       */}
       <div className="imgfield-do">
         {path && (
@@ -139,13 +151,13 @@ export default function ImageField({
         {path && (
           <button
             type="button"
-            className={`iconbtn${asking ? ' armed' : ''}`}
+            className="iconbtn"
             disabled={pending}
-            onClick={() => (asking ? drop() : setAsking(true))}
-            title={asking ? T('reallyDelete') : T('deletePhoto')}
-            aria-label={asking ? T('reallyDelete') : T('deletePhoto')}
+            onClick={drop}
+            title={T('deletePhoto')}
+            aria-label={T('deletePhoto')}
           >
-            {/* 휴지통. 한 번 누르면 빨개지고, 그때 한 번 더 눌러야 지워진다. */}
+            {/* 휴지통. 누르면 무엇을 지우는지 적힌 확인창이 먼저 뜬다. */}
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="M3.5 4.5h9" />
               <path d="M6.4 4.5V3.2h3.2v1.3" />
@@ -153,6 +165,7 @@ export default function ImageField({
             </svg>
           </button>
         )}
+      </div>
       </div>
 
       {error && <p className="faint" style={{ color: 'var(--debit)', fontSize: 12.5 }}>{error}</p>}

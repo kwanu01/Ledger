@@ -339,8 +339,6 @@ psql -d <db> -f supabase/tests/guards_test.sql   # 스키마 가드 30개
 
 곁에 있는 문서 둘. 어느 코드도 import 하지 않지만 지우면 안 됩니다.
 
-- `setup-guide.html` — Supabase·구글·카카오·배포까지 처음부터 따라 하는 설치 안내서
-- `character-guide.html` — 수증이의 자세와 말투
 
 ---
 
@@ -695,8 +693,6 @@ psql -d <db> -f supabase/tests/guards_test.sql   # 30 schema guards
 
 Two companion documents. No code imports them, but don't delete them:
 
-- `setup-guide.html` — step-by-step setup for Supabase, Google, Kakao and deployment
-- `character-guide.html` — Sujeungi's poses and voice
 
 ---
 

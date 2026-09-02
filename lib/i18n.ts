@@ -97,7 +97,7 @@ export type Key =
   | 'iSent' | 'undoSent' | 'sentWaiting' | 'saysSent' | 'simpleSplit'
   | 'notLinked'
   | 'contact' | 'privacy' | 'sendOneByOne' | 'rename'
-  | 'receipt' | 'itemPhoto' | 'addPhoto' | 'replacePhoto' | 'deletePhoto' | 'reallyDelete' | 'noReceipt' | 'noPhoto' | 'keepReceipt'
+  | 'receipt' | 'itemPhoto' | 'addPhoto' | 'replacePhoto' | 'deletePhoto' | 'reallyDelete' | 'photoDropWarn' | 'noReceipt' | 'noPhoto' | 'keepReceipt'
   | 'helperTitle' | 'helperAsk' | 'helperAskWhat' | 'helperAskGo' | 'helperReading'
   | 'helperHide' | 'helperShow'
   | 'sortBy' | 'etc'  | 'askHint' | 'chat' | 'settledNow' | 'sendItNow' | 'settleEndsWhen' | 'waitingN'
@@ -234,7 +234,8 @@ const ko: Record<Key, string> = {
   deleteForReal: '삭제합니다', gotAll: '{n}건 전부 받았어요',
   notLinked: '계정 연결 전', contact: '문의', privacy: '개인정보 처리방침', sendOneByOne: '한 사람씩 보내기', rename: '바꾸기',
   receipt: '영수증', itemPhoto: '품목 사진', addPhoto: '사진 올리기', replacePhoto: '사진 바꾸기', deletePhoto: '사진 지우기',
-  reallyDelete: '정말 지웁니다', noReceipt: '영수증 없음', noPhoto: '사진 없음',
+  reallyDelete: '정말 지웁니다', photoDropWarn: '이 사진을 지웁니다. 되돌릴 수 없습니다.',
+  noReceipt: '영수증 없음', noPhoto: '사진 없음',
   keepReceipt: '이 영수증 사진을 장부에 남기기',
   helperTitle: '수증이', helperAsk: '장부에 대해 묻기', helperAskWhat: '무엇이 궁금한가요',
   helperWhat: '여기서 뭘 하나요?', helperChat: '다른 얘기 해 주세요',
@@ -393,7 +394,8 @@ const en: Record<Key, string> = {
   deleteForReal: 'Yes, delete', gotAll: 'Received all {n}',
   notLinked: 'not linked yet', contact: 'Contact', privacy: 'Privacy', sendOneByOne: 'Send one by one', rename: 'Rename',
   receipt: 'Receipt', itemPhoto: 'Item photo', addPhoto: 'Add a photo', replacePhoto: 'Replace photo', deletePhoto: 'Delete photo',
-  reallyDelete: 'Delete for real', noReceipt: 'No receipt', noPhoto: 'No photo',
+  reallyDelete: 'Delete for real', photoDropWarn: 'This photo will be deleted. This cannot be undone.',
+  noReceipt: 'No receipt', noPhoto: 'No photo',
   keepReceipt: 'Keep this receipt photo in the ledger',
   helperTitle: 'Receipt', helperAsk: 'Ask about this ledger', helperAskWhat: 'What would you like to know',
   helperWhat: 'What happens here?', helperChat: 'Tell me something else',
@@ -550,7 +552,8 @@ const ja: Record<Key, string> = {
   deleteForReal: '削除する', gotAll: '{n}件すべて受け取りました',
   notLinked: 'アカウント未連携', contact: 'お問い合わせ', privacy: 'プライバシー', sendOneByOne: '一人ずつ送る', rename: '変更',
   receipt: 'レシート', itemPhoto: '品目写真', addPhoto: '写真を追加', replacePhoto: '写真を差し替え', deletePhoto: '写真を削除',
-  reallyDelete: '本当に削除', noReceipt: 'レシートなし', noPhoto: '写真なし',
+  reallyDelete: '本当に削除', photoDropWarn: 'この写真を削除します。元に戻せません。',
+  noReceipt: 'レシートなし', noPhoto: '写真なし',
   keepReceipt: 'このレシート写真を帳簿に残す',
   helperTitle: 'レシート', helperAsk: '帳簿について聞く', helperAskWhat: '何が知りたいですか',
   helperWhat: 'ここは何をする所ですか', helperChat: '他の話をしてください',
@@ -707,7 +710,8 @@ const zh: Record<Key, string> = {
   deleteForReal: '确认删除', gotAll: '{n}笔全部已收到',
   notLinked: '尚未关联账号', contact: '联系', privacy: '隐私政策', sendOneByOne: '逐个发送', rename: '修改',
   receipt: '收据', itemPhoto: '物品照片', addPhoto: '添加照片', replacePhoto: '更换照片', deletePhoto: '删除照片',
-  reallyDelete: '确认删除', noReceipt: '没有收据', noPhoto: '没有照片',
+  reallyDelete: '确认删除', photoDropWarn: '将删除这张照片，无法恢复。',
+  noReceipt: '没有收据', noPhoto: '没有照片',
   keepReceipt: '把这张收据照片留在账本里',
   helperTitle: '收据', helperAsk: '询问这本账本', helperAskWhat: '想知道什么',
   helperWhat: '这里是做什么的？', helperChat: '说点别的吧',
@@ -869,7 +873,8 @@ const es: Record<Key, string> = {
   deleteForReal: 'Eliminar', gotAll: 'Recibí las {n}',
   notLinked: 'sin cuenta vinculada', contact: 'Contacto', privacy: 'Privacidad', sendOneByOne: 'Enviar uno por uno', rename: 'Cambiar',
   receipt: 'Recibo', itemPhoto: 'Foto del artículo', addPhoto: 'Añadir foto', replacePhoto: 'Cambiar foto', deletePhoto: 'Eliminar foto',
-  reallyDelete: 'Eliminar de verdad', noReceipt: 'Sin recibo', noPhoto: 'Sin foto',
+  reallyDelete: 'Eliminar de verdad', photoDropWarn: 'Esta foto se eliminará. No se puede deshacer.',
+  noReceipt: 'Sin recibo', noPhoto: 'Sin foto',
   keepReceipt: 'Guardar esta foto del recibo en el libro',
   helperTitle: 'Recibo', helperAsk: 'Preguntar sobre el libro', helperAskWhat: 'Qué quieres saber',
   helperWhat: '¿Qué se hace aquí?', helperChat: 'Cuéntame otra cosa',
@@ -1028,7 +1033,8 @@ const vi: Record<Key, string> = {
   deleteForReal: 'Xoá', gotAll: 'Đã nhận cả {n} khoản',
   notLinked: 'chưa liên kết', contact: 'Liên hệ', privacy: 'Quyền riêng tư', sendOneByOne: 'Gửi từng người', rename: 'Đổi tên',
   receipt: 'Hóa đơn', itemPhoto: 'Ảnh món đồ', addPhoto: 'Thêm ảnh', replacePhoto: 'Đổi ảnh', deletePhoto: 'Xóa ảnh',
-  reallyDelete: 'Xóa thật', noReceipt: 'Không có hóa đơn', noPhoto: 'Không có ảnh',
+  reallyDelete: 'Xóa thật', photoDropWarn: 'Ảnh này sẽ bị xóa. Không thể hoàn tác.',
+  noReceipt: 'Không có hóa đơn', noPhoto: 'Không có ảnh',
   keepReceipt: 'Giữ ảnh hóa đơn này trong sổ',
   helperTitle: 'Hóa đơn', helperAsk: 'Hỏi về sổ này', helperAskWhat: 'Bạn muốn biết gì',
   helperWhat: 'Ở đây làm gì vậy?', helperChat: 'Kể chuyện khác đi',
