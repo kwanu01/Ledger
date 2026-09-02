@@ -24,7 +24,10 @@ const EXT: Record<string, string> = {
 };
 
 export const ALLOWED_TYPES = Object.keys(EXT);
-export const MAX_BYTES = 5 * 1024 * 1024;
+/* 서버가 받아 두는 한도. next.config.mjs 의 본문 상한(4MB)과 같은 값이어야
+   한다 — 여기가 더 크면 통과시킬 생각으로 적어 둔 숫자를 프레임워크가 먼저
+   끊고, 그 오류는 우리가 잡을 수 없다. */
+export const MAX_BYTES = 4 * 1024 * 1024;
 
 /**
  * 정말 그림 파일인지 앞머리를 보고 판정한다.

@@ -18,7 +18,7 @@ import {
   type Locale,
 } from '../../../../lib/domain/money.ts';
 import type { Allocation, Member } from '../../../../lib/domain/types.ts';
-import { shrinkImage } from '../../../../lib/shrink.ts';
+import { shrinkImage, tooBigToSend } from '../../../../lib/shrink.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
 
 /**
@@ -169,6 +169,14 @@ export default function ExpenseForm({
      */
     const file = await shrinkImage(original);
     if (runId.current !== mine) return;
+    /* 줄이기가 실패했을 수 있다. 그대로 보내면 서버 액션 상한에 걸려
+       우리가 잡을 수 없는 오류가 난다 — 여기서 말하고 폼으로 넘긴다. */
+    if (tooBigToSend(file)) {
+      runId.current += 1;
+      say(T('photoTooBig'));
+      setStep('form');
+      return;
+    }
     setPhoto(file);
 
     const fd = new FormData();
@@ -222,6 +230,7 @@ export default function ExpenseForm({
      이미 손으로 적어 둔 칸을 사진 한 장이 덮어써 버리면 곤란하다. */
   async function pickReceipt(original: File) {
     const file = await shrinkImage(original);
+    if (tooBigToSend(file)) return say(T('photoTooBig'));
     setPhoto(file);
     setThumb(URL.createObjectURL(file));
     setKeepPhoto(true);
@@ -229,6 +238,7 @@ export default function ExpenseForm({
 
   async function pickItem(original: File) {
     const file = await shrinkImage(original);
+    if (tooBigToSend(file)) return say(T('photoTooBig'));
     setItem(file);
     setItemThumb(URL.createObjectURL(file));
   }

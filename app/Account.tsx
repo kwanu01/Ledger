@@ -122,7 +122,19 @@ export default function Account({
               </tr>
             </tbody>
           </table>
-          <div className="acct-out">{children}</div>
+          {/*
+            자세한 것은 따로 본다.
+
+            이 카드에는 '지금 누구인가'만 둔다. 이 계정에 장부가 몇 개
+            매달려 있는지, 나가면 무엇이 남는지는 좁은 카드에서 답할 수
+            있는 분량이 아니고, 탈퇴는 지나가듯 눌릴 자리에 두면 안 된다.
+          */}
+          <div className="acct-out">
+            <a className="plain" href="/account">
+              {T('myInfo')}
+            </a>
+            {children}
+          </div>
         </div>
       )}
     </div>

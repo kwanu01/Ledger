@@ -24,6 +24,28 @@ const MAX_EDGE = 1600;
 const LEAVE_ALONE = 400 * 1024;
 
 /**
+ * 여기까지는 반드시 줄인다 (§7)
+ *
+ * 서버 액션은 본문 크기에 상한이 있다. 그 상한을 넘으면 **우리 코드가 시작되기
+ * 전에** 프레임워크가 요청을 끊는다. 그러면 오류를 잡아 수증이에게 넘길 수도
+ * 없어서, 화면에는 'Application error'만 뜬다 — 사용자 입장에서는 사진을
+ * 골랐더니 서비스가 죽은 것이다. 실제로 그렇게 됐다.
+ *
+ * 상한은 next.config.mjs 에서 4MB 로 올려 두었지만, 그것만 믿지 않는다.
+ * 상한에 기대는 대신 **보내는 쪽에서 확실히 줄인다.** 900KB 는 1600픽셀
+ * 영수증에 넉넉하고, LTE 에서 올리는 시간도 짧다.
+ *
+ * 화질을 한 단씩 낮추다가, 그래도 안 되면 크기를 줄인다. 순서가 중요하다 —
+ * 글자는 화질보다 크기에 먼저 무너진다. 1200픽셀 흐린 영수증이 900픽셀
+ * 선명한 영수증보다 잘 읽힌다.
+ */
+const FITS = 900 * 1024;
+/** 화질을 낮추는 차례. 0.82 는 눈으로 원본과 구분이 안 되는 선이다. */
+const QUALITIES = [0.82, 0.7, 0.58, 0.46];
+/** 화질로 안 되면 크기를 줄이는 차례. */
+const EDGES = [MAX_EDGE, 1200, 900];
+
+/**
  * 저장소가 받는 형식. 이 셋이 아니면 크기와 상관없이 다시 그려서 JPEG로 만든다.
  *
  * 아이폰은 사진을 HEIC로 저장한다. 파일 고르기에서 형식을 걸러도 그대로
@@ -41,33 +63,75 @@ export async function shrinkImage(file: File): Promise<File> {
   try {
     // 'from-image' 는 파일에 적힌 방향 표시를 따라 세워서 넘겨준다.
     const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-    const long = Math.max(bitmap.width, bitmap.height);
-    const scale = long > MAX_EDGE ? MAX_EDGE / long : 1;
-    const w = Math.round(bitmap.width * scale);
-    const h = Math.round(bitmap.height * scale);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return file;
-    ctx.drawImage(bitmap, 0, 0, w, h);
+    const draw = async (edge: number, quality: number): Promise<Blob | null> => {
+      const long = Math.max(bitmap.width, bitmap.height);
+      const scale = long > edge ? edge / long : 1;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      return new Promise<Blob | null>((done) => canvas.toBlob(done, 'image/jpeg', quality));
+    };
+
+    /*
+     * 900KB 아래로 떨어질 때까지 낮춘다.
+     *
+     * 크기를 바깥 고리에 둔 것은 글자가 화질보다 크기에 먼저 무너지기
+     * 때문이다. 한 크기 안에서 화질을 끝까지 낮춰 보고, 그래도 안 되면
+     * 그때 크기를 한 단 줄인다.
+     */
+    let best: Blob | null = null;
+    for (const edge of EDGES) {
+      for (const q of QUALITIES) {
+        const blob = await draw(edge, q);
+        if (!blob) continue;
+        if (!best || blob.size < best.size) best = blob;
+        if (blob.size <= FITS) {
+          best = blob;
+          break;
+        }
+      }
+      if (best && best.size <= FITS) break;
+    }
     bitmap.close?.();
 
-    const blob = await new Promise<Blob | null>((done) =>
-      canvas.toBlob(done, 'image/jpeg', 0.82),
-    );
-    if (!blob) return file;
-    // 형식을 바꾸려고 그린 경우에는 커져도 바꾼 쪽을 쓴다. 원본은 애초에
-    // 저장소가 받아 주지 않는 형식이다.
-    if (blob.size >= file.size && KEEPS.includes(file.type)) return file;
+    if (!best) return file;
 
-    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
+    /*
+     * 다시 그린 것이 원본보다 크면 원본을 쓰던 자리다. 그런데 그 원본이
+     * 4MB 면 보내는 순간 끊긴다 — 실제로 그래서 터졌다. **작은 쪽을
+     * 쓰되, 상한을 넘는 것은 어느 쪽이든 쓰지 않는다.**
+     */
+    if (KEEPS.includes(file.type) && file.size <= best.size && file.size <= FITS) {
+      return file;
+    }
+
+    return new File([best], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
       type: 'image/jpeg',
       lastModified: Date.now(),
     });
   } catch {
     // 브라우저가 못 하겠다고 하면 원본을 보낸다. 느릴 뿐 못 읽는 것은 아니다.
+    // 그래도 큰 것은 보내는 쪽에서 막는다(tooBigToSend).
     return file;
   }
+}
+
+/**
+ * 보내도 되는 크기인가.
+ *
+ * 줄이기가 실패했을 수도 있다(브라우저가 그 형식을 못 그리는 경우). 그때
+ * 그대로 보내면 서버 액션 상한에 걸려 **우리가 잡을 수 없는 오류**가 난다.
+ * 보내기 전에 여기서 걸러 사람에게 말해 주는 편이 낫다.
+ *
+ * 4MB 는 next.config.mjs 에 적어 둔 상한과 같다. 두 숫자가 어긋나면
+ * 한쪽은 통과시키고 다른 쪽이 끊는 일이 생긴다.
+ */
+export const SEND_LIMIT = 4 * 1024 * 1024;
+
+export function tooBigToSend(file: File): boolean {
+  return file.size > SEND_LIMIT;
 }

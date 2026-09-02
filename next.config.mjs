@@ -4,6 +4,23 @@ export default {
   // 그래야 Next 없이도 `node --experimental-strip-types scripts/simulate.ts` 가 그대로 돈다.
   typescript: { ignoreBuildErrors: false },
 
+  /*
+   * 서버 액션이 받는 본문 크기 (§7)
+   *
+   * 기본값은 1MB 다. 영수증 사진 한 장이 그 선을 넘으면 **우리 코드가
+   * 시작되기 전에** 프레임워크가 요청을 끊는다. 그러면 오류를 잡아 수증이에게
+   * 넘길 수도 없고, 화면에는 'Application error: a server-side exception'
+   * 만 뜬다. 사진을 골랐더니 서비스가 죽은 것처럼 보인다 — 실제로 그랬다.
+   *
+   * 4MB 로 올린다. 배포 환경의 요청 한도가 4.5MB 라서 그보다 위로는 올려도
+   * 소용이 없다. 다만 이 값은 **그물**이지 계획이 아니다. 보내는 쪽에서
+   * 900KB 아래로 줄이고(lib/shrink.ts), 그래도 큰 것은 보내기 전에
+   * 막는다. 상한에 기대는 설계는 상한이 바뀌는 날 그대로 무너진다.
+   */
+  experimental: {
+    serverActions: { bodySizeLimit: '4mb' },
+  },
+
   async headers() {
     return [
       {

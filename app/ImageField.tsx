@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Lightbox from './Lightbox.tsx';
 import { attachImage, removeImage } from './actions/images.ts';
 import { imageSrc } from '../lib/img.ts';
-import { shrinkImage } from '../lib/shrink.ts';
+import { shrinkImage, tooBigToSend } from '../lib/shrink.ts';
 import { translator } from '../lib/i18n.ts';
 import type { Locale } from '../lib/domain/money.ts';
 
@@ -64,6 +64,12 @@ export default function ImageField({
        * 예전에는 원본을 그대로 보내서, 폰에서 고른 사진이 자주 거절당했다.
        */
       const small = await shrinkImage(f);
+      /* 줄여도 상한을 넘으면 보내지 않는다. 보내 버리면 서버 액션이
+         시작되기 전에 끊겨서, 잡을 수도 말할 수도 없는 오류가 된다. */
+      if (tooBigToSend(small)) {
+        setError(T('photoTooBig'));
+        return;
+      }
 
       const fd = new FormData();
       fd.set('ledgerId', ledgerId);
