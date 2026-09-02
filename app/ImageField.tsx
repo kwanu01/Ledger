@@ -110,22 +110,49 @@ export default function ImageField({
         </button>
       )}
 
+      {/*
+        사진 아래의 두 가지 — 바꾸기와 지우기.
+
+        글자로 두었더니 사진 밑에 파란 밑줄 두 줄이 왼쪽으로 붙어, 사진보다
+        먼저 읽혔다. 사진이 주인공인 자리에서 그 밑의 곁다리가 더 눈에 띄면
+        차례가 뒤집힌다. 그래서 **글자 크기만 한 그림 두 개**로 줄이고
+        사진 아래 가운데에 놓는다. 무엇인지는 눌러 보기 전에 알아야 하므로
+        같은 말을 title 과 aria-label 에 그대로 남긴다.
+      */}
       <div className="imgfield-do">
         {path && (
-          <button className="plain" disabled={pending} onClick={() => file.current?.click()}>
-            {pending ? T('working') : T('replacePhoto')}
+          <button
+            type="button"
+            className="iconbtn"
+            disabled={pending}
+            onClick={() => file.current?.click()}
+            title={pending ? T('working') : T('replacePhoto')}
+            aria-label={pending ? T('working') : T('replacePhoto')}
+          >
+            {/* 되돌아오는 화살표 한 바퀴 — 같은 자리에 다른 것을 넣는다는 뜻 */}
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M13 8a5 5 0 1 1-1.6-3.7" />
+              <path d="M13 2.2V5h-2.8" />
+            </svg>
           </button>
         )}
-        {path &&
-          (asking ? (
-            <button className="act small sure" disabled={pending} onClick={drop}>
-              {T('reallyDelete')}
-            </button>
-          ) : (
-            <button className="plain" disabled={pending} onClick={() => setAsking(true)}>
-              {T('deletePhoto')}
-            </button>
-          ))}
+        {path && (
+          <button
+            type="button"
+            className={`iconbtn${asking ? ' armed' : ''}`}
+            disabled={pending}
+            onClick={() => (asking ? drop() : setAsking(true))}
+            title={asking ? T('reallyDelete') : T('deletePhoto')}
+            aria-label={asking ? T('reallyDelete') : T('deletePhoto')}
+          >
+            {/* 휴지통. 한 번 누르면 빨개지고, 그때 한 번 더 눌러야 지워진다. */}
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M3.5 4.5h9" />
+              <path d="M6.4 4.5V3.2h3.2v1.3" />
+              <path d="M4.6 4.5l.6 8.3h5.6l.6-8.3" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {error && <p className="faint" style={{ color: 'var(--debit)', fontSize: 12.5 }}>{error}</p>}

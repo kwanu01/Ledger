@@ -55,6 +55,9 @@ export default function EditExpense({
   const [vendor, setVendor] = useState(expense.vendor ?? '');
   const [category, setCategory] = useState(expense.category ?? '');
   const [note, setNote] = useState(expense.note ?? '');
+  // 기입할 때 받아 놓고 고칠 때는 못 고치던 칸. 링크야말로 나중에 고쳐야
+  // 하는 것이다 — 적을 때는 장바구니 주소였다가 나중에 상품 주소가 된다.
+  const [productLink, setProductLink] = useState(expense.productLink ?? '');
 
   // 부담할 사람을 고르는 자리는 그 줄을 적던 순간의 명단 안에서만 고른다.
   const roster = members.filter((m) => expense.teamMemberIds.includes(m.id));
@@ -85,6 +88,7 @@ export default function EditExpense({
         vendor,
         category,
         note,
+        productLink,
       });
       if (!r.ok) return say(r.message);
       onDone();
@@ -135,6 +139,16 @@ export default function EditExpense({
         <label className="field">
           <span className="lab">{T('category')}</span>
           <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} />
+        </label>
+
+        <label className="field">
+          <span className="lab">{T('productLink')}</span>
+          <input
+            type="text"
+            value={productLink}
+            onChange={(e) => setProductLink(e.target.value)}
+            placeholder="https://"
+          />
         </label>
 
         <label className="field wide">

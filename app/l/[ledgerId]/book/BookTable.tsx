@@ -108,7 +108,20 @@ export default function BookTable({
   }, [ledger]);
   const waiting = (seq: number | undefined) => seq !== undefined && openSeqs.includes(seq);
 
-  const pickable = list.filter((e) => !settled.has(e.id)).map((e) => e.id);
+  /*
+   * 고를 수 있는 줄.
+   *
+   * '아직 정산에 안 들어간 줄'이 아니라 **'정산할 것이 남은 줄'**이다. 둘은
+   * 다르다 — 자기가 사서 자기가 가져간 줄은 어느 정산에도 안 들어가지만
+   * 정산할 것이 애초에 없다. 그 줄까지 세는 바람에 '정산 불필요' 한 줄짜리
+   * 장부 아래에 '미정산 1건'이 떠 있었다. 고르면 '전체 정산'이 켜지지만
+   * 눌러도 그 줄에서는 아무 송금도 나오지 않는다.
+   *
+   * 같은 판정을 화면 두 곳이 서로 다르게 하고 있었다. 줄에는 needsSettling
+   * 으로 '정산 불필요'라 적어 놓고, 아래 셈은 뺄셈으로 세고 있었다.
+   * 판정은 한 군데서만 한다.
+   */
+  const pickable = list.filter((e) => !settled.has(e.id) && needsSettling(e)).map((e) => e.id);
 
   /** 쉬프트를 누른 채 누르면 마지막으로 고른 줄과 이번 줄 사이가 한꺼번에 처리된다. */
   function pick(id: string, on: boolean, withShift: boolean) {

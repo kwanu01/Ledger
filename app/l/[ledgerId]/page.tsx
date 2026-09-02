@@ -3,7 +3,7 @@ import { getLang } from '../../../lib/lang.ts';
 import LedgerShell from './LedgerShell.tsx';
 import { requireLedgerAccess } from '../../../lib/access.ts';
 import { loadLedger, openTransfers } from '../../../lib/db/repo.ts';
-import { nameOf, settledExpenseIds, summarizeLedger } from '../../../lib/domain/settlement.ts';
+import { nameOf, summarizeLedger, unsettledExpenses } from '../../../lib/domain/settlement.ts';
 import { adjustmentLabel, allocationLabel } from '../../../lib/labels.ts';
 import { translator } from '../../../lib/i18n.ts';
 import { formatEntryAmount, formatMoney } from '../../../lib/domain/money.ts';
@@ -47,7 +47,10 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
   const recent = [...ledger.expenses].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
   const mine = s.pending.balances.find((b) => b.memberId === pass.memberId);
   const net = mine ? mine.netBalance : 0;
-  const unsettledCount = ledger.expenses.length - settledExpenseIds(ledger).size;
+  /* 바로 위 칸의 금액(s.unsettledAmount)은 '정산할 것이 남은 줄'만 더한다.
+     건수만 뺄셈으로 세면 그 아래 숫자가 위 금액과 다른 것을 세게 된다 —
+     자기가 사서 자기가 가져간 줄이 금액 0으로 한 건 더 잡힌다. */
+  const unsettledCount = unsettledExpenses(ledger).length;
 
   // 전표 번호. 장부의 각 줄은 번호로 참조된다.
   const slips = new Map<string, string>();

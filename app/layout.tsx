@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
+import './fonts.css';
 import { getLang } from '../lib/lang.ts';
 import { getTheme } from '../lib/theme.ts';
 import ThemeToggle from './ThemeToggle.tsx';
@@ -39,14 +40,14 @@ const courier = localFont({
   display: 'swap',
 });
 
-const hanSerif = localFont({
-  src: [
-    { path: './fonts/NanumMyeongjo-Regular.subset.woff2', weight: '400', style: 'normal' },
-    { path: './fonts/NanumMyeongjo-Bold.subset.woff2', weight: '700', style: 'normal' },
-  ],
-  variable: '--font-han',
-  display: 'swap',
-});
+/*
+ * 한글은 next/font 로 심지 않는다.
+ *
+ * next/font 는 한 이름에 파일 하나(굵기별로 하나)를 매단다. 그런데 한글 한 벌은
+ * 자른 뒤에도 455 kB 라서, 그 방식으로는 처음 들어온 사람이 **쓰지도 않을 2,400자를
+ * 통째로** 받는다. 조각으로 나눠 unicode-range 로 골라 받게 하려면 @font-face 를
+ * 직접 써야 한다 — app/fonts.css 에 있다. 거기서 이름을 "Han" 으로 붙인다.
+ */
 
 export const metadata: Metadata = {
   title: 'Ledger',
@@ -87,8 +88,31 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang={lang}
       data-theme={theme ?? undefined}
-      className={`${courier.variable} ${hanSerif.variable}`}
+      className={courier.variable}
     >
+      <head>
+        {/*
+          미리 받아 두는 것은 **core 두 조각뿐이다.**
+          손으로 쓴 @font-face 는 Next 가 알아서 미리 받지 않는다. 그런데
+          이 두 조각은 어느 화면에서든 반드시 쓰이므로, CSS 를 다 읽은 뒤에야
+          받기 시작하면 글씨가 한 번 늦게 바뀐다. 나머지 24조각은 적지 않는다 —
+          쓰일지 안 쓰일지 모르는 것을 미리 받으면 나눈 뜻이 없어진다.
+        */}
+        <link
+          rel="preload"
+          as="font"
+          type="font/woff2"
+          href="/fonts/han-400-core.3759d0d0.woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          as="font"
+          type="font/woff2"
+          href="/fonts/han-700-core.64715324.woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>
         <HelperProvider>
           <ThemeToggle value={theme} />

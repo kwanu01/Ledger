@@ -66,13 +66,13 @@ function greetFor(path: string | null): { pose: string; trick: string; ms: numbe
   if (path.endsWith('/book')) return { pose: 'point', ...nod };
   if (path.endsWith('/goods')) return { pose: 'spread', ...wig };
   if (path.endsWith('/settle')) return { pose: 'cheer', trick: 'hop', ms: 760 };
-  if (path.endsWith('/archive')) return { pose: 'fold', ...nod };
+  if (path.endsWith('/archive')) return { pose: 'tuck', ...nod };
   if (path.endsWith('/team')) return { pose: 'wave', ...wig };
   if (path.endsWith('/add')) return { pose: 'open', ...nod };
   if (path.startsWith('/teams/new')) return { pose: 'gasp', ...nod };
-  if (path.startsWith('/teams')) return { pose: 'open', ...nod };
+  if (path.startsWith('/teams')) return { pose: 'bow', ...nod };
   if (path.startsWith('/login') || path.startsWith('/join')) return { pose: 'wave', ...wig };
-  if (path.startsWith('/l/')) return { pose: 'smile', ...nod };
+  if (path.startsWith('/l/')) return { pose: 'lean', ...nod };
   return { pose: 'stand', ...nod };
 }
 
@@ -120,13 +120,31 @@ const CHAT_POSES = [
   'shy',     // 잉크가 마르면 흐려져요
   'brace',   // 누가 얼마 냈는지는 안 잊어요
   'hit',     // 숫자가 안 맞으면 제가 먼저 놀랄 거예요
+  'float',   // …나는 영수증 유령이다
+  'bow',     // 오셨네요. 장부는 그대로 있어요
+  'curl',    // 주머니에 오래 있으면 이렇게 말려요
+  'flop',    // 오늘은 좀 눌린 것 같아요
+  'tip',     // 똑바로 서 있는 게 생각보다 어려워요
+  'tuck',    // 여기 접어 두면 그 자리부터 펴져요
+  'twist',   // 비에 젖었다 마르면 이렇게 돼요
+  'lean',    // 잠깐만 기대 있을게요
+  'coil',    // 오래 말려 있으면 자꾸 돌아가요
+  'sleep',   // 조용하면 저는 잠깐 자요
+  'squash',  // 눌려도 괜찮아요. 숫자는 안 눌려요
+  'curl',    // 영수증은 남으라고 만든 게 아닌데, 저는 남았네요
 ] as const;
 
 /**
  * 아무 말도 안 할 때의 자세. 여기서만 천천히 오간다.
  * 서 있는 모습 몇 가지라 팔의 위치만 달라지는 정도다.
  */
-const REST_POSES = ['stand', 'smile', 'shy', 'spread', 'point', 'brace'] as const;
+const REST_POSES = [
+  'stand', 'smile', 'shy', 'spread', 'point', 'brace',
+  // 서 있는 모습만 여섯이면 오래 보고 있을 때 한 바퀴가 금방 돈다. 기대거나
+  // 숙이거나 귀퉁이가 접힌 모습을 섞어 둔다 — 전부 서 있는 자세라서 갑자기
+  // 누웠다 일어나는 것처럼 보이지 않는다.
+  'bow', 'lean', 'open', 'fold', 'tuck', 'wave',
+] as const;
 
 /**
  * 들려서 옮겨질 때의 자세.
@@ -323,7 +341,6 @@ export default function Helper({ lang }: { lang: Locale }) {
   const [pose, setPose] = useState('stand');
   const [trick, setTrick] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
-  const [unread, setUnread] = useState(false);
   const [open, setOpen] = useState(false);
   const [asking, setAsking] = useState(false);
   const [tip, setTip] = useState<Key | null>(null);
@@ -343,6 +360,8 @@ export default function Helper({ lang }: { lang: Locale }) {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   /** 사람이 열어 둔 상태인가. 탭을 옮길 때 그대로 둘지 판단한다. */
   const menuRef = useRef(false);
+  /** 지금 열려 있는 창을 수증이가 스스로 열었는가. 그러면 스스로 닫는다. */
+  const spoke = useRef(false);
   const restPose = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 버리는 중의 시계. 말하는 시계(timers)와 섞이면 도중에 지워진다. */
   const tossTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -633,11 +652,31 @@ export default function Helper({ lang }: { lang: Locale }) {
    * 동안 눈이 그 자리를 따라가므로, 도착했을 때 어디를 보라는 말이 필요 없다.
    */
   useEffect(() => {
-    if (!line) return;
+    if (!line) {
+      // 말이 지나갔다. 수증이가 열어 둔 창이면 스스로 닫고 하던 일로 돌아간다.
+      // 사람이 열어 둔 창이면 그대로 둔다 — 사람이 닫을 창이다.
+      if (spoke.current) {
+        spoke.current = false;
+        setOpen(false);
+        setPose('stand');
+      }
+      return;
+    }
+    spoke.current = true;
     lastSeen.current = Date.now();
-    setUnread(true);
+    /*
+     * 말은 **스스로 열린다.**
+     *
+     * 전에는 손만 흔들고, 사람이 머리 위 점을 눌러야 무슨 말인지 보였다.
+     * 그런데 이 말이 나오는 때는 대부분 방금 누른 단추가 안 먹은 때다 —
+     * 왜 안 됐는지가 지금 필요한데, 그걸 보려고 한 번 더 눌러야 했다.
+     *
+     * 다섯 초 뒤에 말이 스스로 지나가고(HelperContext), 그러면 이 창도
+     * 스스로 닫힌다. 사람이 치울 일이 없다.
+     */
     setMenu(false);
     setAsking(false);
+    setOpen(true);
     play('gasp', 'wiggle', 820); // 놀란다. 무슨 일이 났다는 뜻이다.
 
     const at = line.at;
@@ -774,14 +813,12 @@ export default function Helper({ lang }: { lang: Locale }) {
       setAsking(false);
       hushUntil.current = Date.now() + 7000; // 닫았으니 잠깐 쉬었다가 이어 간다
       setPose('stand');
-      if (unread) {
-        setUnread(false);
-        ctx?.hush();
-      }
+      // 하던 말이 있으면 여기서 끝난다. 다시 보려고 눌러야 하는 말은 없다.
+      if (line) ctx?.hush();
       return;
     }
     setOpen(true);
-    setUnread(false);
+    spoke.current = false; // 사람이 연 창이다. 말이 지나가도 닫지 않는다.
     hushUntil.current = Date.now() + 7000; // 사람 차례다. 그동안은 말하지 않는다
     setMenu(!line);
     setAsking(false);
@@ -909,7 +946,7 @@ export default function Helper({ lang }: { lang: Locale }) {
       {/* 머리 위 단추. 말풍선은 여기서만 열고 닫는다.
           검은 선으로 그린 흰 원 하나 — 말풍선을 가장 적게 줄인 모양이다. */}
       <button
-        className={`helper-tab${open ? ' on' : ''}${unread ? ' unread' : ''}`}
+        className={`helper-tab${open ? ' on' : ''}`}
         onClick={toggle}
         aria-expanded={open}
         aria-label={T('helperTitle')}

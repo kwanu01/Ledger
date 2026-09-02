@@ -45,6 +45,9 @@ export default function Relabel({
   const [vendor, setVendor] = useState(expense.vendor ?? '');
   const [category, setCategory] = useState(expense.category ?? '');
   const [note, setNote] = useState(expense.note ?? '');
+  // 링크도 이름표다. 돈이 아니라 그 줄이 무엇이었는지를 가리키는 것이므로,
+  // 정산이 끝난 뒤에도 고칠 수 있어야 한다.
+  const [productLink, setProductLink] = useState(expense.productLink ?? '');
 
   function save() {
     start(async () => {
@@ -55,6 +58,7 @@ export default function Relabel({
         vendor,
         category,
         note,
+        productLink,
       });
       if (!r.ok) return say(r.message);
       onDone();
@@ -84,6 +88,16 @@ export default function Relabel({
         <label className="field">
           <span className="lab">{T('category')}</span>
           <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} />
+        </label>
+
+        <label className="field">
+          <span className="lab">{T('productLink')}</span>
+          <input
+            type="text"
+            value={productLink}
+            onChange={(e) => setProductLink(e.target.value)}
+            placeholder="https://"
+          />
         </label>
 
         <label className="field wide">

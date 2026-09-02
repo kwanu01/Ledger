@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 /**
  * 말을 한 군데로 모으는 자리 (§21.10)
@@ -40,12 +48,25 @@ export function useHelper(): {
   say: (text: string, tone?: Tone, near?: HTMLElement | null) => void;
 } {
   const ctx = useContext(HelperCtx);
+  /*
+   * **ctx가 아니라 ctx.say에 매단다.**
+   *
+   * ctx는 지금 하는 말(line)을 담고 있어서 말이 바뀔 때마다 새 객체가 된다.
+   * 여기서 ctx에 매달면 그때마다 say도 새 함수가 되고, 이 say를 의존성으로
+   * 둔 <Say>의 effect가 다시 돌아 같은 말을 또 한다 — 말이 스스로 지나가게
+   * 만들자마자 그 자리에서 다시 켜지는 고리가 됐다. 화면에는 5초짜리 말이
+   * 영원히 떠 있는 것으로 보였다.
+   *
+   * ctx.say 자체는 처음 한 번 만들어지고 바뀌지 않으므로, 그것에 매달면
+   * 이 함수도 바뀌지 않는다.
+   */
+  const tell = ctx?.say;
   return useMemo(
     () => ({
       say: (text: string, tone: Tone = 'warn', near?: HTMLElement | null) =>
-        ctx?.say(text, tone, near),
+        tell?.(text, tone, near),
     }),
-    [ctx],
+    [tell],
   );
 }
 
@@ -55,8 +76,26 @@ export function useHelperLine(): Ctx | null {
 
 let seq = 0;
 
+/**
+ * 말이 남아 있는 시간.
+ *
+ * 전에는 사람이 치울 때까지 남았다. 머리 위 점이 빨개지고, 그 점을 눌러야
+ * 말이 사라졌다. 두 가지가 잘못됐다.
+ *
+ *   · **일을 하나 떠넘긴다.** 잘못은 이미 알았는데 치우는 일이 하나 더 생긴다.
+ *   · **거기서 멈춘다.** 치울 때까지 다른 말을 못 하니, 한참 뒤에 점을 누르면
+ *     지나간 일에 대한 말이 그제야 나온다 — 정산을 다 끝낸 뒤에 눌렀는데
+ *     '정산할 지출이 없습니다'가 떠 있는 식이다.
+ *
+ * 그래서 말은 **스스로 지나간다.** 다섯 초는 한 줄을 읽고도 남는 시간이고,
+ * 읽지 못했으면 같은 일을 다시 해 보면 같은 말이 다시 나온다. 지나간 뒤에는
+ * 하던 이야기로 돌아간다.
+ */
+const LINE_MS = 5000;
+
 export function HelperProvider({ children }: { children: React.ReactNode }) {
   const [line, setLine] = useState<Line | null>(null);
+  const fade = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const say = useCallback((text: string, tone: Tone = 'warn', near?: HTMLElement | null) => {
     const t = text.trim();
@@ -67,10 +106,19 @@ export function HelperProvider({ children }: { children: React.ReactNode }) {
       const r = near.getBoundingClientRect();
       if (r.width || r.height) at = { x: r.left, y: r.top, w: r.width, h: r.height };
     }
-    setLine({ id: seq, text: t, tone, at });
+    const id = seq;
+    setLine({ id, text: t, tone, at });
+    if (fade.current) clearTimeout(fade.current);
+    // 다음 말이 이미 왔으면 이 시계는 남의 말을 지우게 된다. id로 확인한다.
+    fade.current = setTimeout(() => setLine((cur) => (cur?.id === id ? null : cur)), LINE_MS);
   }, []);
 
-  const hush = useCallback(() => setLine(null), []);
+  const hush = useCallback(() => {
+    if (fade.current) clearTimeout(fade.current);
+    setLine(null);
+  }, []);
+
+  useEffect(() => () => { if (fade.current) clearTimeout(fade.current); }, []);
 
   const value = useMemo(() => ({ line, say, hush }), [line, say, hush]);
   return <HelperCtx.Provider value={value}>{children}</HelperCtx.Provider>;
