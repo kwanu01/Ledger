@@ -834,12 +834,25 @@ footer a:hover{color:var(--ink)}
   text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
 .linky:hover{color:var(--ink)}
 /* 문의 주소. 맨 아래 줄에서 자라 나온다. */
-.mailcard{
-  flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;
-  margin-top:10px;padding:10px 12px;border:1px solid var(--rule);background:var(--field)}
-.mailcard-addr{
-  font-family:var(--mono);font-size:13px;color:var(--ink) !important;
-  word-break:break-all}
+/*
+   문의 — 판이 아니라 같은 줄에.
+
+   맨 아래 줄은 이미 flex 라서, 주소를 형제로 내놓으면 오른쪽으로 이어
+   붙고 좁아지면 저절로 다음 줄로 넘어간다. 폰을 위해 따로 짤 것이 없다.
+
+   주소는 길다. 좁은 화면에서 한 덩어리로 버티면 줄이 밖으로 밀려나므로
+   어디서든 끊기게 둔다(word-break).
+*/
+.mail-addr{
+  appearance:none;background:none;border:0;padding:0;margin:0;font:inherit;
+  font-family:var(--mono);font-size:12.5px;color:var(--ink) !important;
+  text-align:left;word-break:break-all;cursor:pointer}
+a.mail-addr,a.mail-addr:visited{text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--rule)}
+a.mail-addr:hover{text-decoration-color:var(--ink)}
+
+/* 기기에 따라 하나만 내놓는다. 두 가지를 다 두면 같은 것이 두 번 보인다. */
+.phone-only{display:none}
 
 /* ── 읽는 문서 (개인정보 처리방침 같은 것) ───────────────────────
    장부가 아니라 글이다. 한 줄이 길면 다음 줄로 눈이 못 넘어가고, 줄이 붙어
@@ -1356,6 +1369,10 @@ footer a:hover{color:var(--ink)}
    펴지는 자리로 보낸다. 표는 표로 남고, 읽을 것만 남는다.
    ══════════════════════════════════════════════════════════════════ */
 @media (max-width:640px){
+  /* 폰에서는 주소 자체가 복사 단추다. 긴 주소를 손가락으로 긁지 않게. */
+  .desk-only{display:none}
+  .phone-only{display:inline}
+
   .two-up{grid-template-columns:1fr;gap:22px}
 
   /*
@@ -1895,4 +1912,72 @@ input[type='text'],input[type='email'],input[type='number'],input[type='date'],s
     transition:none}
   .mark,.done-mark,main > section,.masthead,.rule-double,nav{animation:none}
   .choice:hover{padding-left:6px}
+  a,.plain,.linky,nav .tab,nav .tab::after{transition:none}
+  nav .tab[aria-current="page"]::after{animation:none}
 }
+
+/*
+   밑줄이 그어진다.
+
+   ── 왜 두 가지로 나누는가 ──────────────────────────────────────
+
+   밑줄을 왼쪽에서 오른쪽으로 긋는 동작은 배경 그림으로만 할 수 있다
+   (text-decoration 은 켜져 있거나 꺼져 있거나 둘뿐이라 폭을 못 준다).
+   그런데 배경 밑줄은 **글자의 아래로 내려오는 획을 피해 가지 않는다.**
+   text-decoration 은 피해 간다(ink skipping). 한글에서 이 차이가 크다 —
+   'ㅇ, ㅜ, ㄹ' 이 밑줄에 물린다.
+
+   그래서 나눈다.
+
+     본문 속 링크  글이 흐르는 자리이고 줄바꿈도 된다. 밑줄은 그대로 두고
+                   **굵기만 눌린다** — 펜을 조금 더 눌러 그은 것처럼.
+     단추꼴 링크   짧고 한 줄이라 획에 물릴 일이 적다. 여기서는 밑줄이
+                   왼쪽에서 오른쪽으로 그어진다. 펜이 지나가는 방향이다.
+
+   ── 차례표 ─────────────────────────────────────────────────────
+
+   지금 보고 있는 탭 아래의 막대는 화면이 열릴 때 그어진다. 탭을 옮기면
+   새 자리에서 다시 그어진다 — 어디로 왔는지가 움직임으로 남는다.
+*/
+
+/* 본문 링크 — 밑줄 굵기가 눌린다. */
+a{transition:text-decoration-thickness .18s ease,text-decoration-color .18s ease,color .18s ease}
+a:hover{text-decoration-thickness:2px}
+
+/*
+   단추꼴 링크 — 밑줄이 그어진다.
+
+   쉬고 있을 때도 밑줄은 있다(둘째 층이 늘 100%). 위에 겹치는 첫째 층이
+   0에서 100%로 자라면서, 같은 자리에 더 진한 선이 덧그어진다.
+   누를 수 있다는 것은 마우스를 올려야 알 수 있는 사실이 아니다.
+*/
+.plain,.linky{
+  text-decoration:none;
+  background-image:
+    linear-gradient(currentColor,currentColor),
+    linear-gradient(currentColor,currentColor);
+  background-size:0 1px,100% 1px;
+  background-position:0 100%,0 100%;
+  background-repeat:no-repeat;
+  padding-bottom:2px;
+  transition:background-size .3s cubic-bezier(.19,1,.22,1),color .18s ease}
+.linky{background-image:
+  linear-gradient(currentColor,currentColor),
+  linear-gradient(var(--rule),var(--rule))}
+.plain:hover,.plain:focus-visible,
+.linky:hover,.linky:focus-visible{background-size:100% 1px,100% 1px}
+/* 겨눈 단추는 링크가 아니다. 밑줄을 걷는다. */
+.plain.arm{background-image:none;padding-bottom:2px}
+
+/* 차례표 — 지금 여기에만 막대가 그어진다. */
+nav .tab{position:relative;transition:color .18s ease}
+nav .tab::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:3px;
+  background:var(--rule-hard);
+  transform:scaleX(0);transform-origin:0 50%;
+  transition:transform .28s cubic-bezier(.19,1,.22,1)}
+nav .tab:hover::after{transform:scaleX(.4);background:var(--rule)}
+nav .tab[aria-current="page"]{box-shadow:none}
+nav .tab[aria-current="page"]::after{
+  transform:scaleX(1);animation:tab-draw .42s cubic-bezier(.19,1,.22,1)}
+@keyframes tab-draw{from{transform:scaleX(0)}}
