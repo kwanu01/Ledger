@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Dithered from './Dithered.tsx';
 
 /**
@@ -12,6 +13,20 @@ import Dithered from './Dithered.tsx';
  *
  * 누르면 원본이 화면을 덮고 크게 열린다. 점은 이 장부의 규칙이지만, 무엇을
  * 샀는지 확인하려고 여는 창에서까지 점일 이유는 없다. 거기서는 읽혀야 한다.
+ *
+ * ── 크게 여는 창은 화면의 자식이어야 한다 ──────────────────────────
+ *
+ * 이 창을 `document.body` 에 따로 그린다(createPortal).
+ *
+ * 전에는 사진이 붙어 있던 자리에 그대로 두었더니, 창이 화면이 아니라 **그
+ * 구역 안에** 열렸다. 영수증이 구역 밖으로 삐져나가 아래가 잘려 보이던 것이
+ * 이것이다. 원인은 이 파일이 아니라 구역에 걸린 놓이는 움직임이었다 —
+ * transform 을 다루는 움직임을 붙들고 있으면 그 요소가 `position:fixed` 의
+ * 기준이 된다(globals.css 의 paper-lay).
+ *
+ * 그쪽은 그쪽대로 고쳤지만, 화면을 덮는 창이 **어느 조상 밑에 있느냐에 따라
+ * 달라지는 것 자체가 약한 구조다.** 누가 나중에 어느 칸에 transform 하나만
+ * 얹어도 같은 일이 다시 일어난다. 그래서 아예 화면 바로 밑에 그린다.
  */
 export default function Lightbox({
   src,
@@ -30,6 +45,9 @@ export default function Lightbox({
   wide?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  /** 서버에는 document 가 없다. 첫 그림 뒤에 옮겨 붙인다. */
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
 
   useEffect(() => {
     if (!open) return;
@@ -51,17 +69,20 @@ export default function Lightbox({
         {label && <span className="shot-label">{label}</span>}
       </button>
 
-      {open && (
-        <div className="lightbox" onClick={() => setOpen(false)} role="dialog" aria-modal="true">
-          <figure onClick={(e) => e.stopPropagation()}>
-            <img src={src} alt={alt} />
-            {caption && <figcaption>{caption}</figcaption>}
-          </figure>
-          <button className="lightbox-x" onClick={() => setOpen(false)} aria-label="닫기">
-            ×
-          </button>
-        </div>
-      )}
+      {open &&
+        ready &&
+        createPortal(
+          <div className="lightbox" onClick={() => setOpen(false)} role="dialog" aria-modal="true">
+            <figure onClick={(e) => e.stopPropagation()}>
+              <img src={src} alt={alt} />
+              {caption && <figcaption>{caption}</figcaption>}
+            </figure>
+            <button className="lightbox-x" onClick={() => setOpen(false)} aria-label="닫기">
+              ×
+            </button>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
