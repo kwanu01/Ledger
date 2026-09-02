@@ -81,7 +81,7 @@ export type Key =
   | 'photoShort' | 'photoSentTo2'
   | 'closedMark'
   | 'relabelEntry' | 'relabelOnly'
-  | 'ownerTag' | 'handOver' | 'handOverWarn' | 'handOverDo' | 'goneWarn' | 'goneDo' | 'myBooks' | 'joinedBooks' | 'makeBook' | 'bookNamePlaceholder' | 'rateOn' | 'rateSays' | 'useRate' | 'helperWhat' | 'helperChat' | 'confirmFor' | 'confirmForWarn' | 'waitedDays' | 'saysSentDays'
+  | 'ownerTag' | 'handOver' | 'handOverWarn' | 'handOverDo' | 'goneWarn' | 'goneDo' | 'myBooks' | 'joinedBooks' | 'makeBook' | 'bookNamePlaceholder' | 'rateOn' | 'rateSays' | 'useRate' | 'helperWhat' | 'helperChat' | 'helperAskOpen' | 'settleAll' | 'confirmFor' | 'confirmForWarn' | 'waitedDays' | 'saysSentDays'
   | 'photoSentTo' | 'chargedIn' | 'paidIn' | 'foreignNote' | 'uploaded'
   // 팀
   | 'membersN' | 'me' | 'gone' | 'markGone' | 'bringBack'
@@ -238,6 +238,7 @@ const ko: Record<Key, string> = {
   keepReceipt: '이 영수증 사진을 장부에 남기기',
   helperTitle: '수증이', helperAsk: '장부에 대해 묻기', helperAskWhat: '무엇이 궁금한가요',
   helperWhat: '여기서 뭘 하나요?', helperChat: '다른 얘기 해 주세요',
+  helperAskOpen: '수증이에게 물어보기', settleAll: '전체 정산',
   helperAskGo: '묻기', helperReading: '읽는 중', helperHide: '버리기', helperShow: '수증이',
   sortBy: '순서', etc: '기타',
   settledNow: '정산했습니다', sendItNow: '이 글을 팀에게 보내세요.',
@@ -396,6 +397,7 @@ const en: Record<Key, string> = {
   keepReceipt: 'Keep this receipt photo in the ledger',
   helperTitle: 'Receipt', helperAsk: 'Ask about this ledger', helperAskWhat: 'What would you like to know',
   helperWhat: 'What happens here?', helperChat: 'Tell me something else',
+  helperAskOpen: 'Ask me anything', settleAll: 'Settle everything',
   helperAskGo: 'Ask', helperReading: 'Reading', helperHide: 'Throw away', helperShow: 'Receipt',
   sortBy: 'Order', etc: 'Other',
   settledNow: 'Settled', sendItNow: 'Send this to the team.',
@@ -552,6 +554,7 @@ const ja: Record<Key, string> = {
   keepReceipt: 'このレシート写真を帳簿に残す',
   helperTitle: 'レシート', helperAsk: '帳簿について聞く', helperAskWhat: '何が知りたいですか',
   helperWhat: 'ここは何をする所ですか', helperChat: '他の話をしてください',
+  helperAskOpen: 'レシートに聞いてみる', settleAll: '全部を精算',
   helperAskGo: '聞く', helperReading: '読み中', helperHide: '捨てる', helperShow: 'レシート',
   sortBy: '順序', etc: 'その他',
   settledNow: '精算しました', sendItNow: 'この文をチームに送ってください。',
@@ -708,6 +711,7 @@ const zh: Record<Key, string> = {
   keepReceipt: '把这张收据照片留在账本里',
   helperTitle: '收据', helperAsk: '询问这本账本', helperAskWhat: '想知道什么',
   helperWhat: '这里是做什么的？', helperChat: '说点别的吧',
+  helperAskOpen: '问问收据', settleAll: '全部结算',
   helperAskGo: '问', helperReading: '读取中', helperHide: '丢掉', helperShow: '收据',
   sortBy: '排序', etc: '其他',
   settledNow: '已结算', sendItNow: '把这段发给团队。',
@@ -869,6 +873,7 @@ const es: Record<Key, string> = {
   keepReceipt: 'Guardar esta foto del recibo en el libro',
   helperTitle: 'Recibo', helperAsk: 'Preguntar sobre el libro', helperAskWhat: 'Qué quieres saber',
   helperWhat: '¿Qué se hace aquí?', helperChat: 'Cuéntame otra cosa',
+  helperAskOpen: 'Pregúntame lo que sea', settleAll: 'Liquidar todo',
   helperAskGo: 'Preguntar', helperReading: 'Leyendo', helperHide: 'Tirar', helperShow: 'Recibo',
   sortBy: 'Orden', etc: 'Otros',
   settledNow: 'Liquidado', sendItNow: 'Envía esto al equipo.',
@@ -1027,6 +1032,7 @@ const vi: Record<Key, string> = {
   keepReceipt: 'Giữ ảnh hóa đơn này trong sổ',
   helperTitle: 'Hóa đơn', helperAsk: 'Hỏi về sổ này', helperAskWhat: 'Bạn muốn biết gì',
   helperWhat: 'Ở đây làm gì vậy?', helperChat: 'Kể chuyện khác đi',
+  helperAskOpen: 'Hỏi tôi bất cứ điều gì', settleAll: 'Chia tất cả',
   helperAskGo: 'Hỏi', helperReading: 'Đang đọc', helperHide: 'Vứt đi', helperShow: 'Hóa đơn',
   sortBy: 'Thứ tự', etc: 'Khác',
   settledNow: 'Đã chia xong', sendItNow: 'Gửi đoạn này cho nhóm.',

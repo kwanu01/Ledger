@@ -213,6 +213,14 @@ a.choice:hover{color:var(--paper)}
 /* 내가 만든 것과 초대받아 들어간 것 사이의 이름표. */
 .choice-head{margin-top:44px}
 .choice-head + .choices{margin-top:10px}
+/* 묶음을 닫는 짧은 선.
+   줄과 줄을 가르는 선은 칸을 다 쓰지만, 묶음을 닫는 선은 그러면 안 된다 —
+   같은 굵기로 같은 폭이면 그것도 줄 사이의 선으로 읽힌다. 위에 붙은 이름표
+   길이만큼만 긋는다. 이름표가 열고 이 선이 닫는 것이다. */
+.choices.grouped::after{
+  content:"";display:block;
+  font-size:13px;width:7em;
+  border-top:1px solid var(--rule-hard)}
 .back{margin-top:34px}
 .calc-in{display:flex;flex-wrap:wrap;gap:18px 24px;align-items:flex-end}
 .calc-in label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--ink-2);font-weight:600}

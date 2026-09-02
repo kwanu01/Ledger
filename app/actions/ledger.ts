@@ -6,6 +6,9 @@ import {
   cancelSettlement,
   confirmSettlement,
   confirmTransfer,
+  activeMemberCount,
+  archiveLedger,
+  reopenLedger,
   confirmTransferAsOwner,
   markSent,
   unmarkSent,
@@ -78,7 +81,10 @@ export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: s
       createdBy: pass.memberId,
     });
 
-    revalidatePath(`/l/${input.ledgerId}`);
+    // 닫혔던 장부에 다시 적으면 다시 열린다. 닫는 것은 지우는 것이 아니다.
+    await reopenLedger(input.ledgerId);
+    revalidatePath(`/l/${input.ledgerId}`, 'layout');
+    revalidatePath('/teams');
     return { ok: true, value: { id } };
   } catch (e) {
     return failed(e);
@@ -271,17 +277,36 @@ export async function relabelExpenseLine(input: {
 
 /* ── 정산 ─────────────────────────────────────────────────────────────── */
 
+/**
+ * 정산 확정 (§12)
+ *
+ * expenseIds 를 안 넘기면 **아직 정산하지 않은 것 전부**가 대상이다.
+ * 골라서 하는 것이 기본이 아니라, 전부가 기본이고 고르는 것이 선택이다 —
+ * 대개는 그날까지의 것을 다 닫는다.
+ *
+ * 팀원이 한 사람이면 나눌 상대가 없어 송금이 0건이다. 확인을 기다릴 것이
+ * 없으니 그 순간 끝나고, 장부도 함께 닫는다. 남은 일이 없는 장부를 열린
+ * 채로 두면 목록에서 계속 볼 것이 있는 것처럼 보인다.
+ */
 export async function settle(args: {
   ledgerId: string;
   expenseIds?: string[];
   label?: string;
   isFinal?: boolean;
-}): Promise<Result<{ settlementId: string; transferCount: number }>> {
+}): Promise<Result<{ settlementId: string; transferCount: number; archived: boolean }>> {
   try {
-    await requireLedgerAccess(args.ledgerId);
+    const pass = await requireLedgerAccess(args.ledgerId);
     const value = await confirmSettlement(args);
-    revalidatePath(`/l/${args.ledgerId}`);
-    return { ok: true, value };
+
+    let archived = false;
+    if (value.transferCount === 0 && (await activeMemberCount(pass.teamId)) <= 1) {
+      await archiveLedger(args.ledgerId);
+      archived = true;
+    }
+
+    revalidatePath(`/l/${args.ledgerId}`, 'layout');
+    revalidatePath('/teams');
+    return { ok: true, value: { ...value, archived } };
   } catch (e) {
     return failed(e);
   }

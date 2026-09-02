@@ -130,13 +130,23 @@ export default function BookTable({
     setLastPicked(id);
   }
 
-  async function settleSelected() {
-        setBusy(true);
-    const r = await settle({ ledgerId: ledger.id, expenseIds: [...selection] });
+  /**
+   * 정산하기 (§12)
+   *
+   * 고른 것이 있으면 그것만, 없으면 **아직 정산 안 한 것 전부**를 닫는다.
+   * 대개는 그날까지의 것을 다 닫으므로, 하나하나 고르게 하는 것은 매번
+   * 같은 일을 시키는 것이다. 고르는 것은 일부만 닫고 싶을 때의 선택지다.
+   *
+   * 팀원이 혼자면 나눌 상대가 없어 그 자리에서 끝나고 장부도 닫힌다.
+   * 그때는 정산 화면 대신 아카이브로 보낸다 — 볼 것이 그쪽에 있다.
+   */
+  async function settleThese(ids?: string[]) {
+    setBusy(true);
+    const r = await settle({ ledgerId: ledger.id, expenseIds: ids });
     setBusy(false);
     if (!r.ok) return say(r.message);
     setSelection(new Set());
-    router.push(`/l/${ledger.id}/settle`);
+    router.push(`/l/${ledger.id}/${r.value.archived ? 'archive' : 'settle'}`);
     router.refresh();
   }
 
@@ -151,6 +161,10 @@ export default function BookTable({
   const arrow = (k: SortKey) => (key === k ? (dir === 'asc' ? ' ↑' : ' ↓') : '');
   const selectedTotal = ledger.expenses
     .filter((e) => selection.has(e.id))
+    .reduce((a, e) => a + e.amount, 0);
+  /** 아직 안 닫힌 것의 합. '전체 정산'이 무엇을 닫는지 미리 보여 준다. */
+  const openTotal = ledger.expenses
+    .filter((e) => pickable.includes(e.id))
     .reduce((a, e) => a + e.amount, 0);
 
   /**
@@ -526,6 +540,28 @@ export default function BookTable({
       </div>
 
       <div className="row" style={{ marginTop: 20 }}>
+        {/*
+          전체 정산.
+
+          고르는 일 없이 **아직 안 닫힌 것을 한 번에** 닫는다. 대개는 그날까지
+          쓴 것을 다 닫으므로 이쪽이 기본이고, 줄을 고르는 것은 일부만 닫고
+          싶을 때의 선택지다. 고르기 시작하면 이 단추는 물러난다 — 그때는
+          '고른 것만'이 하려는 일이다.
+        */}
+        {selection.size === 0 && pickable.length > 0 && (
+          <>
+            <span className="muted">
+              {T('openN', { n: pickable.length })}
+              <span className="num" style={{ marginLeft: 12 }}>
+                {cash(openTotal)}
+              </span>
+            </span>
+            <button className="act small primary" onClick={() => settleThese()} disabled={busy}>
+              {busy ? T('settling') : T('settleAll')}
+            </button>
+          </>
+        )}
+
         {selection.size > 0 && (
           <>
             <span>
@@ -534,7 +570,7 @@ export default function BookTable({
                 {cash(selectedTotal)}
               </span>
             </span>
-            <button className="act small" onClick={settleSelected} disabled={busy}>
+            <button className="act small" onClick={() => settleThese([...selection])} disabled={busy}>
               {busy ? T('settling') : T('settleSelected')}
             </button>
             <button className="plain" onClick={() => setSelection(new Set())}>

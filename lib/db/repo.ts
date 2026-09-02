@@ -451,6 +451,60 @@ export async function openTransfers(ledgerId: string): Promise<OpenTransfer[]> {
 
 export const MONTHLY_AI_LIMIT = Number(process.env.LEDGER_AI_MONTHLY_LIMIT ?? 200);
 
+/**
+ * 혼자 쓰는 장부는 정산하는 순간 끝난다 (§12)
+ *
+ * 팀원이 한 사람이면 나눌 상대가 없다. 계산은 늘 '보낼 돈 0, 받을 돈 0'이고
+ * 송금 목록도 비어 있다. 그래서 확인을 기다릴 것이 없다 — 정산을 누른 그
+ * 순간이 곧 끝난 순간이다.
+ *
+ * 그때는 장부도 닫는다. 남은 일이 없는 장부를 열린 채로 두면 목록에서 계속
+ * '아직 볼 것이 있는 장부'처럼 보인다. 아카이브 화면은 원래 그 자리다 —
+ * 끝난 장부를 되돌아보는 자리.
+ *
+ * 닫아도 지우지 않는다. 지출을 더 적으면 그때 다시 열린다(reopenLedger).
+ */
+export async function activeMemberCount(teamId: string): Promise<number> {
+  const { count } = await db
+    .from('members')
+    .select('id', { count: 'exact', head: true })
+    .eq('team_id', teamId)
+    .eq('active', true);
+  return count ?? 0;
+}
+
+export async function archiveLedger(ledgerId: string): Promise<void> {
+  await db
+    .from('ledgers')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', ledgerId)
+    .is('archived_at', null);
+}
+
+export async function reopenLedger(ledgerId: string): Promise<void> {
+  await db.from('ledgers').update({ archived_at: null }).eq('id', ledgerId);
+}
+
+/**
+ * 장부 밖에서 묻는 말의 하루 상한 (§21.10)
+ *
+ * 첫 화면의 묻는 창은 **로그인하지 않은 사람에게도 열려 있다.** 아무나 부를
+ * 수 있는 자리에 모델 호출이 하나 생긴다는 뜻이고, 그 값은 키 주인이 낸다.
+ *
+ * 브라우저마다 세는 방법도 있지만 쿠키는 지우면 그만이라 한도가 되지 못한다.
+ * 여기서 세는 것은 '누가'가 아니라 '얼마나'다 — 막고 싶은 것이 사람이 아니라
+ * 비용이기 때문이다. 세는 것과 판정하는 것을 DB 안에서 한 문장으로 한다
+ * (0016_open_ai_cap.sql). 그래야 동시에 열 개가 들어와도 상한을 안 넘는다.
+ */
+export const OPEN_AI_DAILY_LIMIT = Number(process.env.LEDGER_AI_OPEN_DAILY_LIMIT ?? 300);
+
+export async function takeOpenAiSlot(): Promise<boolean> {
+  const { data, error } = await db.rpc('take_open_ai_slot', { p_limit: OPEN_AI_DAILY_LIMIT });
+  // 셀 수 없으면 열어 주지 않는다. 값이 나가는 쪽이라 모를 때는 닫는 편이 맞다.
+  if (error) return false;
+  return data === true;
+}
+
 export async function aiUsageThisMonth(ledgerId: string): Promise<number> {
   const { data, error } = await db.rpc('ai_usage_this_month', { p_ledger_id: ledgerId });
   if (error) return 0;

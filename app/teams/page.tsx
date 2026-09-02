@@ -48,14 +48,21 @@ export default async function Teams() {
         return a;
       }, 0);
 
-      // 건수만 알면 되므로 장부 전체를 읽지 않는다. 목록 화면이 장부 수만큼
-      // 느려지면 안 된다. 개수는 데이터베이스가 세게 한다.
-      const [{ count: total }, { count: settled }] = await Promise.all([
+      /*
+       * 건수만 알면 되므로 장부 전체를 읽지 않는다. 목록 화면이 장부 수만큼
+       * 느려지면 안 된다. 개수는 데이터베이스가 세게 한다.
+       *
+       * 미정산 건수는 뺄셈으로 세지 않는다. '전체 − 정산에 든 것'으로 세면
+       * **'정산 불필요'가 미정산으로 잡힌다** — 자기가 사서 자기가 가져간
+       * 줄은 정산에 들어가지 않지만, 아직 안 한 것이 아니라 할 것이 없는
+       * 것이다. 장부 화면은 그 구분을 하는데 목록만 몰라서, 열어 보면
+       * 아무것도 없는 장부에 '미정산 1건'이 떠 있었다.
+       *
+       * 판정 조건은 한 곳에만 있어야 한다(0017_open_expense_count.sql).
+       */
+      const [{ count: total }, { data: openCount }] = await Promise.all([
         db.from('expenses').select('id', { count: 'exact', head: true }).eq('ledger_id', l.ledgerId),
-        db
-          .from('expenses')
-          .select('id, settlement_expenses!inner(expense_id)', { count: 'exact', head: true })
-          .eq('ledger_id', l.ledgerId),
+        db.rpc('open_expense_count', { p_ledger_id: l.ledgerId }),
       ]);
 
       return {
@@ -65,7 +72,7 @@ export default async function Teams() {
         mine: l.mine,
         currency: l.currency,
         net,
-        openCount: Math.max(0, (total ?? 0) - (settled ?? 0)),
+        openCount: Math.max(0, Number(openCount ?? 0)),
         hasAny: (total ?? 0) > 0,
       };
     }),

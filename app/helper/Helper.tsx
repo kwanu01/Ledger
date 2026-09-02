@@ -829,11 +829,17 @@ export default function Helper({ lang }: { lang: Locale }) {
       {open && menu && (
         <div className={`helper-bubble${sayRight ? ' right' : ''}`}>
           <div className="say-menu">
-              {ledgerId && (
-                <button className="plain" onClick={() => { setAsking(true); setOpen(false); }}>
-                  {T('helperAsk')}
-                </button>
-              )}
+              {/*
+                묻는 창은 장부 밖에서도 열린다.
+
+                장부 안에서는 그 장부를 읽고 답하고, 밖에서는 서비스가 무엇인지
+                답한다. 밖에서는 **장부 내용이 한 글자도 실리지 않는다** —
+                로그인하지 않은 사람도 여는 자리라서, 실을 것이 있으면 그것부터
+                새어 나간다.
+              */}
+              <button className="plain" onClick={() => { setAsking(true); setOpen(false); }}>
+                {T(ledgerId ? 'helperAsk' : 'helperAskOpen')}
+              </button>
 
               {/*
                 장부 밖에서도 할 수 있는 것 (§21.10)
@@ -857,17 +863,6 @@ export default function Helper({ lang }: { lang: Locale }) {
                 {T('helperWhat')}
               </button>
 
-              <button
-                className="plain"
-                onClick={() => {
-                  setMenu(false);
-                  hushUntil.current = 0;
-                  // 화면 설명 뒤의 일상적인 말 쪽으로 건너뛴다.
-                  setTipAt(script.tips.length + Math.floor(Math.random() * 97));
-                }}
-              >
-                {T('helperChat')}
-              </button>
               <button
                 className="plain"
                 onClick={() => {
@@ -897,9 +892,9 @@ export default function Helper({ lang }: { lang: Locale }) {
       )}
 
       {/* 장부에 대해 묻는 창. 말풍선 안에 넣기엔 대답이 길다. */}
-      {asking && ledgerId && (
+      {asking && (
         <AskPanel
-          ledgerId={ledgerId}
+          ledgerId={ledgerId ?? undefined}
           lang={lang}
           onClose={() => { setAsking(false); play('stand', 'nod', 620); }}
           onBusy={(state) => {

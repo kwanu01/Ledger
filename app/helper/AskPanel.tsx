@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { askHelper } from '../actions/ask.ts';
+import { askHelper, askOpen } from '../actions/ask.ts';
 import type { Turn } from '../../lib/ai/ask.ts';
 import { translator } from '../../lib/i18n.ts';
 import type { Locale } from '../../lib/domain/money.ts';
@@ -23,7 +23,8 @@ export default function AskPanel({
   onClose,
   onBusy,
 }: {
-  ledgerId: string;
+  /** 장부 안에서 열면 그 장부에 대해 묻고, 없으면 서비스 전반을 묻는다. */
+  ledgerId?: string;
   lang: Locale;
   onClose: () => void;
   /** 읽는 동안과 대답한 뒤의 자세를 수증이가 따라 하도록 알린다. */
@@ -59,7 +60,9 @@ export default function AskPanel({
     setHistory((h) => [...h, { role: 'user', text: q }]);
     setQuestion('');
 
-    const r = await askHelper({ ledgerId, question: q, history });
+    const r = ledgerId
+      ? await askHelper({ ledgerId, question: q, history })
+      : await askOpen({ question: q, history });
     setBusy(false);
     if (r.ok) {
       onBusy('answered');

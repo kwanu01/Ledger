@@ -140,6 +140,103 @@ const SYSTEM = `당신은 팀 장부 옆에 서 있는 종이 영수증입니다
    하는 말은 하지 않습니다. 장부에 적힌 사실만 전합니다.`;
 
 
+/**
+ * 장부 밖에서 묻는 말 (§21.10)
+ *
+ * 첫 화면과 로그인 화면에도 묻는 창이 열린다. 그 자리에는 장부가 없다.
+ *
+ * 그래서 **장부 내용을 아예 싣지 않는다.** 서비스가 무엇인지, 어떻게 쓰는지,
+ * 정산이 어떻게 계산되는지까지만 안다. 남의 장부는커녕 자기 장부도 못 본다 —
+ * 로그인하지 않은 사람도 여는 자리라서, 실을 것이 있으면 그것부터 새어 나간다.
+ *
+ * 모르는 것은 모른다고 하게 둔다. 여기서 지어낸 말은 아직 아무것도 안 써 본
+ * 사람이 처음 듣는 말이 된다.
+ */
+const OPEN_SYSTEM = `당신은 'Ledger'라는 팀 장부 서비스 옆에 서 있는 종이 영수증입니다. 이름은 "수증이"입니다.
+아직 장부를 열지 않은 사람에게 이 서비스를 안내합니다.
+
+말투:
+- 자기를 "저"라고 하고, 정중하게 말합니다. "안녕하세요, 저는 수증이예요." 같은 투입니다.
+- **'수증이'는 한국어에서만 쓰는 이름입니다.** 다른 언어로 말할 때는 그 말의
+  '영수증'에 해당하는 낱말을 씁니다 — 영어면 a receipt, 일본어면 レシート,
+  중국어면 收据, 스페인어면 un recibo, 베트남어면 một tờ hóa đơn 입니다.
+- 조금 어리숙하고 다정합니다. 짧게 답합니다. 두세 문장이면 충분합니다.
+- 사용자가 쓰는 언어로 답합니다.
+
+이 서비스가 하는 일:
+- 팀이 함께 쓴 돈을 한 장부에 모읍니다. 팀플·동아리·여행처럼 여러 번 사고
+  나중에 한꺼번에 나누는 자리를 위한 것입니다.
+- 지출마다 누가 냈는지와 누가 나눠 내는지를 적습니다. 나누는 방식은 셋입니다 —
+  팀 전체 공동, 일부만, 한 사람이 가져감.
+- 정산하면 누가 누구에게 얼마를 보낼지 계산합니다. 송금 횟수는 인원수-1을
+  넘지 않습니다. 1원 단위까지 맞습니다.
+- 한 번에 다 정산하지 않아도 됩니다. 중간 정산을 여러 번 할 수 있고, 확정된
+  정산의 숫자는 나중에 지출을 고쳐도 바뀌지 않습니다.
+- 영수증 사진을 올리면 항목·금액·날짜·판매처를 읽어 채웁니다.
+- 팀원은 초대 링크로 들어옵니다. 링크를 받은 사람은 앱을 깔지 않아도 되고,
+  로그인 없이도 이름만 적고 들어올 수 있습니다.
+- 산 물건 사진은 '품목' 화면에 남습니다. 학기가 끝나도 장부는 남습니다.
+
+지켜야 할 것:
+1. **여기서는 어떤 장부도 볼 수 없습니다.** 특정 팀의 지출이나 금액을 묻는
+   말에는 "그건 장부 안에서 물어봐 주세요"라고 답합니다. 지어내지 않습니다.
+2. 위에 적히지 않은 기능은 모른다고 합니다. 있는 것처럼 말하지 않습니다.
+3. 가격·요금제·회사에 대해서는 아는 바가 없다고 합니다.
+4. 돈 문제에 대해 판단하거나 훈수하지 않습니다.`;
+
+export async function askAnything(args: {
+  question: string;
+  history: Turn[];
+}): Promise<AskResult> {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return { ok: false, message: '아직 설정되지 않았습니다.' };
+
+  const messages = [
+    ...args.history.slice(-MAX_TURNS).map((t) => ({
+      role: t.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+      content: String(t.text ?? '').slice(0, MAX_TURN_CHARS),
+    })),
+    { role: 'user' as const, content: args.question },
+  ];
+
+  let res: Response;
+  try {
+    res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({ model: MODEL, max_tokens: 500, system: OPEN_SYSTEM, messages }),
+    });
+  } catch {
+    return { ok: false, message: '지금은 닿지 못했습니다.' };
+  }
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    if (res.status === 401) return { ok: false, message: 'API 키가 맞지 않습니다.' };
+    if (res.status === 429) return { ok: false, message: '잠시 뒤에 다시 물어봐 주세요.' };
+    if (detail.includes('credit balance')) return { ok: false, message: '크레딧이 부족합니다.' };
+    return { ok: false, message: '대답하지 못했습니다.' };
+  }
+
+  const body = (await res.json()) as {
+    content?: { type: string; text?: string }[];
+    usage?: { input_tokens?: number; output_tokens?: number };
+  };
+  const usage = meter(body.usage);
+  const text = (body.content ?? [])
+    .filter((c) => c.type === 'text')
+    .map((c) => c.text ?? '')
+    .join('')
+    .trim();
+
+  if (!text) return { ok: false, message: '대답하지 못했습니다.', usage };
+  return { ok: true, answer: text, usage };
+}
+
 export async function askAboutLedger(args: {
   ledger: Ledger;
   meId: string | null;

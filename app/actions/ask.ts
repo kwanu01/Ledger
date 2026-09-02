@@ -5,9 +5,10 @@ import {
   loadLedger,
   aiUsageThisMonth,
   recordAiUsage,
+  takeOpenAiSlot,
   MONTHLY_AI_LIMIT,
 } from '../../lib/db/repo.ts';
-import { askAboutLedger, type AskResult, type Turn } from '../../lib/ai/ask.ts';
+import { askAboutLedger, askAnything, type AskResult, type Turn } from '../../lib/ai/ask.ts';
 
 /**
  * 수증이에게 이 장부에 대해 묻는다 (§21.10)
@@ -78,6 +79,42 @@ export async function askHelper(args: {
     return r;
   } catch (e) {
     if (e instanceof AccessError) return { ok: false, message: e.message };
+    return { ok: false, message: '대답하지 못했습니다.' };
+  }
+}
+
+
+/**
+ * 장부 밖에서 묻기 (§21.10)
+ *
+ * 첫 화면·로그인 화면에서도 수증이에게 말을 걸 수 있다. 그 자리에는 장부가
+ * 없으므로 **장부 내용은 한 글자도 실리지 않는다.** 서비스가 무엇이고 어떻게
+ * 쓰는지까지만 아는 수증이다.
+ *
+ * 로그인하지 않은 사람도 여는 자리다. 그래서 접근 확인 대신 **하루 상한**이
+ * 문을 지킨다 — 막고 싶은 것이 사람이 아니라 비용이기 때문이다. 상한에
+ * 닿으면 정중히 거절한다. 서비스가 죽는 것보다 낫다.
+ */
+export async function askOpen(args: {
+  question: string;
+  history: Turn[];
+}): Promise<AskResult> {
+  try {
+    const q = args.question.trim();
+    if (!q) return { ok: false, message: '무엇이 궁금한지 적어 주세요.' };
+    if (q.length > 500) return { ok: false, message: '질문이 너무 깁니다.' };
+
+    if (!(await takeOpenAiSlot())) {
+      return {
+        ok: false,
+        message: '오늘은 여기서 물어볼 수 있는 몫을 다 썼어요. 내일 다시 물어봐 주세요.',
+      };
+    }
+
+    return await askAnything({ question: q, history: trim(args.history) });
+  } catch (e) {
+    if (e instanceof AccessError) return { ok: false, message: e.message };
+    console.error('[ledger]', e);
     return { ok: false, message: '대답하지 못했습니다.' };
   }
 }
