@@ -1,7 +1,10 @@
 import 'server-only';
 import type { Ledger } from '../domain/types.ts';
 import { computeSettlement, nameOf, settledExpenseIds } from '../domain/settlement.ts';
-import { collectsDues, duesBoard, fundBook, usesFund } from '../domain/closing.ts';
+import { collectsDues, duesBoard, fundBook, guessDuesPerHead, usesFund } from '../domain/closing.ts';
+import { burn } from '../domain/ahead.ts';
+import { watch } from '../domain/watch.ts';
+import { nudges } from '../domain/nudge.ts';
 import { formatNumber } from '../domain/money.ts';
 import { ENDPOINT, MODEL, meter, type Usage } from './usage.ts';
 
@@ -40,7 +43,8 @@ export type AskResult =
  * 장부를 글로 옮긴다. 화면에 있는 것과 같은 사실만 담는다.
  * 사진·영수증 파일 이름처럼 대답에 쓸모없는 것은 넣지 않는다.
  */
-export function digest(ledger: Ledger, meId: string | null): string {
+export function digest(ledger: Ledger, meId: string | null, today?: string): string {
+  const now = today ?? new Date().toISOString().slice(0, 10);
   const cur = ledger.currency ?? 'KRW';
   const money = (n: number) => formatNumber(n, cur, 'ko');
   const who = (id: string) => nameOf(ledger.members, id);
@@ -69,14 +73,36 @@ export function digest(ledger: Ledger, meId: string | null): string {
     for (const k of b.byKind) {
       out.push(`  ${k.kind}: ${money(k.amount)} (${k.count}건)`);
     }
-    if (collectsDues(ledger) && ledger.duesPerHead) {
-      out.push(`  1인당 회비 ${money(ledger.duesPerHead)}`);
+    /*
+     * 1인당 회비는 적어 둔 값이 없어도 장부가 알아낸다 (§12.2).
+     * 화면이 그 값으로 미납을 세므로, 여기서 다른 기준을 쓰면 수증이가
+     * 화면과 다른 말을 하게 된다. 어긋난 숫자 하나가 나머지를 다 무너뜨린다.
+     */
+    const perHead = ledger.duesPerHead ?? guessDuesPerHead(ledger)?.amount ?? 0;
+    if (collectsDues(ledger) && perHead > 0) {
+      out.push(
+        `  1인당 회비 ${money(perHead)}` +
+          (ledger.duesPerHead ? '' : ' (걷힌 회비에서 장부가 알아낸 값)'),
+      );
       for (const r of duesBoard(ledger, ledger.members)) {
         out.push(
           `  ${who(r.memberId)}: 낸 돈 ${money(r.paid)}` +
             (r.short > 0 ? `, 모자란 돈 ${money(r.short)}` : ', 다 냄'),
         );
       }
+    }
+
+    /* 예산과 집행률 (§14). 화면과 같은 숫자를 같은 자리에서 가져온다. */
+    const b2 = burn(ledger, now);
+    out.push(
+      `  예산 ${money(b2.budget)}${b2.told ? '' : ' (들어온 돈에서 알아낸 값)'}` +
+        ` · 집행률 ${Math.round(b2.ran * 100)}%`,
+    );
+    if (b2.left < 0) out.push(`  예산을 ${money(-b2.left)} 넘겼습니다.`);
+    else if (b2.weeksLeft !== null) {
+      out.push(`  이 속도면 ${b2.weeksLeft}주쯤 더 갑니다 (${b2.dryOn} 무렵).`);
+    } else {
+      out.push('  아직 이 속도를 말할 만큼 기록이 쌓이지 않았습니다 (넉 주 · 공금 지출 3건).');
     }
   }
 
@@ -167,6 +193,48 @@ export function digest(ledger: Ledger, meId: string | null): string {
     out.push('', '아직 정산하지 않은 지출은 없습니다.');
   }
 
+  /*
+   * 확인할 것 (§13)
+   *
+   * 화면(장부 탭 위의 띠)에 뜨는 것과 **같은 목록**이다. 사람이 "이상한 거
+   * 없어?"라고 물었을 때 수증이가 "없어요"라고 하는데 화면에는 물음이 세 개
+   * 떠 있으면, 그 순간부터 둘 중 어느 쪽도 못 믿는다.
+   */
+  const asks = watch(ledger, ledger.members);
+  if (asks.length > 0) {
+    out.push('', `확인할 것 ${asks.length}가지 (장부 화면 위에 떠 있는 것과 같은 목록)`);
+    for (const f of asks) {
+      const row = ledger.expenses.find((e) => e.id === f.expenseId);
+      if (f.kind === 'twin') {
+        const other = ledger.expenses.find((e) => e.id === f.otherId);
+        out.push(`  중복 의심: '${row?.title}' 과 '${other?.title}' — 금액·결제자·날짜가 같습니다`);
+      } else if (f.kind === 'spike') {
+        out.push(`  튀는 금액: '${row?.title}' ${money(f.facts.amount)} — 보통 한 줄의 ${f.facts.times}배`);
+      } else if (f.kind === 'offReceipt') {
+        out.push(
+          `  영수증과 다름: '${row?.title}' — 사진에서 읽은 값 ${money(f.facts.read)}, ` +
+            `적힌 값 ${money(f.facts.amount)}`,
+        );
+      } else {
+        out.push(`  빠진 사람: ${who(f.memberId!)} 이(가) 어느 줄에도 없습니다`);
+      }
+    }
+  } else {
+    out.push('', '확인할 것은 없습니다.');
+  }
+
+  /* 미룬 것 (§15). 첫 화면에 뜨는 한 줄과 같은 판정이다. */
+  for (const n of nudges(ledger, ledger.members, now)) {
+    if (n.kind === 'settle') {
+      out.push(
+        '',
+        `${n.weeks}주째 정산을 안 했습니다 — 미정산 ${n.rows}건, 1인당 ${money(n.perHead)}.`,
+      );
+    } else {
+      out.push('', `회비를 아직 다 안 낸 사람이 ${n.people}명 — 모자란 돈 ${money(n.short)}.`);
+    }
+  }
+
   return out.join('\n');
 }
 
@@ -195,7 +263,13 @@ const SYSTEM = `당신은 팀 장부 옆에 서 있는 종이 영수증입니다
    요약이나 되묻기로 시작하지 마세요.
 4. 사용자가 쓴 말(사람 이름, 항목 이름)은 그대로 옮겨 적습니다.
 5. 돈 문제에 대해 판단하거나 훈수하지 않습니다. 누가 더 냈다든가 공평하다든가
-   하는 말은 하지 않습니다. 장부에 적힌 사실만 전합니다.`;
+   하는 말은 하지 않습니다. 장부에 적힌 사실만 전합니다.
+6. **'확인할 것'과 '미룬 것'은 아래 장부에 적힌 그대로만 전합니다.** 화면의
+   띠에 떠 있는 것과 같은 목록이라, 여기서 더하거나 빼면 둘이 어긋납니다.
+   새로 찾아내려 하지 마세요 — 찾는 일은 장부가 이미 했습니다.
+7. 어디를 보면 되는지 알려 줄 때 쓰는 이름입니다: '장부'(모든 줄과 확인할 것),
+   '정산 내역'(누가 누구에게), '들어온 돈'(결산·회비·예산, 공금 장부에만),
+   '품목', '팀', '지출 기입', 그리고 장부 맨 아래의 '결산 보고서'.`;
 
 
 /**
@@ -250,7 +324,23 @@ const OPEN_SYSTEM = `당신은 'Ledger'라는 팀 장부 서비스 옆에 서 �
   "지난 3번 중 3번 재료비였습니다"처럼 근거를 함께 적습니다.
 - 팀원은 초대 링크로 들어옵니다. 링크를 받은 사람은 앱을 깔지 않아도 되고,
   로그인 없이도 이름만 적고 들어올 수 있습니다.
+- 영수증 사진은 여러 장 한꺼번에 올릴 수 있습니다. 차례로 읽고 한 화면에서
+  훑은 뒤 한꺼번에 적습니다.
+- **장부가 스스로 검사합니다.** 같은 지출이 두 번 적혔는지, 사진에서 읽은 값과
+  적힌 값이 다른지, 이 장부에서 유난히 큰 금액인지, 어느 줄에도 없는 팀원이
+  있는지. 전부 "틀렸다"가 아니라 "이거 맞나요?"로 묻고, 괜찮다고 하면 다시
+  묻지 않습니다. 이 검사는 AI가 아니라 세는 계산입니다.
+- 공금 장부에는 예산과 집행률이 있습니다. 예산은 적지 않아도 됩니다 —
+  들어온 돈이 곧 쓸 수 있는 돈이니까요. 기록이 넉 주쯤 쌓이면 "이 속도면
+  8주쯤 더 갑니다"라고 알려 줍니다. 그 전에는 말하지 않습니다.
+- 정산을 오래 미루면 장부가 먼저 한 줄로 말을 겁니다.
+- 받을 돈 얘기를 꺼내기 어려울 때, 보낼 문장을 대신 써 줍니다. 정중하게와
+  편하게 두 가지 말투가 있고, 고쳐서 보낼 수 있습니다.
+- **결산 보고서**를 뽑을 수 있습니다. 교수·학회·총회에 낼 한 장이고, 인쇄하면
+  그대로 PDF가 됩니다. 이 문서의 숫자는 전부 계산해서 적으므로 다시 뽑아도
+  같습니다.
 - 산 물건 사진은 '품목' 화면에 남습니다. 학기가 끝나도 장부는 남습니다.
+- 서비스에 무엇이 달라졌는지는 첫 화면 맨 아래 '업데이트 내역'에 있습니다.
 
 지켜야 할 것:
 1. **여기서는 어떤 장부도 볼 수 없습니다.** 특정 팀의 지출이나 금액을 묻는

@@ -263,9 +263,24 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
           자리는 아니고, 탭이 하나 늘면 매일 쓰는 다섯이 그만큼 좁아진다.
           장부 맨 아래, 다 훑고 나서 닿는 자리가 맞다.
         */}
-        <p className="report-out">
+        <div className="report-out">
           <Link href={`/l/${ledgerId}/report`} className="plain">{T('reportTab')}</Link>
-        </p>
+          {/*
+            내보내기 (§16)
+
+            보고서 옆에 선다. 둘은 같은 자리에서 나가는 두 갈래다 —
+            보고서는 사람이 읽는 종이고, CSV 는 기계가 읽는 것이다.
+
+            Link 가 아니라 a 다. 화면으로 가는 것이 아니라 파일을 받는
+            자리라서, 라우터가 가로채면 안 된다.
+          */}
+          <a href={`/l/${ledgerId}/export`} className="plain" download>{T('exportRows')}</a>
+          {fund && (
+            <a href={`/l/${ledgerId}/export?what=incomes`} className="plain" download>
+              {T('exportIn')}
+            </a>
+          )}
+        </div>
       </main>
     </>
   );

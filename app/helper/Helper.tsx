@@ -67,6 +67,10 @@ function greetFor(path: string | null): { pose: string; trick: string; ms: numbe
   if (path.endsWith('/book')) return { pose: 'point', ...nod };
   if (path.endsWith('/goods')) return { pose: 'spread', ...wig };
   if (path.endsWith('/settle')) return { pose: 'cheer', trick: 'hop', ms: 760 };
+  /* 들어온 돈 — 주머니를 여는 자리라 두 팔을 벌린다. */
+  if (path.endsWith('/income')) return { pose: 'spread', ...nod };
+  /* 결산 보고서 — 내는 종이 앞에서는 자세를 바로 한다. */
+  if (path.endsWith('/report')) return { pose: 'stand', ...nod };
   if (path.endsWith('/archive')) return { pose: 'tuck', ...nod };
   if (path.endsWith('/team')) return { pose: 'wave', ...wig };
   if (path.endsWith('/add')) return { pose: 'open', ...nod };
@@ -83,6 +87,8 @@ function tipFor(path: string | null): Key | null {
   if (path.endsWith('/book')) return 'tipBook';
   if (path.endsWith('/goods')) return 'tipGoods';
   if (path.endsWith('/settle')) return 'tipSettle';
+  if (path.endsWith('/income')) return 'tipIncome';
+  if (path.endsWith('/report')) return 'tipReport';
   if (path.endsWith('/archive')) return 'tipArchive';
   if (path.endsWith('/team')) return 'tipTeam';
   if (path.endsWith('/add')) return 'tipAdd';

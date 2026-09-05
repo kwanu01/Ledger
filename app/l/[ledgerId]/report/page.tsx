@@ -322,6 +322,22 @@ export default async function Report({ params }: { params: Promise<{ ledgerId: s
         </section>
       )}
 
+      {/*
+        내보내기 (§16)
+
+        인쇄에는 안 나간다. 이 종이를 뽑으러 온 사람은 대개 숫자도 함께
+        필요하다 — 학교 양식에 옮겨 붙이거나, 다음 학기 담당자에게 넘기거나.
+      */}
+      <p className="noprint export-out">
+        <a href={`/l/${ledgerId}/export`} className="plain" download>{T('exportRows')}</a>
+        {fund && (
+          <a href={`/l/${ledgerId}/export?what=incomes`} className="plain" download>
+            {T('exportIn')}
+          </a>
+        )}
+        <span className="faint">{T('exportSay')}</span>
+      </p>
+
       <div className="rp-foot">
         <p>{T('reportMade', { date: today })}</p>
         {/* 서명란. 총회에 내는 종이에는 이 줄이 있어야 한다. */}

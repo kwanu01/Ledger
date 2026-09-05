@@ -7,7 +7,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "simulate": "node --experimental-strip-types scripts/simulate.ts",
-    "prototype": "esbuild scripts/browser-entry.ts --bundle --format=iife --target=es2020 --outfile=prototype/engine.js && node scripts/build-prototype.mjs"
+    "prototype": "esbuild scripts/browser-entry.ts --bundle --format=iife --target=es2020 --outfile=prototype/engine.js && node scripts/build-prototype.mjs",
+    "edge": "node --experimental-strip-types scripts/edge.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

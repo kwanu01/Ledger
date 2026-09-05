@@ -107,6 +107,7 @@ export type Key =
   | 'sayIt' | 'sayWriting' | 'sayAgain' | 'sayWarm' | 'sayPolite' | 'sayFor'
   | 'nudgeSettle' | 'nudgeDues' | 'reportTab' | 'reportPrint' | 'reportMade'
   | 'reportSign' | 'reportTitle' | 'reportSpan' | 'reportNoRows'
+  | 'exportRows' | 'exportIn' | 'exportSay'
   | 'closeTerm' | 'closeWarn' | 'closeDone' | 'reopenTerm' | 'closedMarkTerm' | 'carryNext'
   | 'bookKind' | 'kindEach' | 'kindEachSay' | 'kindDuesBook' | 'kindDuesSay'
   | 'kindGrantBook' | 'kindGrantSay'
@@ -145,7 +146,7 @@ export type Key =
   | 'helperHide' | 'helperShow'
   | 'making' | 'sortBy' | 'etc'  | 'askHint' | 'askClear' | 'askOpener' | 'chat' | 'settledNow' | 'sendItNow' | 'settleEndsWhen' | 'waitingN'
   | 'tipLanding' | 'tipHome' | 'tipBook' | 'tipGoods' | 'tipSettle' | 'tipArchive' | 'tipTeam'
-  | 'tipAdd' | 'tipTeams' | 'tipLogin'
+  | 'tipAdd' | 'tipTeams' | 'tipLogin' | 'tipIncome' | 'tipReport'
   | 'accountTitle' | 'accountName' | 'accountEmail' | 'accountNoEmail'
   | 'accountHow' | 'viaGoogle' | 'viaKakao' | 'viaEmail' | 'viaOther'
   | 'accountSince' | 'accountLast' | 'accountId';
@@ -306,6 +307,8 @@ const ko: Record<Key, string> = {
   reportMade: '{date} 에 만든 문서입니다.',
   reportSign: '작성자', reportTitle: '결산 보고서',
   reportSpan: '기간', reportNoRows: '해당 내역이 없습니다.',
+  exportRows: '지출 내려받기 (CSV)', exportIn: '들어온 돈 내려받기 (CSV)',
+  exportSay: '엑셀에서 열립니다. 사람마다 칸이 하나씩 있어서, 가로로 더하면 금액이고 세로로 더하면 그 사람이 부담한 돈입니다.',
   closeTerm: '회기 닫기',
   closeWarn: '닫으면 이 회기의 수입을 더 넣거나 고칠 수 없습니다. 다시 열 수 있습니다.',
   closeDone: '회기를 닫았습니다.', reopenTerm: '다시 열기',
@@ -367,7 +370,7 @@ const ko: Record<Key, string> = {
   sweepJump: '{n}번째 항목',
   groupField: '묶음',
   groupHint: '‘1차 MT’, ‘중간발표’처럼 이름을 붙여 두면 장부를 그 이름으로 접어 볼 수 있습니다.',
-  foldBy: '묶어 보기', foldNone: '없음', foldGroup: '묶음', foldMonth: '달',
+  foldBy: '묶어 보기', foldNone: '없음', foldGroup: '묶음', foldMonth: '월별',
   foldCategory: '분류', foldPayer: '결제자',
   ungrouped: '묶음 없음', uncategorized: '분류 없음',
   groupRename: '묶음 이름 바꾸기', groupRenameTo: '새 이름',
@@ -436,6 +439,8 @@ const ko: Record<Key, string> = {
   tipArchive: '프로젝트가 끝나면 이 한 장이 남아요.\n얼마 동안, 무엇에 썼는지가 여기 모여요.',
   tipTeam: '팀원이랑 초대 링크가 있는 곳이에요.\n계좌는 본인만 적을 수 있어요.\n저도 남의 계좌는 못 만져요.',
   tipAdd: '안녕하세요, 저는 수증이예요. 영수증 사진을 올려 주시면 제가 읽어 볼게요.\n읽고 나면 항목이랑 금액이 칸에 채워져요. 표가 붙은 칸이 제가 채운 자리예요.\n금액부터 봐 주세요. 배달팁이나 배송비가 붙은 영수증은 제가 잘못 볼 때가 있어요.\n누가 결제했는지는 제가 알 수 없어요. 그건 직접 골라 주셔야 해요.\n누가 나눠 낼지도요. 전체가 아니면 일부만 고를 수 있어요.\n영수증 사진을 장부에 남기시려면 사진 아래 칸에 표시해 주세요.\n이름이 어색하면 그냥 고치셔도 돼요. 제가 틀린 거예요.',
+  tipIncome: '들어온 돈이랑 남은 돈이 여기 있어요.\n"현우 3월 회비 3만원"처럼 한 줄로 적으셔도 제가 칸을 채워요.\n1인당 회비는 안 적으셔도 돼요. 걷힌 걸 보고 제가 세요.\n맨 아래 결산 보고서를 누르시면 한 장으로 뽑을 수 있어요.',
+  tipReport: '이건 내는 종이라 제가 한 글자도 안 지어냈어요.\n숫자는 전부 장부에서 세어서 적은 거예요.\n인쇄를 누르시면 그대로 PDF가 돼요.',
   tipTeams: '여기가 장부 목록이에요.\n+ 새 장부로 하나 만들어 보세요.\n수업이 둘이면 장부도 둘이에요.',
   tipLogin: '안녕하세요, 저는 수증이예요.\n로그인하시면 이 장부가 계정에 남아요.\n다른 기기로 들어오셔도 그대로예요.',
   accountTitle: '내 계정', accountName: '이름', accountEmail: '이메일',
@@ -596,6 +601,8 @@ const en: Record<Key, string> = {
   reportMade: 'Prepared on {date}.',
   reportSign: 'Prepared by', reportTitle: 'Closing report',
   reportSpan: 'Period', reportNoRows: 'Nothing here.',
+  exportRows: 'Download expenses (CSV)', exportIn: 'Download money in (CSV)',
+  exportSay: 'Opens in Excel. One column per person — rows add up to the amount, columns add up to what that person bore.',
   closeTerm: 'Close the term',
   closeWarn: 'Once closed, income for this term cannot be added or edited. You can reopen it.',
   closeDone: 'Term closed.', reopenTerm: 'Reopen',
@@ -726,6 +733,8 @@ const en: Record<Key, string> = {
   tipArchive: 'When the project ends, this page stays.\nHow long, and what it went on.',
   tipTeam: 'Members and invite links live here.\nOnly you can write your own account.\nNot even I can touch anyone else’s.',
   tipAdd: 'Hello, I am a receipt. Upload a receipt photo and I will read it.\nThe fields I filled are marked. Check the amount first.\nReceipts with delivery fees trip me up sometimes.\nI cannot know who paid. Please pick that yourself.\nAnd who shares it — everyone, or only some.\nTick the box under the photo to keep the receipt in the ledger.\nIf the name reads oddly, just fix it. That one is on me.',
+  tipIncome: "Money in and what's left are here.\nWrite it in one line — 'March dues 30,000 from Hyunwoo' — and I'll fill the fields.\nYou don't have to set the dues per head. I work it out from what came in.\nThe closing report at the bottom prints as one page.",
+  tipReport: "This one gets handed in, so I made none of it up.\nEvery figure was counted from the ledger.\nPress print and it becomes a PDF as it is.",
   tipTeams: 'These are your ledgers.\nMake one with + New ledger.\nTwo classes, two ledgers.',
   tipLogin: 'Hello, I am a receipt.\nSign in and this ledger stays with your account.\nSame on any device.',
   accountTitle: 'My account', accountName: 'Name', accountEmail: 'Email',
@@ -884,6 +893,8 @@ const ja: Record<Key, string> = {
   reportMade: '{date} に作成した書類です。',
   reportSign: '作成者', reportTitle: '決算報告書',
   reportSpan: '期間', reportNoRows: '該当する記録がありません。',
+  exportRows: '支出をダウンロード (CSV)', exportIn: '入ったお金をダウンロード (CSV)',
+  exportSay: 'Excelで開けます。一人に一列ずつあり、横に足すと金額、縦に足すとその人の負担額になります。',
   closeTerm: '会期を閉じる',
   closeWarn: '閉じるとこの会期の収入は追加も修正もできません。開き直すことはできます。',
   closeDone: '会期を閉じました。', reopenTerm: '開き直す',
@@ -1014,6 +1025,8 @@ const ja: Record<Key, string> = {
   tipArchive: 'プロジェクトが終わるとこの一枚が残ります。\nどれくらいの間、何に使ったか。',
   tipTeam: 'メンバーと招待リンクの場所です。\n口座はご本人だけが書けます。\nわたしも他人の口座は触れません。',
   tipAdd: 'こんにちは、レシートです。レシートの写真を上げてくだされば読んでみます。\nわたしが埋めた欄には印がつきます。まず金額を見てくださいね。\n配達料が付いたレシートは間違えることがあります。\n誰が払ったかはわたしにはわかりません。ご自分で選んでください。\n誰で分けるかも同じです。全員でなくても大丈夫です。\n写真を帳簿に残すなら、写真の下の欄に印をつけてください。',
+  tipIncome: '入ったお金と残りがここにあります。\n「ヒョヌ 3月の会費 3万円」のように一行で書いても記入できます。\n一人あたりの会費は書かなくても大丈夫です。集まった分から割り出します。\n一番下の決算報告書を押すと一枚にまとまります。',
+  tipReport: 'これは提出する紙なので、私は一文字も作っていません。\n数字はすべて帳簿から数えて書きました。\n印刷を押せばそのままPDFになります。',
   tipTeams: 'ここが帳簿の一覧です。\n+ 新しい帳簿で作ってみてください。\n授業が二つなら帳簿も二つです。',
   tipLogin: 'こんにちは、レシートです。\nログインするとこの帳簿がアカウントに残ります。\nどの端末から来ても同じです。',
   accountTitle: 'マイアカウント', accountName: '名前', accountEmail: 'メール',
@@ -1172,6 +1185,8 @@ const zh: Record<Key, string> = {
   reportMade: '本文件制作于 {date}。',
   reportSign: '制作人', reportTitle: '结算报告',
   reportSpan: '期间', reportNoRows: '暂无相关记录。',
+  exportRows: '下载支出 (CSV)', exportIn: '下载收入 (CSV)',
+  exportSay: '可用 Excel 打开。每人一列，横向相加是金额，纵向相加是那个人承担的钱。',
   closeTerm: '结束本期',
   closeWarn: '结束后本期收入不能再添加或修改。可以重新打开。',
   closeDone: '本期已结束。', reopenTerm: '重新打开',
@@ -1302,6 +1317,8 @@ const zh: Record<Key, string> = {
   tipArchive: '项目结束后留下的就是这一页。\n花了多久、花在哪里。',
   tipTeam: '成员和邀请链接在这里。\n账户只能本人填写。\n连我也碰不了别人的账户。',
   tipAdd: '你好，我是收据。上传收据照片，我来读读看。\n我填过的格子会有标记。先看金额吧。\n带配送费的收据我有时会看错。\n谁付的钱我不知道，要你自己选。\n由谁分摊也一样，不一定是全体。\n想把照片留在账本里，就勾一下照片下面那格。',
+  tipIncome: '收入和结余都在这里。\n像「贤宇 3月会费 3万」这样一句话，我也能填好。\n每人会费不写也行，我看已缴的自己推算。\n点最下面的结算报告，可以整理成一页。',
+  tipReport: '这是要交出去的纸，我一个字也没编。\n数字全是从账本里数出来的。\n按打印就直接变成 PDF。',
   tipTeams: '这是你的账本列表。\n用 + 新账本创建一个吧。\n两门课就有两本账。',
   tipLogin: '你好，我是收据。\n登录后这本账本会留在你的账号里。\n换设备也一样。',
   accountTitle: '我的账号', accountName: '姓名', accountEmail: '邮箱',
@@ -1465,6 +1482,8 @@ const es: Record<Key, string> = {
   reportMade: 'Documento preparado el {date}.',
   reportSign: 'Preparado por', reportTitle: 'Informe de cierre',
   reportSpan: 'Periodo', reportNoRows: 'No hay nada aquí.',
+  exportRows: 'Descargar gastos (CSV)', exportIn: 'Descargar ingresos (CSV)',
+  exportSay: 'Se abre en Excel. Una columna por persona: las filas suman el importe y las columnas lo que asumió cada una.',
   closeTerm: 'Cerrar el periodo',
   closeWarn: 'Una vez cerrado no se pueden añadir ni editar ingresos. Se puede reabrir.',
   closeDone: 'Periodo cerrado.', reopenTerm: 'Reabrir',
@@ -1595,6 +1614,8 @@ const es: Record<Key, string> = {
   tipArchive: 'Al terminar el proyecto queda esta página.\nCuánto duró y en qué se gastó.',
   tipTeam: 'Aquí viven integrantes y enlaces de invitación.\nSolo tú escribes tu cuenta.\nNi yo toco las ajenas.',
   tipAdd: 'Hola, soy un recibo. Súbeme la foto de un recibo y la leo.\nLos campos que rellené quedan marcados. Mira primero el importe.\nLos recibos con gastos de envío a veces me confunden.\nNo puedo saber quién pagó. Eso lo eliges tú.\nY quién lo comparte: todos, o solo algunos.\nMarca la casilla bajo la foto para guardar el recibo.',
+  tipIncome: 'Los ingresos y lo que queda están aquí.\nEscríbelo en una línea — «cuota de marzo 30.000 de Hyunwoo» — y relleno los campos.\nNo hace falta fijar la cuota por persona: la deduzco de lo que ha entrado.\nEl informe de cierre, abajo, sale en una sola página.',
+  tipReport: 'Este papel se entrega, así que no me he inventado nada.\nTodas las cifras salen contadas del libro.\nDale a imprimir y queda en PDF tal cual.',
   tipTeams: 'Estos son tus libros.\nCrea uno con + Libro nuevo.\nDos clases, dos libros.',
   tipLogin: 'Hola, soy un recibo.\nInicia sesión y este libro queda en tu cuenta.\nIgual en cualquier dispositivo.',
   accountTitle: 'Mi cuenta', accountName: 'Nombre', accountEmail: 'Correo',
@@ -1755,6 +1776,8 @@ const vi: Record<Key, string> = {
   reportMade: 'Tài liệu lập ngày {date}.',
   reportSign: 'Người lập', reportTitle: 'Báo cáo quyết toán',
   reportSpan: 'Kỳ', reportNoRows: 'Chưa có mục nào.',
+  exportRows: 'Tải chi tiêu (CSV)', exportIn: 'Tải khoản thu (CSV)',
+  exportSay: 'Mở được bằng Excel. Mỗi người một cột — cộng ngang ra số tiền, cộng dọc ra phần người đó chịu.',
   closeTerm: 'Đóng kỳ',
   closeWarn: 'Đóng rồi thì không thêm hay sửa khoản thu của kỳ này được. Có thể mở lại.',
   closeDone: 'Đã đóng kỳ.', reopenTerm: 'Mở lại',
@@ -1885,6 +1908,8 @@ const vi: Record<Key, string> = {
   tipArchive: 'Dự án xong thì còn lại trang này.\nBao lâu, và tiêu vào đâu.',
   tipTeam: 'Thành viên và liên kết mời ở đây.\nChỉ chính chủ ghi được tài khoản của mình.\nMình cũng không đụng vào của người khác.',
   tipAdd: 'Xin chào, mình là một tờ hóa đơn. Tải ảnh hóa đơn lên, mình đọc thử nhé.\nÔ nào mình điền sẽ có dấu. Xem số tiền trước nhé.\nHóa đơn có phí giao hàng đôi khi mình đọc sai.\nAi trả tiền thì mình không biết. Bạn chọn giúp nhé.\nAi cùng chia cũng vậy, không nhất thiết là tất cả.\nMuốn giữ ảnh trong sổ thì tích vào ô dưới ảnh.',
+  tipIncome: 'Tiền vào và số còn lại đều ở đây.\nGhi một dòng như «Hyunwoo hội phí tháng 3 30.000» là tôi điền giúp.\nKhông cần đặt mức hội phí mỗi người — tôi suy ra từ khoản đã nộp.\nBáo cáo quyết toán ở dưới cùng in ra vừa một trang.',
+  tipReport: 'Đây là tờ để nộp nên tôi không bịa một chữ nào.\nMọi con số đều đếm từ sổ ra.\nBấm in là thành PDF ngay.',
   tipTeams: 'Đây là danh sách sổ của bạn.\nTạo một sổ bằng + Sổ mới nhé.\nHai lớp thì hai sổ.',
   tipLogin: 'Xin chào, mình là một tờ hóa đơn.\nĐăng nhập thì sổ này ở lại với tài khoản của bạn.\nMáy nào cũng vậy.',
   accountTitle: 'Tài khoản của tôi', accountName: 'Tên', accountEmail: 'Email',

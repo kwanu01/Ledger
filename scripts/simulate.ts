@@ -29,6 +29,7 @@ import { inSettlement } from '../lib/domain/settlement.ts';
 import { twins, spikes, offReceipt, leftOut, median, watch } from '../lib/domain/watch.ts';
 import { burn, budgetOf, weeksBetween } from '../lib/domain/ahead.ts';
 import { nudges, weeksSinceSettle } from '../lib/domain/nudge.ts';
+import { expensesCsv, incomesCsv, cell, fileName, BOM } from '../lib/domain/csv.ts';
 import type { Income } from '../lib/domain/types.ts';
 import type { Expense, Ledger, SettlementResult } from '../lib/domain/types.ts';
 
@@ -731,6 +732,106 @@ const allPaid = { ...club, members: club.members.filter((m) => m.id === 'kw' || 
 check('회비를 다 걷으면 사라진다',
   nudges(allPaid, allPaid.members, '2026-06-01').every((n) => n.kind !== 'dues'),
   '할 일이 없으면 말도 없다');
+
+/* --- 내보내기 (§16) ---------------------------------------------------- */
+/*
+ * CSV 는 화면 밖으로 나가는 유일한 숫자다. 나가서 엑셀에서 열렸을 때도
+ * **지분의 합 = 금액**이 그대로 서야 한다. 이 절이 지키는 것은 그것이다.
+ */
+console.log('\n[내보내기]');
+
+/** CSV 한 줄을 칸으로 되돌린다. 따옴표 안의 쉼표와 줄바꿈을 지킨다. */
+function cutRow(line: string): string[] {
+  const out: string[] = [];
+  let at = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"' && line[i + 1] === '"') { at += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else at += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { out.push(at); at = ''; }
+    else at += c;
+  }
+  out.push(at);
+  return out;
+}
+
+const csv = expensesCsv(ledger, 'ko');
+const csvRows = csv.slice(BOM.length).split('\r\n').filter(Boolean).map(cutRow);
+const HEAD = 13; // 사람 칸이 시작하는 자리
+
+check('머리글의 사람 칸 수 = 팀원 수',
+  csvRows[0].length - HEAD === ledger.members.length,
+  csvRows[0].slice(HEAD).join(' · '));
+check('줄 수 = 지출 수 + 머리글',
+  csvRows.length === ledger.expenses.length + 1, `${csvRows.length - 1}줄`);
+
+/* 이것이 이 절의 핵심이다 — 파일 안에서도 검산이 된다 */
+check('가로로 더하면 금액이 된다 (모든 줄)',
+  csvRows.slice(1).every((r) => {
+    const amount = Number(r[2]);
+    const shares = r.slice(HEAD).filter((v) => v !== '').reduce((a, v) => a + Number(v), 0);
+    // 공금 지출은 부담자가 없어 사람 칸이 전부 빈다. 그때는 0 이 맞다.
+    return shares === amount || shares === 0;
+  }),
+  '지분의 합 = 금액이 파일 안에 그대로 실린다');
+check('세로로 더하면 그 사람이 부담한 총액이 된다',
+  (() => {
+    const whole = computeSettlement(ledger.expenses, members);
+    return members.every((m, i) => {
+      const col = csvRows.slice(1).reduce((a, r) => a + Number(r[HEAD + i] || 0), 0);
+      return col === (whole.balances.find((b) => b.memberId === m.id)?.totalOwed ?? 0);
+    });
+  })(),
+  '화면의 부담액과 1원까지 같다');
+check('부담이 없는 줄은 0 이 아니라 빈칸',
+  (() => {
+    const one = expensesCsv({ ...club, expenses: club.expenses.filter(fromFund) }, 'ko');
+    const r = cutRow(one.slice(BOM.length).split('\r\n')[1]);
+    return r.slice(HEAD).every((v) => v === '');
+  })(),
+  "0 은 '부담이 0원'이고 빈칸은 '부담 자체가 없다'다");
+
+/* 깨지지 않는 것들 */
+check('쉼표가 든 항목 이름이 칸을 쪼개지 않는다',
+  cutRow(cell('폼보드, 아크릴'))[0] === '폼보드, 아크릴');
+check('따옴표가 든 이름도 그대로 돌아온다',
+  cutRow(cell('"특가" 폼보드'))[0] === '"특가" 폼보드');
+check('줄바꿈이 든 메모도 한 칸이다',
+  cutRow(cell('첫 줄\n둘째 줄'))[0] === '첫 줄\n둘째 줄');
+check('= 로 시작하는 이름이 엑셀 수식이 되지 않는다',
+  cell('=1+1').startsWith("'") && cell('=1+1').includes('=1+1'),
+  '지우지 않고 따옴표만 앞에 붙인다');
+check('+ @ 로 시작하는 것도 막는다',
+  ['+A1', '@SUM', '-SUM(A1)'].every((v) => cell(v).startsWith("'")));
+/* 여기서 한 번 크게 틀렸다. 환불 줄의 음수가 전부 글자가 되어 있었다. */
+check('음수 금액에는 따옴표를 안 붙인다',
+  cell(-2966) === '-2966' && cell('-46000') === '-46000',
+  '붙이면 엑셀에서 글자가 되어 더해지지 않는다');
+check('멀쩡한 값에는 따옴표를 안 붙인다',
+  cell('폼보드') === '폼보드' && cell(27000) === '27000');
+check('엑셀이 한글을 깨뜨리지 않게 BOM 이 맨 앞에 있다',
+  csv.charCodeAt(0) === 0xfeff);
+check('빈 장부도 머리글은 나온다',
+  expensesCsv({ ...ledger, expenses: [] }, 'ko').split('\r\n').filter(Boolean).length === 1);
+
+/* 들어온 돈 */
+const inCsv = incomesCsv(club, 'ko').slice(BOM.length).split('\r\n').filter(Boolean).map(cutRow);
+check('들어온 돈은 파일이 따로다',
+  inCsv.length === club.incomes.length + 1 && inCsv[0][4] === '무엇으로',
+  '한 파일에 섞으면 들어온 돈과 나간 돈이 같은 부호로 앉는다');
+check('회비가 아닌 줄에는 낸 사람이 비어 있다',
+  inCsv.slice(1).every((r) => (r[4] === '회비') === (r[5] !== '')));
+
+check('파일 이름에 팀과 장부 이름이 들어간다',
+  fileName(club, 'expenses', '2026-09-05').includes('스팟') &&
+  fileName(club, 'expenses', '2026-09-05').endsWith('.csv'),
+  fileName(club, 'expenses', '2026-09-05'));
+check('파일 이름에 못 쓰는 글자는 걷어 낸다',
+  !/[\\/:*?"<>|]/.test(fileName({ ...club, name: 'a/b:c*d' }, 'expenses', '2026-09-05')));
 
 rule();
 console.log(failures === 0 ? `\n모든 불변식 통과 — 이 장부는 검산 가능하다.\n` : `\n실패 ${failures}건\n`);
