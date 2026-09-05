@@ -102,6 +102,9 @@ function keyOf(a: Allocation): string | null {
       return `personal:${a.ownerId}`;
     case 'items':
       return null;
+    // 공금은 되풀이되지만 제안할 것이 없다 — 고르는 순간 부담자가 없어진다.
+    case 'common':
+      return 'common';
   }
 }
 

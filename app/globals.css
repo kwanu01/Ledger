@@ -936,6 +936,37 @@ td.foldsum{font-weight:700;white-space:nowrap}
   margin-top:14px;padding-top:10px;border-top:1px solid var(--rule);font-size:13.5px}
 .batch-foot .lab{color:var(--ink-2)}
 
+/*
+   공금과 결산 (§12)
+
+   정산은 사람들 사이의 셈이고 결산은 한 주머니의 셈이다. 두 숫자를 같은
+   줄에 섞으면 종류가 다른 것이 나란히 선다 — 그래서 잔고는 세 숫자 위에
+   따로 한 줄로 세우고, 아래에 괘선을 그어 갈라 둔다.
+*/
+.fundline{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;
+  padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid var(--rule);
+  font-size:14px}
+.fundline .lab{color:var(--ink-2)}
+.fundline > strong{font-size:20px;font-weight:700}
+.fundline .ways{font-size:12.5px}
+
+/* 결산 화면의 머리. 남은 돈 하나가 크고, 식이 그 밑에 그대로 선다. */
+.fundsum{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;
+  margin-top:12px;padding-bottom:14px;border-bottom:1px solid var(--rule-hard)}
+.fundsum .lab{color:var(--ink-2);font-size:14px}
+.fundsum .big{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.fundsum .ways{font-size:13px;color:var(--ink-3)}
+.facts.fundways{max-width:340px;margin-top:6px}
+.facts.fundways td.r{text-align:right}
+
+/* 회비를 덜 낸 사람의 줄. 숫자를 빨갛게 하는 것으로 충분하고,
+   줄 전체를 칠하면 명단이 경고판이 된다. */
+table.book tr.owes td:first-child{font-weight:700}
+
+/* 들어온 돈은 나간 돈과 부호가 반대다. 색이 아니라 자리로 갈린다 —
+   장부에서 색은 상태(보낼 돈)에 이미 쓰고 있어서 뜻이 겹친다. */
+.credit{font-weight:700}
+
 /* 부담 방식 고르는 줄에 딸린 한 마디. 무엇을 고르는 것인지 설명한다. */
 .pick-say{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
 

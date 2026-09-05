@@ -625,6 +625,7 @@ export default function BookTable({
                     ledgerId={ledger.id}
                     expense={e}
                     groups={groups}
+                    fund={ledger.fundSource ?? 'each'}
                     members={ledger.members}
                     currency={ledger.currency ?? 'KRW'}
                     lang={lang}

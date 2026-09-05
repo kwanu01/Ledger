@@ -28,6 +28,7 @@ export default function EditExpense({
   expense,
   members,
   groups,
+  fund,
   currency,
   lang,
   onDone,
@@ -37,6 +38,8 @@ export default function EditExpense({
   members: Member[];
   /** 이 장부에 이미 쓰인 묶음 이름들 (§11.3) */
   groups: string[];
+  /** 돈의 출처 (§12). 'each' 가 아닐 때만 공금 갈래가 선다. */
+  fund: string;
   currency: CurrencyCode;
   lang: Locale;
   onDone: () => void;
@@ -105,7 +108,9 @@ export default function EditExpense({
           ? { type: 'partial', participantIds: participants }
           : kind === 'items'
             ? { type: 'items', lines }
-            : { type: 'personal', ownerId };
+            : kind === 'common'
+              ? { type: 'common' }
+              : { type: 'personal', ownerId };
 
     start(async () => {
       const r = await editExpenseLine({
@@ -274,6 +279,23 @@ export default function EditExpense({
           />
           <span>{T('onePersonTakes')}</span>
         </label>
+
+        {/* 공금 갈래는 그 장부가 공금을 쓸 때만. 다만 이미 공금으로 적힌
+            줄을 고칠 때는 성격이 바뀌었더라도 보여 줘야 한다 —
+            안 그러면 라디오가 하나도 안 켜진 채로 저장이 된다. */}
+        {(fund !== 'each' || a.type === 'common') && (
+          <label className="pick">
+            <input
+              type="radio"
+              checked={kind === 'common'}
+              onChange={() => setKind('common')}
+            />
+            <span>
+              {T('fromFund')}
+              <span className="pick-say">{T('fromFundHint')}</span>
+            </span>
+          </label>
+        )}
         {kind === 'personal' && (
           <div className="pick-sub">
             <label>

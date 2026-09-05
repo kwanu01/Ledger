@@ -19,7 +19,7 @@ import {
   type CurrencyCode,
   type Locale,
 } from '../../../../lib/domain/money.ts';
-import type { Allocation, Member } from '../../../../lib/domain/types.ts';
+import type { Allocation, FundSource, Member } from '../../../../lib/domain/types.ts';
 import ItemLines, { newDraft, toItemLines, type Draft } from './ItemLines.tsx';
 import BatchRows, { batchSum, ready as rowReady, type Row } from './BatchRows.tsx';
 import { shrinkImage, tooBigToSend } from '../../../../lib/shrink.ts';
@@ -43,6 +43,7 @@ export default function ExpenseForm({
   categories,
   vendors,
   past,
+  fund,
   currency,
   meId,
   today,
@@ -58,6 +59,8 @@ export default function ExpenseForm({
   vendors: string[];
   /** 되돌아볼 지난 기록. 세는 데 필요한 칸만 온다 (lib/domain/recall.ts). */
   past: Recallable[];
+  /** 이 장부의 돈이 어디서 오는가 (§12). 'each' 가 아니면 공금 부담이 켜진다. */
+  fund: FundSource;
   currency: CurrencyCode;
   meId: string;
   today: string;
@@ -611,7 +614,9 @@ export default function ExpenseForm({
           ? { type: 'partial', participantIds: participants }
           : kind === 'items'
             ? { type: 'items', lines }
-            : { type: 'personal', ownerId };
+            : kind === 'common'
+              ? { type: 'common' }
+              : { type: 'personal', ownerId };
 
     setBusy(true);
     const r = await recordExpense({
@@ -1175,6 +1180,15 @@ export default function ExpenseForm({
           />
         )}
 
+        {/*
+          공금에서 나가는 지출 (§12)
+
+          이 장부가 회비나 지원금을 쓸 때만 선다. 각자 결제하는 장부에는
+          모아 둔 주머니가 없으니 고를 것도 없다.
+
+          맨 아래에 두는 이유가 있다. 공금 장부에서도 개인끼리 나누는
+          지출은 여전히 생기고(뒤풀이 각출 같은), 그쪽이 더 자주 쓰인다.
+        */}
         <label className="pick">
           <input
             type="radio"
@@ -1184,6 +1198,21 @@ export default function ExpenseForm({
           />
           <span>{T('onePersonTakes')}</span>
         </label>
+
+        {fund !== 'each' && (
+          <label className="pick">
+            <input
+              type="radio"
+              name="alloc"
+              checked={kind === 'common'}
+              onChange={() => setKind('common')}
+            />
+            <span>
+              {T('fromFund')}
+              <span className="pick-say">{T('fromFundHint')}</span>
+            </span>
+          </label>
+        )}
         {kind === 'personal' && (
           <div className="pick-sub">
             <label>
@@ -1305,7 +1334,7 @@ export default function ExpenseForm({
       <div className="formbar">
         {/* 저장하기 전에 어떻게 갈라지는지 미리 보여 준다. 저장한 뒤에 놀랄 일이 없어야 한다.
             항목별일 때는 사람마다 금액이 다르므로 줄 판 안에서 이미 보여 주고 있다. */}
-        {kind !== 'items' && each.length > 0 && (
+        {kind !== 'items' && kind !== 'common' && each.length > 0 && (
           <span className="split-say">
             {T('perPerson', {
               n: bearers.length,

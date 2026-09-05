@@ -8,6 +8,9 @@
 import type {
   Allocation,
   Expense,
+  FundSource,
+  Income,
+  IncomeKind,
   ItemLine,
   Ledger,
   Member,
@@ -35,7 +38,7 @@ export type ExpenseRow = {
   amount: number | string; // bigint는 드라이버에 따라 문자열로 온다
   payer_member_id: string;
   team_member_ids: string[];
-  allocation: 'all' | 'partial' | 'personal' | 'items';
+  allocation: 'all' | 'partial' | 'personal' | 'items' | 'common';
   participant_member_ids: string[] | null;
   owner_member_id: string | null;
   /** allocation = 'items' 일 때만. [{ name, amount, memberIds }] */
@@ -73,6 +76,25 @@ export type LedgerRow = {
   started_at: string;
   archived_at: string | null;
   currency: CurrencyCode;
+  /* ── 0020 이후. 옛 장부에는 없을 수 있으므로 전부 옵셔널로 받는다. ── */
+  fund_source?: FundSource | null;
+  term_carry?: boolean | null;
+  dues_per_head?: number | string | null;
+  closed_at?: string | null;
+};
+
+/** 들어온 돈 (0020_income_and_fund.sql 과 1:1) */
+export type IncomeRow = {
+  id: string;
+  ledger_id: string;
+  received_on: string;
+  title: string;
+  amount: number | string;
+  kind: IncomeKind;
+  member_id: string | null;
+  note: string | null;
+  created_at: string;
+  created_by_member_id: string | null;
 };
 
 /* ── row → 도메인 ────────────────────────────────────────────────────── */
@@ -120,7 +142,24 @@ function toAllocation(row: ExpenseRow): Allocation {
       return { type: 'personal', ownerId: row.owner_member_id! };
     case 'items':
       return { type: 'items', lines: toItemLines(row.item_lines) };
+    case 'common':
+      return { type: 'common' };
   }
+}
+
+export function toIncome(row: IncomeRow): Income {
+  return {
+    id: row.id,
+    ledgerId: row.ledger_id,
+    date: row.received_on,
+    title: row.title,
+    amount: won(row.amount),
+    kind: row.kind,
+    memberId: row.member_id ?? undefined,
+    note: row.note ?? undefined,
+    createdAt: row.created_at,
+    createdBy: row.created_by_member_id ?? undefined,
+  };
 }
 
 export function toExpense(row: ExpenseRow): Expense {
@@ -172,6 +211,7 @@ export function toLedger(
   memberRows: MemberRow[],
   expenseRows: ExpenseRow[],
   settlementRows: SettlementRow[],
+  incomeRows: IncomeRow[] = [],
 ): Ledger {
   return {
     id: ledger.id,
@@ -179,6 +219,12 @@ export function toLedger(
     name: ledger.name,
     startedAt: ledger.started_at,
     currency: ledger.currency ?? 'KRW',
+    // 0020 이전에 만들어진 장부는 이 칸들이 비어 있다. 전부 '각자 결제'다.
+    fundSource: ledger.fund_source ?? 'each',
+    termCarry: ledger.term_carry ?? false,
+    duesPerHead: ledger.dues_per_head != null ? won(ledger.dues_per_head) : undefined,
+    closedAt: ledger.closed_at ?? undefined,
+    incomes: incomeRows.map(toIncome).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1)),
     members: toMembers(memberRows),
     expenses: expenseRows.map(toExpense),
     settlements: settlementRows.map(toSettlement).sort((a, b) => a.seq - b.seq),
@@ -186,6 +232,22 @@ export function toLedger(
 }
 
 /* ── 도메인 → row (insert용) ─────────────────────────────────────────── */
+
+export type NewIncome = Omit<Income, 'id' | 'createdAt'>;
+
+export function toIncomeInsert(i: NewIncome): Omit<IncomeRow, 'id' | 'created_at'> {
+  return {
+    ledger_id: i.ledgerId,
+    received_on: i.date,
+    title: i.title,
+    amount: i.amount,
+    kind: i.kind,
+    // 회비가 아니면 낸 사람 칸은 비어 있어야 한다 (DB 제약이 같은 것을 본다).
+    member_id: i.kind === 'dues' ? (i.memberId ?? null) : null,
+    note: i.note ?? null,
+    created_by_member_id: i.createdBy ?? null,
+  };
+}
 
 export type NewExpense = Omit<Expense, 'id' | 'createdAt'>;
 

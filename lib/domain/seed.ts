@@ -205,7 +205,8 @@ export function buildLedger(): Ledger {
     startedAt: '2026-09-01',
     members,
     expenses,
-    settlements: [
+    incomes: [],
+  settlements: [
       {
         id: 'st01',
         ledgerId: LEDGER_ID,
@@ -275,7 +276,8 @@ export function buildCompetitionLedger(): Ledger {
     startedAt: '2026-10-02',
     members: TF,
     expenses: tfExpenses,
-    settlements: [],
+    incomes: [],
+  settlements: [],
   };
 }
 

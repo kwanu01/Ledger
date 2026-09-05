@@ -10,6 +10,7 @@ import {
   unsettledExpenses,
 } from '../../../lib/domain/settlement.ts';
 import { adjustmentLabel, allocationLabel } from '../../../lib/labels.ts';
+import { fundBook, unpaid, usesFund, collectsDues } from '../../../lib/domain/closing.ts';
 import { translator } from '../../../lib/i18n.ts';
 import { formatEntryAmount, formatMoney } from '../../../lib/domain/money.ts';
 import Moving from './Moving.tsx';
@@ -35,6 +36,10 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
   // 보낼 곳을 바로 보여 주려면 받는 사람의 계좌가 필요하다.
   const acct = new Map(roster.map((m) => [m.id, { bank: m.bank, accountNo: m.accountNo }]));
   const s = summarizeLedger(ledger);
+  /* 공금을 쓰는 장부에는 첫 화면에도 잔고가 서야 한다 (§12).
+     "얼마 남았나"가 이 화면에 들어오는 사람의 첫 물음이기 때문이다. */
+  const fund = usesFund(ledger) ? fundBook(ledger) : null;
+  const owing = collectsDues(ledger) && ledger.duesPerHead ? unpaid(ledger, ledger.members) : [];
   const members = ledger.members;
   const T = translator(lang);
   const currency = ledger.currency ?? 'KRW';
@@ -73,11 +78,33 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
         current=""
         lang={lang}
         signedIn={Boolean(pass.userId)}
+        fund={ledger.fundSource ?? 'each'}
       />
 
       <main>
 
         <section>
+          {/*
+            공금 잔고 (§12)
+
+            세 숫자 위에 한 줄로 선다. 아래 셋은 사람들 사이의 셈이고
+            이것은 한 주머니의 셈이라, 같은 줄에 섞으면 서로 다른 종류의
+            숫자가 나란히 서게 된다.
+          */}
+          {fund && (
+            <div className="fundline">
+              <span className="lab">{T('fundLeft')}</span>
+              <strong className="num">{won(fund.left)}</strong>
+              <span className="ways num faint">
+                {won(fund.carriedIn)} + {won(fund.received)} − {won(fund.spent)}
+              </span>
+              {owing.length > 0 && (
+                <span className="debit">{T('duesUnpaidN', { n: owing.length })}</span>
+              )}
+              {ledger.closedAt && <span className="muted">{T('closedMarkTerm')}</span>}
+            </div>
+          )}
+
           <div className="summary">
             <div>
               <div className="label">{T('spentAll')}</div>

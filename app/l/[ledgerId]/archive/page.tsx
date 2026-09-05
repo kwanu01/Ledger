@@ -66,6 +66,7 @@ export default async function Archive({ params }: { params: Promise<{ ledgerId: 
         current="/archive"
         lang={lang}
         signedIn={Boolean(pass.userId)}
+        fund={ledger.fundSource ?? 'each'}
       />
 
       <main>

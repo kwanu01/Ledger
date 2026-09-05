@@ -5,7 +5,10 @@ import { dropImage } from './images.ts';
 import {
   toLedger,
   toExpenseInsert,
+  toIncomeInsert,
   type ExpenseRow,
+  type IncomeRow,
+  type NewIncome,
   type LedgerRow,
   type MemberRow,
   type NewExpense,
@@ -54,16 +57,24 @@ export const loadLedger = cache(_loadLedger);
 async function _loadLedger(ledgerId: string): Promise<Ledger> {
   const { data: ledger, error } = await db
     .from('ledgers')
-    .select('id, team_id, name, started_at, archived_at, currency, teams(name)')
+    /* 칸을 하나하나 적지 않고 통째로 받는다. 0020 이 아직 안 돌아간
+       데이터베이스에서 없는 칸을 이름으로 부르면 질의가 통째로 실패하고,
+       그러면 장부가 아예 안 열린다. 없는 칸은 안 오면 그만이고,
+       toLedger 가 기본값을 채운다. */
+    .select('*, teams(name)')
     .eq('id', ledgerId)
     .single<LedgerRow & { teams: { name: string } }>();
   if (error || !ledger) throw new Error('장부를 찾을 수 없습니다.');
 
-  const [{ data: members }, { data: expenses }, { data: settlements }] = await Promise.all([
-    db.from('members').select('*').eq('team_id', ledger.team_id).order('sort_order'),
-    db.from('expenses').select('*').eq('ledger_id', ledgerId).order('spent_on').order('id'),
-    db.from('settlements').select('*').eq('ledger_id', ledgerId).order('seq'),
-  ]);
+  const [{ data: members }, { data: expenses }, { data: settlements }, { data: incomes }] =
+    await Promise.all([
+      db.from('members').select('*').eq('team_id', ledger.team_id).order('sort_order'),
+      db.from('expenses').select('*').eq('ledger_id', ledgerId).order('spent_on').order('id'),
+      db.from('settlements').select('*').eq('ledger_id', ledgerId).order('seq'),
+      /* 들어온 돈 (§12). 0020 을 아직 안 돌린 데이터베이스에서는 이 질의가
+         실패하는데, 그때도 장부는 열려야 한다 — 지출만 있는 장부로 선다. */
+      db.from('incomes').select('*').eq('ledger_id', ledgerId).order('received_on').order('id'),
+    ]);
 
   return toLedger(
     ledger,
@@ -71,7 +82,63 @@ async function _loadLedger(ledgerId: string): Promise<Ledger> {
     (members ?? []) as MemberRow[],
     (expenses ?? []) as ExpenseRow[],
     (settlements ?? []) as SettlementRow[],
+    (incomes ?? []) as IncomeRow[],
   );
+}
+
+/* ── 들어온 돈 (§12) ──────────────────────────────────────────────────── */
+
+export async function insertIncome(income: NewIncome): Promise<string> {
+  const { data, error } = await db
+    .from('incomes')
+    .insert(toIncomeInsert(income))
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return data.id as string;
+}
+
+export async function removeIncome(incomeId: string, ledgerId: string): Promise<void> {
+  const { error } = await db
+    .from('incomes')
+    .delete()
+    .eq('id', incomeId)
+    .eq('ledger_id', ledgerId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * 장부의 성격을 정한다 (§12)
+ *
+ * 돈의 출처를 바꾸면 화면이 통째로 달라진다 — 수입과 결산이 켜지고,
+ * 부담 방식에 '공금'이 생긴다. 그래서 만들 때 고르는 것이 원칙이고,
+ * 여기서 바꾸는 것은 잘못 골랐을 때를 위한 길이다.
+ */
+export async function setLedgerKind(args: {
+  ledgerId: string;
+  fundSource: 'each' | 'dues' | 'grant';
+  termCarry: boolean;
+  duesPerHead?: number;
+}): Promise<void> {
+  const { error } = await db
+    .from('ledgers')
+    .update({
+      fund_source: args.fundSource,
+      term_carry: args.termCarry,
+      // 각자 결제하는 장부에는 회비 기준이 있을 수 없다(DB 제약도 같은 것을 본다).
+      dues_per_head: args.fundSource === 'each' ? null : (args.duesPerHead ?? null),
+    })
+    .eq('id', args.ledgerId);
+  if (error) throw new Error(error.message);
+}
+
+/** 회기를 닫거나 다시 연다. 닫힌 회기의 수입은 DB 가 막는다(0020). */
+export async function setTermClosed(ledgerId: string, closed: boolean): Promise<void> {
+  const { error } = await db
+    .from('ledgers')
+    .update({ closed_at: closed ? new Date().toISOString() : null })
+    .eq('id', ledgerId);
+  if (error) throw new Error(error.message);
 }
 
 /* ── 지출 ─────────────────────────────────────────────────────────────── */

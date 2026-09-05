@@ -15,6 +15,7 @@ import {
   type TeamMember,
 } from '../../../actions/teams.ts';
 import { translator } from '../../../../lib/i18n.ts';
+import { membersCount } from '../../../../lib/labels.ts';
 import type { Locale } from '../../../../lib/domain/money.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
 
@@ -40,6 +41,7 @@ export default function TeamPanel({
   origin,
   lang,
   owner,
+  fund,
 }: {
   ledgerId: string;
   teamName: string;
@@ -49,6 +51,8 @@ export default function TeamPanel({
   lang: Locale;
   /** 이 장부를 만든 사람인가. 명단 정리 버튼만 여기에 달린다. */
   owner: boolean;
+  /** 돈의 출처 (§12). 부르는 이름이 여기서 갈린다 — 팀원 / 회원. */
+  fund?: string;
 }) {
   const router = useRouter();
   // 경고는 도우미 말풍선 한 자리로 모인다(app/helper).
@@ -113,7 +117,7 @@ export default function TeamPanel({
     <>
 
       <section>
-        <div className="caption">{T('membersN', { n: active.length })}</div>
+        <div className="caption">{membersCount(lang, fund as never, active.length)}</div>
 
         <div className="scroll" style={{ marginTop: 14 }}>
           <table className="book members">

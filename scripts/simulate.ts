@@ -24,7 +24,10 @@ import {
 } from '../lib/domain/settlement.ts';
 import { buildLedger, members } from '../lib/domain/seed.ts';
 import { recallFor, recallSeed, categoriesOf } from '../lib/domain/recall.ts';
-import type { Expense, SettlementResult } from '../lib/domain/types.ts';
+import { fundBook, duesBoard, unpaid, carryOut, fromFund, usesFund } from '../lib/domain/closing.ts';
+import { inSettlement } from '../lib/domain/settlement.ts';
+import type { Income } from '../lib/domain/types.ts';
+import type { Expense, Ledger, SettlementResult } from '../lib/domain/types.ts';
 
 const ledger = buildLedger();
 const pad = (s: string, n: number) => s + ' '.repeat(Math.max(0, n - [...s].reduce((w, c) => w + (c.charCodeAt(0) > 0x2e80 ? 2 : 1), 0)));
@@ -412,6 +415,99 @@ check('판매처가 없으면 항목 이름으로 되짚는다',
 check('쓰던 분류를 많이 쓴 순으로 돌려준다',
   categoriesOf(ledger).length > 0 && categoriesOf(ledger).every((c) => typeof c === 'string'),
   categoriesOf(ledger).slice(0, 4).join(' · '));
+
+/* --- 공금과 결산 (§12) ------------------------------------------------ */
+/*
+ * 정산과 결산은 다른 계산이다. 이 절이 지키는 것은 그 분리다 —
+ * 한 줄이 양쪽에 동시에 서면 돈이 두 번 세어진다.
+ */
+console.log('\n[공금과 결산]');
+
+/* 동아리 장부 하나를 세운다. 회비를 걷고 공금에서 쓴다. */
+const club: Ledger = {
+  id: 'club',
+  teamName: '스팟',
+  name: '2026 상반기',
+  startedAt: '2026-03-01',
+  currency: 'KRW',
+  fundSource: 'dues',
+  termCarry: true,
+  duesPerHead: 30000,
+  members,
+  settlements: [],
+  incomes: [
+    { id: 'n0', ledgerId: 'club', date: '2026-03-02', title: '지난 학기 이월', amount: 47000, kind: 'carryover', createdAt: '' },
+    { id: 'n1', ledgerId: 'club', date: '2026-03-05', title: '3월 회비', amount: 30000, kind: 'dues', memberId: 'kw', createdAt: '' },
+    { id: 'n2', ledgerId: 'club', date: '2026-03-05', title: '3월 회비', amount: 30000, kind: 'dues', memberId: 'hw', createdAt: '' },
+    { id: 'n3', ledgerId: 'club', date: '2026-03-07', title: '3월 회비(절반)', amount: 15000, kind: 'dues', memberId: 'sj', createdAt: '' },
+    { id: 'n4', ledgerId: 'club', date: '2026-03-20', title: '학과 지원금', amount: 200000, kind: 'grant', createdAt: '' },
+  ] as Income[],
+  expenses: [
+    /* 공금에서 나간 것 — 결산에만 들어간다 */
+    { id: 'c1', ledgerId: 'club', date: '2026-03-10', title: '동아리방 청소용품', amount: 38000,
+      payerId: 'kw', teamMemberIds: ['kw','hw','sj','yr'], allocation: { type: 'common' },
+      createdAt: '2026-03-10T00:00:00Z', createdBy: 'kw' },
+    { id: 'c2', ledgerId: 'club', date: '2026-03-25', title: '현수막 제작', amount: 120000,
+      payerId: 'hw', teamMemberIds: ['kw','hw','sj','yr'], allocation: { type: 'common' },
+      createdAt: '2026-03-25T00:00:00Z', createdBy: 'hw' },
+    /* 개인끼리 나눈 것 — 정산에만 들어간다 */
+    { id: 'c3', ledgerId: 'club', date: '2026-03-28', title: '뒤풀이', amount: 84000,
+      payerId: 'sj', teamMemberIds: ['kw','hw','sj','yr'], allocation: { type: 'all' },
+      createdAt: '2026-03-28T00:00:00Z', createdBy: 'sj' },
+  ],
+};
+
+const book = fundBook(club);
+check('결산 — 시작 잔고 + 수입 − 공금 지출 = 남은 돈',
+  book.left === book.carriedIn + book.received - book.spent,
+  `${won(book.carriedIn)} + ${won(book.received)} − ${won(book.spent)} = ${won(book.left)}`);
+check('이월금은 수입에 두 번 세지 않는다',
+  book.carriedIn === 47000 && book.received === 30000 + 30000 + 15000 + 200000,
+  `이월 ${won(book.carriedIn)} · 수입 ${won(book.received)}`);
+check('공금 지출만 결산에 들어간다',
+  book.spent === 38000 + 120000, `${won(book.spent)}`);
+
+/* 이것이 이 절의 핵심이다 */
+const both = club.expenses.filter((e) => fromFund(e) && inSettlement(e));
+const neither = club.expenses.filter((e) => !fromFund(e) && !inSettlement(e));
+check('한 줄이 정산과 결산 양쪽에 서지 않는다', both.length === 0);
+check('어느 쪽에도 안 서는 줄이 없다', neither.length === 0);
+
+const clubSettle = computeSettlement(club.expenses, members);
+check('공금 지출은 정산 총액에 안 들어간다',
+  clubSettle.totalAmount === 84000, `${won(clubSettle.totalAmount)} (뒤풀이만)`);
+check('공금을 집행한 사람에게 받을 돈이 생기지 않는다',
+  (clubSettle.balances.find((b) => b.memberId === 'kw')?.totalPaid ?? 0) === 0,
+  '관우는 청소용품 38,000을 집행했지만 결제자가 아니다');
+check('공금 지출이 섞여도 balance 총합 = 0',
+  clubSettle.balances.reduce((a, b) => a + b.netBalance, 0) === 0);
+check('공금 지출은 정산 대상이 아니다',
+  club.expenses.filter((e) => fromFund(e)).every((e) => !E_needsSettling(e)));
+check('공금 지출의 지분은 비어 있다',
+  club.expenses.filter(fromFund).every((e) => breakdownOf(e).shares.length === 0));
+
+/* 회비 */
+const board = duesBoard(club, members);
+check('회비는 참/거짓이 아니라 모자란 금액이다',
+  board.find((r) => r.memberId === 'sj')?.short === 15000,
+  `성주 낸 돈 ${won(board.find((r) => r.memberId === 'sj')?.paid ?? 0)}`);
+check('다 낸 사람은 모자란 돈이 0',
+  board.find((r) => r.memberId === 'kw')?.short === 0);
+check('한 번도 안 낸 사람은 1인당 회비 전부가 모자란다',
+  board.find((r) => r.memberId === 'yr')?.short === 30000);
+check('미납자는 모자란 사람만 센다', unpaid(club, members).length === 2,
+  unpaid(club, members).map((r) => nameOf(members, r.memberId)).join(' · '));
+check('회비 기준이 없으면 미납을 세지 않는다',
+  unpaid({ ...club, duesPerHead: undefined }, members).length === 0);
+
+check('남은 돈이 음수면 다음으로 넘기지 않는다',
+  carryOut({ ...book, left: -5000 }) === 0);
+check('넘길 돈은 남은 돈 그대로', carryOut(book) === book.left, won(carryOut(book)));
+
+/* 지금까지의 장부는 하나도 안 달라진다 */
+check('각자 결제하는 장부는 공금을 쓰지 않는다', !usesFund(ledger));
+check('옛 장부의 정산 결과는 그대로', whole.totalAmount === 715050 - 0,
+  `${won(whole.totalAmount)}`);
 
 rule();
 console.log(failures === 0 ? `\n모든 불변식 통과 — 이 장부는 검산 가능하다.\n` : `\n실패 ${failures}건\n`);

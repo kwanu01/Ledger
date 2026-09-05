@@ -1,7 +1,29 @@
 import { nameOf } from './domain/settlement.ts';
 import { t } from './i18n.ts';
 import type { Locale } from './domain/money.ts';
-import type { Expense, Member } from './domain/types.ts';
+import type { Expense, FundSource, Member } from './domain/types.ts';
+
+/**
+ * 사람들을 뭐라고 부르는가 (§12)
+ *
+ * 팀플에서는 '팀원'이지만 동아리에서는 '회원'이다. 학회도 반 모임도
+ * 그렇다. 같은 화면에 팀플의 말이 박혀 있으면 그 장부는 남의 옷을 입은
+ * 것처럼 읽힌다.
+ *
+ * **한국어에서만 갈린다.** 영어의 member 도, 일본어의 メンバー도, 다른
+ * 말들도 두 경우를 다 덮는다. 안 갈리는 말을 억지로 갈라 두면 번역이
+ * 여섯 벌에서 열두 벌이 되고, 그중 절반은 다음 판에서 어긋난다.
+ */
+export function memberWord(locale: Locale, fund: FundSource | undefined): string {
+  if (locale !== 'ko') return t(locale, 'memberWord');
+  return (fund ?? 'each') === 'each' ? '팀원' : '회원';
+}
+
+/** '팀원 3명' 처럼 수와 함께 쓸 때. */
+export function membersCount(locale: Locale, fund: FundSource | undefined, n: number): string {
+  if (locale !== 'ko') return t(locale, 'membersN', { n });
+  return `${memberWord(locale, fund)} ${n}명`;
+}
 
 /**
  * 화면에 붙는 이름표.
@@ -26,6 +48,8 @@ export function allocationLabel(expense: Expense, members: Member[], locale: Loc
         : t(locale, 'allocPersonal', { who: nameOf(members, a.ownerId) });
     case 'items':
       return t(locale, 'allocItems', { n: a.lines.length });
+    case 'common':
+      return t(locale, 'allocCommon');
   }
 }
 

@@ -19,6 +19,8 @@ import { amOwner, teamLedgers } from '../../actions/teams.ts';
 export const TABS = [
   ['', 'tabHome'],
   ['/book', 'tabBook'],
+  /* 들어온 돈 (§12). 공금을 쓰는 장부에만 선다 — 아래 fund 로 걸러진다. */
+  ['/income', 'incomeTab'],
   ['/goods', 'tabGoods'],
   ['/settle', 'tabSettle'],
   ['/archive', 'tabArchive'],
@@ -35,6 +37,7 @@ export default async function LedgerShell({
   current,
   lang,
   signedIn = false,
+  fund = 'each',
 }: {
   ledgerId: string;
   teamName: string;
@@ -44,6 +47,11 @@ export default async function LedgerShell({
   lang: Locale;
   /** 초대 링크로만 들어온 사람에게는 로그아웃할 계정이 없다. */
   signedIn?: boolean;
+  /**
+   * 돈의 출처 (§12). 'each' 면 '들어온 돈' 탭을 세우지 않는다 —
+   * 그 장부에는 모아 둔 주머니가 없어서 셀 잔고가 없다.
+   */
+  fund?: string;
 }) {
   const base = `/l/${ledgerId}`;
   const T = translator(lang);
@@ -96,7 +104,7 @@ export default async function LedgerShell({
       <div className="rule-double" />
 
       <nav>
-        {TABS.map(([path, key]) => (
+        {TABS.filter(([path]) => path !== '/income' || (fund ?? 'each') !== 'each').map(([path, key]) => (
           <Link
             key={path}
             href={`${base}${path}`}

@@ -1,13 +1,13 @@
-# Ledger 배포 가이드 — v54 → v61
+# Ledger 배포 가이드 — v54 → v63
 
-배포되어 있는 것은 **v54**이고, 이 코드는 **v61**입니다. 그 사이 일곱 판이
+배포되어 있는 것은 **v54**이고, 이 코드는 **v63**입니다. 그 사이 아홉 판이
 한 번에 올라갑니다. 순서대로만 하면 됩니다.
 
 ---
 
 ## 0. 먼저 알아 둘 것
 
-**마이그레이션은 순서대로 다 돌려도 안전합니다.** 0012부터 0019까지 전부
+**마이그레이션은 순서대로 다 돌려도 안전합니다.** 0012부터 0020까지 전부
 `create or replace` · `if not exists` · `drop … if exists` 로 되어 있어서,
 이미 돌린 것을 다시 돌려도 아무 일도 일어나지 않습니다. **어느 것까지
 돌렸는지 기억할 필요가 없습니다** — 0012부터 차례로 다 돌리세요.
@@ -31,7 +31,7 @@ cd <저장소>
 git status --porcelain | grep -i env    # 아무것도 안 나와야 정상
 
 git add -A
-git commit -m "v61 — 항목별 청구, 지출 묶음, 한 줄로 적기, 몰아서 적기"
+git commit -m "v63 — 수입과 공금, 결산, 장부 성격"
 git push
 ```
 
@@ -51,7 +51,7 @@ Vercel 이 GitHub 에 붙어 있으므로 push 하면 배포가 시작됩니다.
 
 ---
 
-## 2. Supabase 마이그레이션 (0012 → 0019)
+## 2. Supabase 마이그레이션 (0012 → 0020)
 
 Supabase Dashboard → SQL Editor 에서 **파일 하나씩, 번호 순서대로** 실행합니다.
 
@@ -65,13 +65,15 @@ Supabase Dashboard → SQL Editor 에서 **파일 하나씩, 번호 순서대로
 | 0017 | '미정산 n건'을 제대로 세기 | |
 | **0018** | **항목별 청구** — 열거형에 `items` 추가, `item_lines` 칸, 합계 가드 | ← 새것 |
 | **0019** | **지출 묶음** — `group_name` 칸 | ← 새것 |
+| **0020** | **들어온 돈과 공금** — `incomes` 표, 열거형에 `common`, 장부의 성격 | ← 새것 |
 
-### 0018 에서 한 번 걸릴 수 있습니다
+### 0018 과 0020 에서 한 번씩 걸릴 수 있습니다
 
 맨 앞 줄이 이것입니다.
 
 ```sql
-alter type public.allocation_type add value if not exists 'items';
+alter type public.allocation_type add value if not exists 'items';   -- 0018
+alter type public.allocation_type add value if not exists 'common';  -- 0020
 ```
 
 PostgreSQL 은 **열거형에 값을 추가한 트랜잭션 안에서 그 값을 쓰지 못합니다.**
@@ -85,7 +87,7 @@ PostgreSQL 은 **열거형에 값을 추가한 트랜잭션 안에서 그 값을
 
 ### 다 돌린 뒤 확인
 
-이 쿼리를 실행해서 **여덟 칸이 전부 `true`** 인지 봅니다.
+이 쿼리를 실행해서 **열 칸이 전부 `true`** 인지 봅니다.
 
 ```sql
 select
@@ -112,7 +114,14 @@ select
   exists (select 1 from information_schema.columns
           where table_schema = 'public' and table_name = 'expenses'
             and column_name = 'group_name')
-    as "0019 묶음";
+    as "0019 묶음",
+  exists (select 1 from information_schema.tables
+          where table_schema = 'public' and table_name = 'incomes')
+    as "0020 들어온 돈",
+  exists (select 1 from information_schema.columns
+          where table_schema = 'public' and table_name = 'ledgers'
+            and column_name = 'fund_source')
+    as "0020 장부의 성격";
 ```
 
 `false` 가 하나라도 있으면 그 번호의 파일만 다시 실행하면 됩니다.
@@ -216,8 +225,15 @@ Vercel 배포가 끝나면 폰으로 열어서 이 순서대로 해 보세요.
    **각자 낼 돈의 합이 총액과 정확히 맞는지** 확인.
 9. **수증이** 에게 "내가 얼마 내야 해?" 물어보기. 항목별 지출의 줄까지
    알고 답하는가.
+10. **기존 장부가 하나도 안 달라졌는지** — 전부 '각자 결제'로 서고
+    '들어온 돈' 탭은 안 보여야 정상입니다.
+11. **팀 화면 → 장부 성격**을 '회비를 모아서 쓰기'로 바꾸고 1인당 회비를 넣기.
+    '들어온 돈' 탭이 서고, 부담 방식에 '공금에서'가 생기는가.
+12. **회비 두 줄 + 공금 지출 한 줄**을 적고 결산이 맞는가.
+    **공금 지출은 정산에 안 들어가야 합니다** — 집행한 사람에게 받을 돈이
+    생기면 그건 버그입니다.
 
-3·5 번이 이번 판의 핵심이고, **8번이 회계가 안 깨졌다는 증거**입니다.
+3·5·12 번이 이번 판의 핵심이고, **8번과 12번이 회계가 안 깨졌다는 증거**입니다.
 
 ---
 
@@ -226,18 +242,23 @@ Vercel 배포가 끝나면 폰으로 열어서 이 순서대로 해 보세요.
 문제가 생기면 Vercel → Deployments → 직전 배포 → **Promote to Production**.
 코드만 되돌아가고 데이터베이스는 그대로입니다.
 
-새 칸(`item_lines`, `group_name`)은 **비어 있어도 옛 코드가 무시**하므로,
+새 칸(`item_lines`, `group_name`, `fund_source` …)은 **비어 있어도 옛 코드가
+무시**하므로,
 마이그레이션을 되돌릴 필요는 없습니다. 다만 항목별 청구로 이미 적은
 지출이 있다면 옛 코드에서는 그 줄의 부담 방식을 읽지 못합니다 — 되돌리기
 전에 그런 줄이 있는지 보세요.
 
 ```sql
-select count(*) from public.expenses where allocation::text = 'items';
+select
+  count(*) filter (where allocation::text = 'items')  as "항목별",
+  count(*) filter (where allocation::text = 'common') as "공금"
+from public.expenses;
+select count(*) from public.incomes;
 ```
 
 ---
 
-## 이번에 올라가는 것 (v55 → v61)
+## 이번에 올라가는 것 (v55 → v63)
 
 | 판 | 내용 |
 |---|---|
@@ -248,6 +269,8 @@ select count(*) from public.expenses where allocation::text = 'items';
 | v59 | 문구 정리 — '줄'과 '항목' 어휘 통일, 6개 언어 |
 | v60 | **한 줄로 적기** + **장부가 이미 아는 것**(과거에서 분류·부담 제안) |
 | v61 | **사진 몰아서 적기** |
+| v62 | 서비스 안 **업데이트 내역** 화면 |
+| v63 | **수입과 공금** — 수입 항목, 공금 지출, 회비 납부, 결산, 장부 성격, 부르는 이름 |
 
 같이 고친 기존 버그
 - 정산이 끝난 지출을 고칠 때 `item_lines` 가 잠기지 않던 것 (0018 에서 함께)
@@ -256,4 +279,4 @@ select count(*) from public.expenses where allocation::text = 'items';
 - 모바일에서 `.pick-sub input` 규칙이 체크박스가 아닌 글자 칸까지
   18px 네모로 찌그러뜨리던 것
 
-검산 불변식은 **22개 → 50개**로 늘었고 전부 통과합니다 (`npm run simulate`).
+검산 불변식은 **22개 → 70개**로 늘었고 전부 통과합니다 (`npm run simulate`).

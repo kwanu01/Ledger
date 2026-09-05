@@ -29,6 +29,7 @@ export default async function Book({ params }: { params: Promise<{ ledgerId: str
         current="/book"
         lang={lang}
         signedIn={Boolean(pass.userId)}
+        fund={ledger.fundSource ?? 'each'}
       />
 
       <main>

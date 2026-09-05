@@ -19,10 +19,15 @@ import {
   editExpense,
   relabelExpense,
   renameGroup,
+  insertIncome,
+  removeIncome,
+  setLedgerKind,
+  setTermClosed,
 } from '../../lib/db/repo.ts';
 import { checkItemLines, currentRoster } from '../../lib/domain/settlement.ts';
 import { failed } from '../../lib/fail.ts';
-import type { Allocation } from '../../lib/domain/types.ts';
+import type { Allocation, FundSource, IncomeKind } from '../../lib/domain/types.ts';
+import { collectsDues, usesFund } from '../../lib/domain/closing.ts';
 import { MAX_BATCH } from '../../lib/limits.ts';
 
 /**
@@ -188,6 +193,145 @@ export async function recordExpenses(input: {
       revalidatePath('/teams');
     }
     return { ok: true, value: { saved, failed: bad } };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/* ── 들어온 돈 (§12) ──────────────────────────────────────────────────── */
+
+/**
+ * 수입 한 줄 적기.
+ *
+ * 지출과 나란한 것이지 지출의 일종이 아니다. 지분도 부담자도 없고 정산에
+ * 들어가지 않는다 — 결산에만 들어간다.
+ *
+ * 각자 결제하는 장부(each)에는 수입이 없다. 들어온 돈이 있다는 것은 모아 둔
+ * 주머니가 있다는 뜻이고, 그 주머니가 있으면 그건 이미 다른 성격의 장부다.
+ */
+export async function recordIncome(input: {
+  ledgerId: string;
+  date: string;
+  title: string;
+  amount: number;
+  kind: IncomeKind;
+  memberId?: string;
+  note?: string;
+}): Promise<Result<{ id: string }>> {
+  try {
+    const pass = await requireLedgerAccess(input.ledgerId);
+    if (!input.title.trim()) return { ok: false, message: '무엇으로 들어왔는지 적어 주세요.' };
+    if (!Number.isInteger(input.amount) || input.amount === 0) {
+      return { ok: false, message: '금액을 적어 주세요.' };
+    }
+
+    const ledger = await loadLedger(input.ledgerId);
+    if (!usesFund(ledger)) {
+      return { ok: false, message: '각자 결제하는 장부에는 들어온 돈을 적지 않습니다.' };
+    }
+    if (ledger.closedAt) {
+      return { ok: false, message: '닫힌 회기에는 수입을 적을 수 없습니다. 회기를 다시 열어 주세요.' };
+    }
+    if (input.kind === 'dues' && !input.memberId) {
+      return { ok: false, message: '회비를 낸 사람을 골라 주세요.' };
+    }
+    if (input.kind === 'dues' && !collectsDues(ledger)) {
+      return { ok: false, message: '이 장부는 회비를 걷지 않습니다.' };
+    }
+
+    const id = await insertIncome({
+      ledgerId: input.ledgerId,
+      date: input.date,
+      title: input.title.trim(),
+      amount: input.amount,
+      kind: input.kind,
+      memberId: input.kind === 'dues' ? input.memberId : undefined,
+      note: input.note?.trim() || undefined,
+      createdBy: pass.memberId,
+    });
+
+    revalidatePath(`/l/${input.ledgerId}`, 'layout');
+    return { ok: true, value: { id } };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+export async function deleteIncome(args: { ledgerId: string; incomeId: string }): Promise<Result> {
+  try {
+    await requireLedgerAccess(args.ledgerId);
+    await removeIncome(args.incomeId, args.ledgerId);
+    revalidatePath(`/l/${args.ledgerId}`, 'layout');
+    return { ok: true };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/**
+ * 장부의 성격 (§12)
+ *
+ * 고르는 순간 화면이 실제로 달라진다 — 수입과 결산이 켜지고, 부담 방식에
+ * '공금'이 생기고, 회비를 걷는 장부면 미납을 센다. 아무것도 안 달라지는
+ * 값은 저장하지 않는다.
+ *
+ * 성격을 되돌릴 때 이미 적힌 공금 지출이나 수입을 지우지는 않는다. 지우는
+ * 것은 사람이 할 일이지 설정 한 번이 할 일이 아니다. 다만 화면에서 그 줄들이
+ * 갈 곳이 없어지므로, 그런 줄이 있으면 막는다.
+ */
+export async function setBookKind(input: {
+  ledgerId: string;
+  fundSource: FundSource;
+  termCarry: boolean;
+  duesPerHead?: number;
+}): Promise<Result> {
+  try {
+    await requireLedgerAccess(input.ledgerId);
+    const ledger = await loadLedger(input.ledgerId);
+
+    if (input.fundSource === 'each') {
+      const fundRows = ledger.expenses.filter((e) => e.allocation.type === 'common').length;
+      const inRows = (ledger.incomes ?? []).length;
+      if (fundRows > 0 || inRows > 0) {
+        return {
+          ok: false,
+          message:
+            `공금 지출 ${fundRows}건과 들어온 돈 ${inRows}건이 이미 적혀 있습니다. ` +
+            '그 줄들을 먼저 지워야 각자 결제하는 장부로 되돌릴 수 있습니다.',
+        };
+      }
+    }
+    if (input.duesPerHead !== undefined && input.duesPerHead <= 0) {
+      return { ok: false, message: '1인당 회비는 0보다 커야 합니다.' };
+    }
+
+    await setLedgerKind({
+      ledgerId: input.ledgerId,
+      fundSource: input.fundSource,
+      termCarry: input.termCarry,
+      duesPerHead: input.fundSource === 'each' ? undefined : input.duesPerHead,
+    });
+    revalidatePath(`/l/${input.ledgerId}`, 'layout');
+    revalidatePath('/teams');
+    return { ok: true };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/**
+ * 회기 닫기·다시 열기 (§12)
+ *
+ * 닫는다는 것은 "이 회기의 숫자는 이제 고정"이라는 선언이다. 지출의
+ * 정산과 같은 성격이라 되돌릴 수 있게 둔다 — 총회에서 숫자가 틀렸다고
+ * 하면 다시 열어 고쳐야 하기 때문이다.
+ */
+export async function closeTerm(input: { ledgerId: string; closed: boolean }): Promise<Result> {
+  try {
+    await requireLedgerAccess(input.ledgerId);
+    await setTermClosed(input.ledgerId, input.closed);
+    revalidatePath(`/l/${input.ledgerId}`, 'layout');
+    return { ok: true };
   } catch (e) {
     return failed(e);
   }

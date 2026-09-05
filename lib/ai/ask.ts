@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Ledger } from '../domain/types.ts';
 import { computeSettlement, nameOf, settledExpenseIds } from '../domain/settlement.ts';
+import { collectsDues, duesBoard, fundBook, usesFund } from '../domain/closing.ts';
 import { formatNumber } from '../domain/money.ts';
 import { ENDPOINT, MODEL, meter, type Usage } from './usage.ts';
 
@@ -50,6 +51,35 @@ export function digest(ledger: Ledger, meId: string | null): string {
     `팀원: ${ledger.members.map((m) => `${m.name}${m.id === meId ? '(=지금 묻는 사람)' : ''}`).join(', ')}`,
   );
 
+  /*
+   * 공금을 쓰는 장부면 결산도 함께 옮긴다 (§12).
+   *
+   * "얼마 남았어?"는 동아리 장부에서 제일 자주 나오는 물음인데, 그 답은
+   * 정산이 아니라 결산에 있다. 숫자는 여기서 계산해 넘긴다 — 모델은
+   * 언제나처럼 세지 않는다.
+   */
+  if (usesFund(ledger)) {
+    const b = fundBook(ledger);
+    out.push(
+      '',
+      `공금 결산 — 시작 잔고 ${money(b.carriedIn)} + 들어온 돈 ${money(b.received)} ` +
+        `− 공금 지출 ${money(b.spent)} = 남은 돈 ${money(b.left)}`,
+    );
+    if (ledger.closedAt) out.push('  이 회기는 닫혀 있습니다.');
+    for (const k of b.byKind) {
+      out.push(`  ${k.kind}: ${money(k.amount)} (${k.count}건)`);
+    }
+    if (collectsDues(ledger) && ledger.duesPerHead) {
+      out.push(`  1인당 회비 ${money(ledger.duesPerHead)}`);
+      for (const r of duesBoard(ledger, ledger.members)) {
+        out.push(
+          `  ${who(r.memberId)}: 낸 돈 ${money(r.paid)}` +
+            (r.short > 0 ? `, 모자란 돈 ${money(r.short)}` : ', 다 냄'),
+        );
+      }
+    }
+  }
+
   const settled = settledExpenseIds(ledger);
   const rows = [...ledger.expenses].sort((a, b) => (a.date < b.date ? -1 : 1));
   const shown = rows.length > MAX_ROWS ? rows.slice(-MAX_ROWS) : rows;
@@ -66,8 +96,10 @@ export function digest(ledger: Ledger, meId: string | null): string {
         : a.type === 'partial'
           ? `일부 ${a.participantIds.map(who).join('·')}`
           : a.type === 'items'
-            ? `항목별 ${a.lines.length}줄`
-            : `${who(a.ownerId)} 개인`;
+            ? `항목별 ${a.lines.length}개`
+            : a.type === 'common'
+              ? '공금 (정산 대상 아님)'
+              : `${who(a.ownerId)} 개인`;
 
     /*
      * 항목별 지출은 줄까지 옮긴다 (§10.4)
@@ -192,8 +224,16 @@ const OPEN_SYSTEM = `당신은 'Ledger'라는 팀 장부 서비스 옆에 서 �
 이 서비스가 하는 일:
 - 팀이 함께 쓴 돈을 한 장부에 모읍니다. 팀플·동아리·여행처럼 여러 번 사고
   나중에 한꺼번에 나누는 자리를 위한 것입니다.
-- 지출마다 누가 냈는지와 누가 나눠 내는지를 적습니다. 나누는 방식은 넷입니다 —
-  팀 전체 공동, 일부만, 한 사람이 가져감, 그리고 항목별로 나눠 청구.
+- 지출마다 누가 냈는지와 누가 나눠 내는지를 적습니다. 나누는 방식은 다섯입니다 —
+  팀 전체 공동, 일부만, 한 사람이 가져감, 항목별로 나눠 청구, 그리고 공금에서.
+- 장부를 만들 때 돈이 어디서 오는지 고릅니다. 각자 결제하고 나중에 나누는
+  장부(팀플), 회비를 모아서 쓰는 장부(동아리·학회), 정해진 예산 안에서 쓰는
+  장부(지원금) 셋입니다.
+- 회비나 지원금을 쓰는 장부에는 '들어온 돈' 자리가 생깁니다. 이월금 + 수입 −
+  공금 지출 = 남은 돈으로 결산이 나오고, 회비는 누가 얼마나 냈고 얼마가
+  모자란지 셉니다. 회기를 닫으면 그 회기의 숫자가 고정됩니다.
+- **정산과 결산은 다른 계산입니다.** 정산은 사람 사이에 오갈 돈이고, 결산은
+  한 주머니의 잔고입니다. 공금에서 나간 지출은 정산에 들어가지 않습니다.
 - 항목별 청구는 같이 배달을 시키고 한 사람이 결제했을 때 씁니다. 영수증
   사진을 읽어 품목을 줄줄이 뽑아 주고, 줄마다 누가 시켰는지 고르면 됩니다.
   배달비처럼 아무도 시키지 않은 항목은 모두로 두면 똑같이 나뉩니다.

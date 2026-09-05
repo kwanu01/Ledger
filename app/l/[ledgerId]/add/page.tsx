@@ -47,6 +47,7 @@ export default async function AddExpense({ params }: { params: Promise<{ ledgerI
           categories={categoriesOf(ledger)}
           vendors={vendorsOf(ledger)}
           past={recallSeed(ledger)}
+          fund={ledger.fundSource ?? 'each'}
           currency={ledger.currency ?? 'KRW'}
           meId={pass.memberId}
           today={today}

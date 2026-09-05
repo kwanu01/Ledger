@@ -45,6 +45,7 @@ export type ItemLine = {
  * - partial  일부 인원만 부담
  * - personal 개인 귀속 — 프로젝트 총지출에는 포함, 공동 정산 대상 금액에서는 제외
  * - items    영수증 줄마다 부담자가 다름 (§10.4)
+ * - common   공금에서 나감 — 아무도 개인적으로 부담하지 않는다 (§12)
  *
  * 개인 귀속이라도 "결제자 ≠ 귀속자"인 경우에는 귀속자가 결제자에게 갚아야 하므로
  * balance 계산에는 반영된다. 결제자 = 귀속자이면 자연히 상계되어 영향이 0이 된다.
@@ -57,7 +58,15 @@ export type Allocation =
   | { type: 'all' }
   | { type: 'partial'; participantIds: MemberId[] }
   | { type: 'personal'; ownerId: MemberId }
-  | { type: 'items'; lines: ItemLine[] };
+  | { type: 'items'; lines: ItemLine[] }
+  /**
+   * 공금에서 나가는 지출 (§12)
+   *
+   * 부담자가 없다. 회비나 지원금으로 모아 둔 돈에서 나갔으므로 갚을 사람도
+   * 받을 사람도 없다. **정산에서 통째로 빠지고 결산에만 들어간다** —
+   * 결제자조차 잔액을 움직이지 않는다. 누가 집행했는지는 기록으로만 남는다.
+   */
+  | { type: 'common' };
 
 /**
  * 보정과 환불은 원본을 고치지 않고 별도 Expense로 기록한다.
@@ -173,11 +182,56 @@ export type Settlement = {
   snapshot: SettlementResult;
 };
 
+/**
+ * 돈이 어디서 오는가 (§12)
+ *
+ * 장부의 성격을 정하는 축. 이 값 하나로 수입 화면, 결산, 공금 부담이
+ * 함께 켜지고 꺼진다.
+ *
+ *   each   각자 결제하고 나중에 나눈다 — 팀플. 지금까지의 Ledger.
+ *   dues   회비를 모아서 쓴다 — 동아리, 학회, 반 모임.
+ *   grant  밖에서 받은 예산 안에서 쓴다 — 지원금.
+ */
+export type FundSource = 'each' | 'dues' | 'grant';
+
+/** 들어온 돈의 갈래 (§12) */
+export type IncomeKind = 'dues' | 'grant' | 'donation' | 'carryover';
+
+/**
+ * 들어온 돈 한 줄.
+ *
+ * 지출과 나란한 것이지 지출의 일종이 아니다. 지분도 부담자도 없고,
+ * 정산에 들어가지 않는다.
+ */
+export type Income = {
+  id: string;
+  ledgerId: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  /** 최소 단위 정수. 잘못 걷은 회비를 돌려줄 때는 음수다. */
+  amount: number;
+  kind: IncomeKind;
+  /** 회비일 때 낸 사람. 다른 갈래에서는 비어 있다. */
+  memberId?: MemberId;
+  note?: string;
+  createdAt: string;
+  createdBy?: MemberId;
+};
+
 export type Ledger = {
   id: string;
   teamName: string;
   name: string;
   startedAt: string;
+  /** 돈의 출처. 없으면 'each' — 지금까지의 장부는 전부 그것이다. */
+  fundSource?: FundSource;
+  /** 회기를 닫을 때 남은 돈을 다음으로 넘기는가 */
+  termCarry?: boolean;
+  /** 1인당 회비. 미납자를 세는 기준. 없으면 세지 않는다. */
+  duesPerHead?: number;
+  /** 회기를 닫은 시각. 닫힌 뒤에는 수입을 못 고친다. */
+  closedAt?: string;
+  incomes: Income[];
   /**
    * 이 장부의 통화. 금액은 전부 이 통화의 최소 단위 정수로 저장된다.
    * (KRW면 원, USD면 센트) 장부 하나는 통화 하나만 쓴다.

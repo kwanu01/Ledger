@@ -77,6 +77,7 @@ export default async function Goods({ params }: { params: Promise<{ ledgerId: st
         current="/goods"
         lang={lang}
         signedIn={Boolean(pass.userId)}
+        fund={ledger.fundSource ?? 'each'}
       />
 
       <main>

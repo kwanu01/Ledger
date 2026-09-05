@@ -24,6 +24,7 @@ export default async function Settle({ params }: { params: Promise<{ ledgerId: s
         current="/settle"
         lang={lang}
         signedIn={Boolean(pass.userId)}
+        fund={ledger.fundSource ?? 'each'}
       />
 
       <main>

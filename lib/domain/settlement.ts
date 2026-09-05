@@ -84,6 +84,14 @@ export function bearersOf(expense: Expense): MemberId[] {
       }
       return roster.filter((id) => touched.has(id));
     }
+    /*
+     * 공금 지출에는 부담자가 없다 (§12).
+     *
+     * 빈 목록을 돌려주는 것이 이 함수에서 유일하게 "아무도 아님"을 뜻하는
+     * 자리다. 다른 갈래는 전부 최소 한 사람이 나온다.
+     */
+    case 'common':
+      return [];
   }
 }
 
@@ -177,11 +185,28 @@ export function lineSharesOf(expense: Expense): { line: ItemLine; shares: Share[
 }
 
 export function breakdownOf(expense: Expense): ExpenseBreakdown {
+  const t = expense.allocation.type;
   return {
     expense,
     shares: sharesOf(expense),
-    countsTowardShared: expense.allocation.type !== 'personal',
+    // 개인 귀속도 공금도 '공동 정산 대상'이 아니다. 앞은 한 사람 것이고
+    // 뒤는 아무의 것도 아니라서, 이유는 다르지만 결과는 같다.
+    countsTowardShared: t !== 'personal' && t !== 'common',
   };
+}
+
+/**
+ * 이 지출이 정산이라는 계산에 들어가는가 (§12)
+ *
+ * 공금 지출만 빠진다. 회비나 지원금으로 모아 둔 돈에서 나갔으므로 사람
+ * 사이에 오갈 것이 없다 — **결제자조차** 잔액이 움직이지 않는다. 누가
+ * 카드를 긁었는지는 기록이지 채권이 아니다.
+ *
+ * 이 한 줄이 정산과 결산을 가르는 자리다. 여기서 걸러 두면 아래의 모든
+ * 계산과 쉰 개 불변식이 지금까지의 전제("지분의 합 = 금액") 위에 그대로 선다.
+ */
+export function inSettlement(expense: Expense): boolean {
+  return expense.allocation.type !== 'common';
 }
 
 /**
@@ -246,6 +271,8 @@ export function computeBalances(expenses: Expense[], members: Member[]): MemberB
   const owed = new Map<MemberId, number>(members.map((m) => [m.id, 0]));
 
   for (const expense of expenses) {
+    // 공금에서 나간 것은 사람의 돈이 아니다. 낸 쪽에도 진 쪽에도 안 적는다.
+    if (!inSettlement(expense)) continue;
     paid.set(expense.payerId, (paid.get(expense.payerId) ?? 0) + expense.amount);
     for (const share of breakdownOf(expense).shares) {
       owed.set(share.memberId, (owed.get(share.memberId) ?? 0) + share.amount);
@@ -310,6 +337,7 @@ export function minimizeTransfers(balances: MemberBalance[]): Transfer[] {
 export function relevantMembers(expenses: Expense[], allMembers: Member[]): Member[] {
   const ids = new Set<MemberId>();
   for (const e of expenses) {
+    if (!inSettlement(e)) continue;
     ids.add(e.payerId);
     for (const id of bearersOf(e)) ids.add(id);
   }
@@ -317,12 +345,13 @@ export function relevantMembers(expenses: Expense[], allMembers: Member[]): Memb
 }
 
 export function computeSettlement(expenses: Expense[], allMembers: Member[]): SettlementResult {
-  const breakdowns = expenses.map((e) => breakdownOf(e));
+  // 정산의 대상은 사람 사이에 오갈 것이 있는 지출뿐이다 (§12).
+  const breakdowns = expenses.filter(inSettlement).map((e) => breakdownOf(e));
   const balances = computeBalances(expenses, relevantMembers(expenses, allMembers));
   const sum = (list: ExpenseBreakdown[]) => list.reduce((acc, b) => acc + b.expense.amount, 0);
 
   return {
-    expenseIds: expenses.map((e) => e.id),
+    expenseIds: breakdowns.map((b) => b.expense.id),
     totalAmount: sum(breakdowns),
     sharedAmount: sum(breakdowns.filter((b) => b.countsTowardShared)),
     personalAmount: sum(breakdowns.filter((b) => !b.countsTowardShared)),
@@ -360,6 +389,8 @@ export function settledExpenseIds(ledger: Ledger): Set<string> {
  */
 export function needsSettling(expense: Expense): boolean {
   const a = expense.allocation;
+  // 공금 지출은 애초에 정산이라는 계산의 바깥에 있다.
+  if (a.type === 'common') return false;
   if (a.type === 'personal') return a.ownerId !== expense.payerId;
   /*
    * 줄마다 부담자가 다른 지출도 같은 이유로 걸러진다. 혼자 시켜 먹고
@@ -475,7 +506,9 @@ export function allocationLabel(expense: Expense, members: Member[]): string {
     case 'personal':
       return `${nameOf(members, a.ownerId)} 개인`;
     case 'items':
-      return `항목별 ${a.lines.length}줄`;
+      return `항목별 ${a.lines.length}개`;
+    case 'common':
+      return '공금';
   }
 }
 
