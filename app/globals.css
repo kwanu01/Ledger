@@ -698,6 +698,247 @@ legend{
  * 겹치지 않게 둔다. */
 .pick{display:flex;align-items:baseline;gap:8px;font-size:14.5px;padding:4px 0}
 .pick-sub{display:flex;flex-wrap:wrap;gap:8px 20px;padding:6px 0 2px 26px}
+/*
+   항목별 청구 — 줄 고르는 판 (§10.4)
+
+   이 판이 하는 일은 하나다. **줄마다 누가 시켰는지 고르게 하는 것.**
+   이름과 금액은 대개 읽어 온 그대로 맞고, 사람이 실제로 손대는 것은 팀원
+   단추뿐이다. 그래서 이름·금액은 한 줄에 나란히 눕히고, 팀원 단추는 그
+   아래에 크게 편다 — 폰에서 손가락으로 바로 누를 수 있어야 한다.
+
+   .pick-sub 의 flex 를 여기서 되돌린다. 저 규칙은 이름표 몇 개를 옆으로
+   흘리는 자리를 위한 것이고, 이 판은 위에서 아래로 쌓인다.
+*/
+.pick-sub.lines{display:block;padding:10px 0 2px 26px}
+@media (max-width:560px){
+  /* 폰에서는 들여쓰기를 버린다. 26px 이 아까운 폭이다. */
+  .pick-sub.lines{padding-left:0}
+}
+.lines-read{margin:0 0 12px}
+
+.lines-list{list-style:none;margin:0;padding:0;
+  border-top:1px solid var(--rule-2)}
+.lineitem{padding:10px 0 10px 10px;border-bottom:1px solid var(--rule-2);
+  box-shadow:inset 3px 0 0 transparent}
+
+/* 부담자를 안 고른 줄. 스무 줄을 훑다 하나를 빠뜨리는 것이 제일 흔한 실수다.
+   막지는 않는다 — 아직 고르는 중일 수 있다. 눈에만 띄게 한다.
+   자리는 미리 비워 둔다. 표시가 켜질 때 줄이 옆으로 밀리면, 고르는 동안
+   줄들이 계속 들썩인다. */
+.lineitem.unassigned{box-shadow:inset 3px 0 0 var(--debit)}
+
+/*
+   이 판의 글자 칸은 상자가 아니라 **밑줄**이다.
+
+   서비스의 다른 폼 칸은 네모로 둘러싸여 있다(input[type=text]). 그 칸들은
+   빈 종이에 하나씩 놓이는 것이라 테두리가 자리를 알려 주는 일을 한다.
+   여기는 다르다 — 줄이 열둘, 스물씩 쌓이는 자리다. 네모가 스무 개 겹치면
+   판이 격자무늬가 되고, 정작 눌러야 할 팀원 단추가 그 격자에 묻힌다.
+
+   그래서 칸은 밑줄 하나로 두고, 판의 구조는 괘선과 납작한 단추가 진다.
+   장부의 칸이 원래 그렇게 생겼다.
+*/
+.lines input[type=text]{font:inherit;color:inherit;background:var(--paper);
+  border:0;border-bottom:1px solid var(--rule);padding:5px 2px}
+.lines input[type=text]:focus-visible{outline:2px solid var(--link-on);outline-offset:2px}
+
+.linehead{display:flex;align-items:center;gap:8px}
+.line-name{flex:1 1 auto;min-width:0}
+.line-amount{flex:0 0 108px;text-align:right}
+.line-drop{flex:0 0 auto;border:0;background:none;cursor:pointer;
+  color:var(--ink-3);font-size:19px;line-height:1;padding:4px 6px}
+.line-drop:hover{color:var(--debit)}
+
+/* 팀원 단추. 누른 것과 안 누른 것이 한눈에 갈려야 한다 —
+   색이 아니라 **채움**으로 가른다. 색맹인 사람에게도 같아야 하고,
+   이 장부는 흑백으로 인쇄해도 읽혀야 한다. */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.chip{font:inherit;font-size:13px;line-height:1;cursor:pointer;
+  padding:7px 12px;border:1px solid var(--rule);background:var(--paper);color:var(--ink-2)}
+.chip:hover{border-color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+/* '전원'은 사람이 아니라 단추다. 눌려 있어도 점선을 유지해서
+   팀원 이름과 같은 것으로 읽히지 않게 한다. */
+.chip.every{margin-left:6px;border-style:dashed}
+.chip.every.on{background:var(--ink-2);border-color:var(--ink-2);border-style:dashed}
+.chip:focus-visible{outline:2px solid var(--link-on);outline-offset:2px}
+
+.lines-add{margin:10px 0 0}
+
+/* 합계는 늘 보인다. 어긋나면 얼마나 어긋나는지까지. (§23.3) */
+.linefoot{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;
+  margin-top:14px;padding-top:10px;border-top:1px solid var(--rule);font-size:13.5px}
+.linefoot .lab{color:var(--ink-2)}
+.linefoot.off{border-top-color:var(--debit)}
+
+/* 저장하기 전에 각자 얼마인지. 저장한 뒤에 놀랄 일이 없어야 한다. */
+.lines-each{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;
+  margin-top:10px;font-size:13.5px}
+.lines-each .lab{color:var(--ink-2)}
+.lines-each .each{white-space:nowrap}
+
+/* 장부에서 항목별 지출을 펼쳤을 때의 표. 이름 · 금액 · 누구 세 칸이다. */
+.tally.lines-read-out{max-width:none}
+.tally.lines-read-out td.l:first-child{max-width:220px;word-break:break-word}
+.tally.lines-read-out td:last-child{padding-left:16px;font-size:12.5px}
+
+/* 줄 기준 / 사람 기준. 읽기 단추 줄의 오른쪽 끝에 붙는다. */
+.lines-read{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 12px}
+.byswitch{display:inline-flex;gap:0;margin-left:auto}
+.byswitch .chip{border-right-width:0}
+.byswitch .chip:last-child{border-right-width:1px}
+
+/*
+   하나씩 훑기 (§10.4)
+
+   항목 하나를 앞에 두고 "이건 누가 시켰나"만 묻는다. 늘어놓고 훑을 때
+   실제로 빠뜨리는 것은 언제나 가운데 어디쯤인데, 한 번에 하나만 보이면
+   빠뜨릴 자리가 없다.
+*/
+.sweep{margin-top:4px}
+
+/* 지도. 진행 막대가 아니라 어디가 비었는지 보여 주는 점들이다. */
+.sweep-dots{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+.dot{width:15px;height:15px;padding:0;cursor:pointer;
+  border:1px solid var(--rule);background:var(--paper)}
+.dot:hover{border-color:var(--ink)}
+.dot.filled{background:var(--ink-2);border-color:var(--ink-2)}
+/* 지금 자리는 채움이 아니라 테두리로 표시한다 — 고른 것과 보는 것은 다른 사실이다. */
+.dot.now{outline:2px solid var(--ink);outline-offset:2px}
+.dot:focus-visible{outline:2px solid var(--link-on);outline-offset:2px}
+
+/* 상자가 아니라 구획이다. 위아래 괘선 사이에 한 항목이 놓인다 —
+   목록의 줄과 같은 언어이고, 다만 한 번에 하나만 선다. */
+.sweep-card{border-top:1px solid var(--rule-hard);
+  border-bottom:1px solid var(--rule-2);padding:16px 0}
+.lines input.sweep-name{display:block;width:100%;font-size:19px;font-weight:700}
+.lines input.sweep-amt{display:block;width:100%;font-size:17px;margin-top:12px}
+
+.sweep-ask{margin:18px 0 9px;font-size:13px;color:var(--ink-2)}
+/* 손가락으로 누르는 단추다. 목록의 이름표보다 크다. */
+.sweep-chips .chip{padding:10px 16px;font-size:14.5px}
+
+.sweep-nav{display:flex;align-items:baseline;gap:12px;margin-top:12px}
+.sweep-nav .sweep-at{margin:0 auto;font-size:13px}
+.sweep-nav button[disabled]{opacity:.35;cursor:default;text-decoration:none}
+
+.sweep-left{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;
+  margin:12px 0 0;font-size:13.5px}
+.sweep-left.done{color:var(--ink-2)}
+
+/*
+   묶어 보기 (§11.3)
+
+   표 위의 줄. 정렬 단추와 섞이지 않게 표 밖에 둔다 — 정렬은 줄의 앞뒤를
+   바꾸는 일이고, 이것은 줄을 덩어리로 묶는 일이라 다른 종류다.
+*/
+.foldbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+  margin-top:16px;font-size:13.5px}
+.foldbar .lab{color:var(--ink-2);margin-right:4px}
+.foldbar .foldall{margin-left:auto}
+@media (max-width:560px){
+  .foldbar .foldall{margin-left:0}
+}
+
+/* 덩어리의 머리. 표의 줄이지만 장부의 기입이 아니라 구획선에 가깝다 —
+   그래서 위아래 괘선을 진하게 두고 바탕을 깐다. */
+tr.foldhead > td{border-top:1px solid var(--rule-hard);
+  border-bottom:1px solid var(--rule-2);background:var(--hl)}
+/* 단추가 든 칸만 여백을 없앤다. 단추가 칸을 가득 채워야 어디를 눌러도 접힌다. */
+tr.foldhead > td:nth-child(2){padding:0}
+.foldbtn{display:flex;align-items:baseline;gap:10px;width:100%;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;
+  background:none;border:0;padding:9px 10px}
+.foldbtn:hover{background:var(--rule-2)}
+.foldbtn .caret{flex:0 0 12px;color:var(--ink-3);font-size:11px}
+.foldbtn .foldname{font-weight:700}
+.foldbtn .foldn{font-size:12.5px}
+/* 접어 놓아도 소계는 보여야 한다 — 접는 이유가 "안에 뭐가 있는지 말고
+   얼마인지만 보고 싶다"이기 때문이다. */
+td.foldsum{font-weight:700;white-space:nowrap}
+
+/*
+   한 줄로 적기 (§11.4)
+
+   사진 받는 판 아래, 손으로 적는 길 위. 셋은 나란한 갈래지 하나가 다른
+   하나에 딸린 것이 아니라서, 사진 판과 같은 폭·같은 축에 세운다.
+*/
+.jot{margin-top:22px}
+.jot-row{display:flex;gap:8px;margin-top:8px}
+.jot-row input{flex:1 1 auto;min-width:0}
+.jot-row .act{flex:0 0 auto}
+@media (max-width:560px){
+  /* 폰에서는 칸이 좁아 예시 문장이 잘린다. 단추를 아래로 내려 칸을 다 준다. */
+  .jot-row{flex-wrap:wrap}
+  .jot-row input{flex:1 1 100%}
+  .jot-row .act{flex:1 1 100%}
+}
+
+/*
+   장부가 이미 아는 것 (§11.4)
+
+   제안은 값이 아니라 **근거와 함께** 선다. "지난 3번 중 3번 재료비"까지
+   적혀 있어야 누를지 말지를 사람이 정할 수 있다. 그래서 이 줄은 조용하되
+   숨지 않는다 — 회색 글씨에 왼쪽 실선 하나.
+*/
+/* label.field 안에 들어가면 그 칸의 굵기(600)를 물려받는다. 이 줄은 라벨이
+   아니라 곁말이라 굵으면 안 된다. */
+.recall{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;
+  margin:8px 0 0;padding-left:9px;border-left:1px solid var(--rule);
+  font-size:12.5px;font-weight:400;color:var(--ink-2)}
+.recall .plain{font-weight:400}
+
+/*
+   몰아서 적기 (§11.4)
+
+   열 줄을 한 화면에서 훑는 자리. 여기서 지켜야 하는 것은 **훑을 수 있게**
+   두는 것이다 — 줄마다 칸이 여섯 개면 훑는 일 자체가 안 된다. 그래서
+   사진·이름·금액·날짜·결제자 다섯만 두고, 부담 방식은 아예 없다.
+*/
+.batch{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--rule-hard)}
+.batch-row{display:flex;align-items:flex-start;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--rule-2)}
+/* 못 읽었거나 비어 있는 줄. 저장에서 빠지므로 눈에 띄어야 한다.
+   이름을 blank 로 둔다 — .empty 는 이미 빈 화면 안내판의 이름이고(아래),
+   그 규칙의 점선 테두리가 이 줄에 통째로 걸린다. 표 밖의 이름과 겹치지 않게. */
+.batch-row{box-shadow:inset 3px 0 0 transparent;padding-left:10px}
+.batch-row.blank{box-shadow:inset 3px 0 0 var(--debit)}
+.batch-row.reading{opacity:.6}
+
+.batch-thumb{flex:0 0 auto;width:54px;height:54px;padding:0;cursor:pointer;
+  border:1px solid var(--rule);background:var(--paper);overflow:hidden}
+.batch-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.batch-thumb:hover{border-color:var(--ink)}
+
+/* 칸도 밑줄이다. 열 줄이 쌓이는 자리라 네모가 마흔 개 겹치면 판이
+   격자무늬가 되고, 정작 훑어야 할 이름과 금액이 그 격자에 묻힌다.
+   항목별 청구 판과 같은 규칙이다(.lines). */
+.batch input[type=text],.batch input[type=date],.batch select{
+  font:inherit;color:inherit;background:var(--paper);
+  border:0;border-bottom:1px solid var(--rule);padding:5px 2px}
+.batch input:focus-visible,.batch select:focus-visible{
+  outline:2px solid var(--link-on);outline-offset:2px}
+
+/* 칸들. 넓은 화면에서는 한 줄, 폰에서는 접힌다. */
+.batch-fields{flex:1 1 auto;min-width:0;display:grid;gap:6px 10px;
+  grid-template-columns:1fr 120px 138px 96px;align-items:center}
+.batch-fields .batch-say{grid-column:1 / -1;font-size:12px}
+/* 금액이 제일 크다. 훑을 때 눈이 먼저 닿아야 하는 칸이다.
+   선택자에 input 을 붙이는 이유는 기본 규칙이 속성 선택자라서다. */
+.batch input[type=text].batch-amount{text-align:right;font-size:15.5px;font-weight:700}
+@media (max-width:700px){
+  .batch-fields{grid-template-columns:1fr 110px}
+  .batch-date{grid-column:1}
+  .batch-payer{grid-column:2}
+}
+
+.batch-foot{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;
+  margin-top:14px;padding-top:10px;border-top:1px solid var(--rule);font-size:13.5px}
+.batch-foot .lab{color:var(--ink-2)}
+
+/* 부담 방식 고르는 줄에 딸린 한 마디. 무엇을 고르는 것인지 설명한다. */
+.pick-say{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+
 /* 항목 이름에 붙는 꼬리표(환불·보정). 이름과 붙으면 이름의 일부처럼 읽힌다. */
 .tag{font-size:11.5px;color:var(--ink-2);border:1px solid var(--rule);padding:1px 6px;
   white-space:nowrap;margin-left:9px;vertical-align:2px}
@@ -1781,6 +2022,23 @@ button.act.waiting::after{
      바탕은 줄이 지고 칸은 글만 담는다. 칸에 바탕을 두면 밀어내지 않은
      칸의 폭만큼만 칠해져, 화면 끝까지 나간 줄 옆으로 흰 띠가 두 줄 남았다.
      펼친 자리는 그 줄에서 이어지는 자리이므로 같은 폭으로 칠해져야 한다. */
+  /*
+     덩어리의 머리 — 폰 (§11.3)
+
+     폰에서는 표의 줄이 카드처럼 쌓인다(위의 display:block). 그 규칙이 이
+     머리에도 걸리면 이름과 소계가 위아래로 떨어져 두 줄이 된다. 머리는
+     카드가 아니라 **구획선**이라 한 줄이어야 하므로 여기서만 되돌린다.
+  */
+  table.book.entries tr.foldhead{display:flex;align-items:baseline;
+    border-top:1px solid var(--rule-hard);border-bottom:1px solid var(--rule-2);
+    background:var(--hl)}
+  table.book.entries tr.foldhead > td{border:0;background:none;padding:0}
+  /* 고르는 칸과 오른쪽 빈 칸은 폰에서 설 자리가 없다. */
+  table.book.entries tr.foldhead > td.tick,
+  table.book.entries tr.foldhead > td:last-child{display:none}
+  table.book.entries tr.foldhead > td:nth-child(2){flex:1 1 auto;min-width:0}
+  table.book.entries tr.foldhead > td.foldsum{flex:0 0 auto;padding:10px 12px 10px 8px}
+
   table.book.entries tr.unfold{display:block;background:var(--hl)}
   table.book.entries tr.unfold.done{background:var(--settled)}
   table.book.entries td.opened{
@@ -1853,10 +2111,15 @@ button.act.waiting::after{
     padding:12px 2px;gap:11px;align-items:center;
     border-bottom:1px solid var(--rule-2)}
   .pick:last-of-type{border-bottom:0}
-  .pick input{width:19px;height:19px;flex:none;margin:0}
+  /* 고르는 칸만 키운다. 예전에는 `.pick-sub input` 이라고만 적었는데,
+     그 자리에 글자 칸이 들어오자(항목별 청구의 이름·금액) 그 칸까지
+     18픽셀짜리 네모가 됐다. 무엇을 겨냥한 규칙인지 선택자에 적어 둔다. */
+  .pick input[type=radio],.pick input[type=checkbox]{width:19px;height:19px;flex:none;margin:0}
   .pick-sub{padding:4px 0 10px 30px;gap:12px 20px}
   .pick-sub label{display:flex;align-items:center;gap:8px}
-  .pick-sub input{width:18px;height:18px;margin:0}
+  .pick-sub input[type=radio],.pick-sub input[type=checkbox]{width:18px;height:18px;margin:0}
+  /* 밑줄 칸은 테두리가 없어 눌러야 할 자리가 눈에 덜 띈다. 높이로 대신한다. */
+  .lines input[type=text]{padding:10px 2px}
 
   /* 마무리 줄 — 화면 아래에 붙어 따라온다. 다 적고 나서 저장 단추를 찾아
      스크롤을 되짚어 내려가는 일이 없게. 종이색을 깔고 위에 선 하나를 그어

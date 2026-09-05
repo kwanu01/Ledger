@@ -5,7 +5,15 @@
  * 여기만 바꾸면 Supabase가 아니라 다른 무엇으로도 갈아끼울 수 있다.
  */
 
-import type { Allocation, Expense, Ledger, Member, Settlement, SettlementResult } from '../domain/types.ts';
+import type {
+  Allocation,
+  Expense,
+  ItemLine,
+  Ledger,
+  Member,
+  Settlement,
+  SettlementResult,
+} from '../domain/types.ts';
 import type { CurrencyCode } from '../domain/money.ts';
 
 /* ── DB row 모양 (0001_schema.sql과 1:1) ─────────────────────────────── */
@@ -27,9 +35,11 @@ export type ExpenseRow = {
   amount: number | string; // bigint는 드라이버에 따라 문자열로 온다
   payer_member_id: string;
   team_member_ids: string[];
-  allocation: 'all' | 'partial' | 'personal';
+  allocation: 'all' | 'partial' | 'personal' | 'items';
   participant_member_ids: string[] | null;
   owner_member_id: string | null;
+  /** allocation = 'items' 일 때만. [{ name, amount, memberIds }] */
+  item_lines: unknown[] | null;
   adjustment_kind: 'correction' | 'refund' | null;
   adjustment_target_id: string | null;
   adjustment_reason: string | null;
@@ -37,6 +47,7 @@ export type ExpenseRow = {
   original_amount: number | string | null;
   vendor: string | null;
   category: string | null;
+  group_name: string | null;
   product_link: string | null;
   receipt_path: string | null;
   representative_image_path: string | null;
@@ -78,6 +89,27 @@ export function toMembers(rows: MemberRow[]): Member[] {
   return [...rows].sort((a, b) => a.sort_order - b.sort_order).map(toMember);
 }
 
+/**
+ * jsonb 로 온 줄들을 도메인 타입으로 세운다.
+ *
+ * jsonb 는 무엇이든 담을 수 있으므로 여기서 한 번 걸러야 한다. 금액이
+ * 문자열로 오거나 memberIds 가 없는 줄이 그대로 계산으로 흘러가면
+ * 지분의 합이 어긋난다. 모양이 아닌 줄은 버리지 않고 0원짜리로 세운다 —
+ * 조용히 사라지는 것보다 0원으로 눈에 띄는 편이 낫다.
+ */
+function toItemLines(raw: unknown[] | null): ItemLine[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((v) => {
+    const o = (v ?? {}) as Record<string, unknown>;
+    const amount = typeof o.amount === 'number' ? o.amount : Number.parseInt(String(o.amount), 10);
+    return {
+      name: typeof o.name === 'string' ? o.name : '',
+      amount: Number.isFinite(amount) ? Math.round(amount) : 0,
+      memberIds: Array.isArray(o.memberIds) ? o.memberIds.filter((x): x is string => typeof x === 'string') : [],
+    };
+  });
+}
+
 function toAllocation(row: ExpenseRow): Allocation {
   switch (row.allocation) {
     case 'all':
@@ -86,6 +118,8 @@ function toAllocation(row: ExpenseRow): Allocation {
       return { type: 'partial', participantIds: row.participant_member_ids ?? [] };
     case 'personal':
       return { type: 'personal', ownerId: row.owner_member_id! };
+    case 'items':
+      return { type: 'items', lines: toItemLines(row.item_lines) };
   }
 }
 
@@ -110,6 +144,7 @@ export function toExpense(row: ExpenseRow): Expense {
     originalAmount: row.original_amount != null ? won(row.original_amount) : undefined,
     vendor: row.vendor ?? undefined,
     category: row.category ?? undefined,
+    group: row.group_name ?? undefined,
     productLink: row.product_link ?? undefined,
     receiptImage: row.receipt_path ?? undefined,
     representativeImage: row.representative_image_path ?? undefined,
@@ -166,6 +201,7 @@ export function toExpenseInsert(e: NewExpense): Omit<ExpenseRow, 'id' | 'created
     allocation: a.type,
     participant_member_ids: a.type === 'partial' ? a.participantIds : null,
     owner_member_id: a.type === 'personal' ? a.ownerId : null,
+    item_lines: a.type === 'items' ? a.lines : null,
     adjustment_kind: e.adjustment?.kind ?? null,
     adjustment_target_id: e.adjustment?.targetExpenseId ?? null,
     adjustment_reason: e.adjustment?.reason ?? null,
@@ -173,6 +209,7 @@ export function toExpenseInsert(e: NewExpense): Omit<ExpenseRow, 'id' | 'created
     original_amount: e.originalAmount ?? null,
     vendor: e.vendor ?? null,
     category: e.category ?? null,
+    group_name: e.group?.trim() || null,
     product_link: e.productLink ?? null,
     receipt_path: e.receiptImage ?? null,
     representative_image_path: e.representativeImage ?? null,

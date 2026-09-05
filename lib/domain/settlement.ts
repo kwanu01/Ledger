@@ -14,6 +14,7 @@ import type {
   Expense,
   ExpenseId,
   ExpenseBreakdown,
+  ItemLine,
   Ledger,
   Member,
   MemberBalance,
@@ -39,16 +40,23 @@ import type {
  *
  * 배분받은 사람은 roundingAdjusted = true 로 표시해서
  * UI가 "7,166 (+1)" 처럼 숨기지 않고 드러낼 수 있게 한다. (§23.3 계산은 숨기지 않는다)
+ *
+ * startAt 은 그 1원을 **누구부터** 주느냐다. 기본값 0 — 명단 맨 앞부터다.
+ * 영수증 한 장을 여러 줄로 갈라 적을 때(§10.4)만 줄마다 이 자리를 한 칸씩
+ * 미룬다. 안 그러면 줄이 넷이고 넷 다 나머지가 1원이면 맨 앞사람 혼자
+ * 4원을 더 낸다. 한 줄에서 1원은 반올림이지만, 스무 줄에서 20원은 오류로 보인다.
  */
-export function splitEvenly(amount: number, memberIds: MemberId[]): Share[] {
-  if (memberIds.length === 0) return [];
-  const base = Math.floor(amount / memberIds.length);
-  const remainder = amount - base * memberIds.length;
-  return memberIds.map((memberId, i) => ({
-    memberId,
-    amount: base + (i < remainder ? 1 : 0),
-    roundingAdjusted: i < remainder,
-  }));
+export function splitEvenly(amount: number, memberIds: MemberId[], startAt = 0): Share[] {
+  const n = memberIds.length;
+  if (n === 0) return [];
+  const base = Math.floor(amount / n);
+  // 금액이 음수여도 floor 때문에 나머지는 언제나 0 이상 n 미만이다.
+  const remainder = amount - base * n;
+  const from = ((startAt % n) + n) % n;
+  return memberIds.map((memberId, i) => {
+    const got = ((i - from + n) % n) < remainder;
+    return { memberId, amount: base + (got ? 1 : 0), roundingAdjusted: got };
+  });
 }
 
 /**
@@ -69,15 +77,145 @@ export function bearersOf(expense: Expense): MemberId[] {
     }
     case 'personal':
       return [expense.allocation.ownerId];
+    case 'items': {
+      const touched = new Set<MemberId>();
+      for (const line of expense.allocation.lines) {
+        for (const id of line.memberIds) touched.add(id);
+      }
+      return roster.filter((id) => touched.has(id));
+    }
   }
+}
+
+/**
+ * 영수증 줄들이 성립하는가 (§10.4)
+ *
+ * 여기서 막지 않으면 지분의 합이 금액과 어긋난다. 그러면 정산 화면의
+ * 숫자가 조용히 틀리는데, 장부에서 그것보다 나쁜 일은 없다.
+ *
+ * 맞으면 빈 배열, 틀리면 사람이 읽을 수 있는 이유들을 돌려준다.
+ * 화면에서도 서버에서도 이 함수 하나만 부른다.
+ */
+export function checkItemLines(args: {
+  lines: ItemLine[];
+  total: number;
+  roster: MemberId[];
+}): string[] {
+  const bad: string[] = [];
+  if (args.lines.length === 0) bad.push('항목이 하나도 없습니다.');
+
+  const known = new Set(args.roster);
+  let sum = 0;
+  for (const [i, line] of args.lines.entries()) {
+    sum += line.amount;
+    if (!Number.isInteger(line.amount)) bad.push(`${i + 1}번째 줄의 금액이 정수가 아닙니다.`);
+    if (line.memberIds.length === 0) {
+      bad.push(`'${line.name || `${i + 1}번째 줄`}'을 누가 부담할지 고르지 않았습니다.`);
+    }
+    if (new Set(line.memberIds).size !== line.memberIds.length) {
+      bad.push(`'${line.name || `${i + 1}번째 줄`}'에 같은 사람이 두 번 들어 있습니다.`);
+    }
+    for (const id of line.memberIds) {
+      if (!known.has(id)) bad.push(`'${line.name || `${i + 1}번째 줄`}'에 이 장부의 팀원이 아닌 사람이 있습니다.`);
+    }
+  }
+
+  // 이것이 이 함수의 존재 이유다. 줄의 합과 결제 총액은 반드시 같아야 한다.
+  if (sum !== args.total) {
+    bad.push(`항목 합계(${sum.toLocaleString('ko-KR')})가 결제 금액(${args.total.toLocaleString('ko-KR')})과 다릅니다.`);
+  }
+  return bad;
+}
+
+/**
+ * 이 지출에서 각자가 실제로 부담하는 금액.
+ *
+ * 줄마다 부담자가 다른 지출(items)은 **줄 단위로 나눈 뒤 사람별로 합친다.**
+ * 총액을 한 번에 나누는 것이 아니다 — 그러면 마라탕 값과 배달비가 섞여
+ * 누가 무엇 때문에 얼마를 내는지 되짚을 수 없게 된다.
+ *
+ * 어느 경우에도 지분의 합은 expense.amount 와 정확히 같다.
+ */
+export function sharesOfLines(lines: ItemLine[], roster: MemberId[]): Share[] {
+  const total = new Map<MemberId, number>();
+  const bumped = new Set<MemberId>();
+
+  for (const [i, line] of lines.entries()) {
+    // 명단 순서로 세워야 나머지 1원이 매번 같은 사람에게 간다.
+    const on = roster.filter((id) => line.memberIds.includes(id));
+    // 줄마다 나머지를 받는 자리를 한 칸씩 미룬다.
+    for (const s of splitEvenly(line.amount, on, i)) {
+      total.set(s.memberId, (total.get(s.memberId) ?? 0) + s.amount);
+      if (s.roundingAdjusted) bumped.add(s.memberId);
+    }
+  }
+
+  return roster
+    .filter((id) => total.has(id))
+    .map((id) => ({
+      memberId: id,
+      amount: total.get(id) ?? 0,
+      roundingAdjusted: bumped.has(id),
+    }));
+}
+
+export function sharesOf(expense: Expense): Share[] {
+  const a = expense.allocation;
+  if (a.type !== 'items') return splitEvenly(expense.amount, bearersOf(expense));
+  return sharesOfLines(a.lines, expense.teamMemberIds);
+}
+
+/** 줄마다 누가 얼마를 부담하는지 — 화면에서 "이 항목은 누구 몫"을 보여 줄 때 쓴다. */
+export function lineSharesOf(expense: Expense): { line: ItemLine; shares: Share[] }[] {
+  const a = expense.allocation;
+  if (a.type !== 'items') return [];
+  const roster = expense.teamMemberIds;
+  return a.lines.map((line, i) => ({
+    line,
+    shares: splitEvenly(line.amount, roster.filter((id) => line.memberIds.includes(id)), i),
+  }));
 }
 
 export function breakdownOf(expense: Expense): ExpenseBreakdown {
   return {
     expense,
-    shares: splitEvenly(expense.amount, bearersOf(expense)),
+    shares: sharesOf(expense),
     countsTowardShared: expense.allocation.type !== 'personal',
   };
+}
+
+/**
+ * 줄마다 부담자가 다른 지출을 보정할 때, 그 차액을 줄에 어떻게 나눠 얹는가 (§10.4)
+ *
+ * 보정은 "이 영수증 전체에서 얼마가 달라졌다"를 적는 일이다. 어느 줄이
+ * 달라졌는지는 대개 모른다 — 카드 명세서에는 총액 하나만 찍혀 나온다.
+ *
+ * 그래서 **원래 줄 금액에 비례해서** 나눈다. 5만 원짜리 영수증에서 500원이
+ * 어긋났다면 큰 줄이 더 많이 어긋났다고 보는 것이 자연스럽고, 무엇보다
+ * 특정 한 사람에게 차액을 통째로 떠넘기지 않는다.
+ *
+ * 어느 줄이 얼마나 달라졌는지 아는 경우에는 이 함수를 쓰지 않는다. 그때는
+ * 그 줄만 담은 보정을 적으면 된다.
+ *
+ * 합은 언제나 정확히 diff 다 — 최대 나머지 방식으로 1원까지 맞춘다.
+ */
+export function spreadOverLines(lines: ItemLine[], diff: number): ItemLine[] {
+  if (lines.length === 0) return [];
+
+  const weight = lines.reduce((a, l) => a + Math.abs(l.amount), 0);
+  // 원본 줄이 전부 0원이면 비율이랄 것이 없다. 첫 줄에 얹는다.
+  if (weight === 0) return lines.map((l, i) => ({ ...l, amount: i === 0 ? diff : 0 }));
+
+  const raw = lines.map((l) => (diff * Math.abs(l.amount)) / weight);
+  const out = raw.map((x) => Math.floor(x));
+  const left = diff - out.reduce((a, b) => a + b, 0);
+  // 소수 부분이 큰 줄부터 1원씩. 같으면 앞줄부터 — 매번 같은 결과가 나와야 한다.
+  const order = raw
+    .map((x, i) => ({ i, frac: x - Math.floor(x) }))
+    .sort((a, b) => b.frac - a.frac || a.i - b.i);
+  for (let k = 0; k < left; k += 1) out[order[k % order.length].i] += 1;
+
+  return lines.map((l, i) => ({ ...l, amount: out[i] }));
 }
 
 /** 이 지출을 보정하거나 환불한 항목들 */
@@ -222,8 +360,16 @@ export function settledExpenseIds(ledger: Ledger): Set<string> {
  */
 export function needsSettling(expense: Expense): boolean {
   const a = expense.allocation;
-  if (a.type !== 'personal') return true;
-  return a.ownerId !== expense.payerId;
+  if (a.type === 'personal') return a.ownerId !== expense.payerId;
+  /*
+   * 줄마다 부담자가 다른 지출도 같은 이유로 걸러진다. 혼자 시켜 먹고
+   * 혼자 결제한 것을 줄까지 갈라 적었다면 — 드물지만 있을 수 있다 —
+   * 오갈 돈은 여전히 없다. 규칙은 하나다: 결제자 말고 부담자가 있는가.
+   */
+  if (a.type === 'items') {
+    return sharesOf(expense).some((s) => s.memberId !== expense.payerId && s.amount !== 0);
+  }
+  return true;
 }
 
 /** 아직 정산하지 않았고, 정산할 것이 남아 있는 지출 */
@@ -281,6 +427,22 @@ export function currentRoster(ledger: Ledger): MemberId[] {
   return ledger.members.filter((m) => m.active !== false).map((m) => m.id);
 }
 
+/**
+ * 이 장부에 이미 쓰인 묶음 이름들 (§11.3)
+ *
+ * 처음 쓰인 순서를 지킨다. 가나다순으로 세우면 '1차 MT' 다음에 '2차 MT'가
+ * 아니라 다른 것이 끼어들 수 있고, 무엇보다 **매번 순서가 바뀌면** 고르는
+ * 자리에서 손이 기억한 위치가 소용없어진다.
+ */
+export function groupsOf(ledger: Ledger): string[] {
+  const seen: string[] = [];
+  for (const e of [...ledger.expenses].sort(byEntryOrder)) {
+    const g = e.group?.trim();
+    if (g && !seen.includes(g)) seen.push(g);
+  }
+  return seen;
+}
+
 /** 단일 항목 정산 (§15) — 전체 누적 정산과 별개로 제공 */
 export function settleSingle(expense: Expense, members: Member[]): SettlementResult {
   return computeSettlement([expense], members);
@@ -312,6 +474,8 @@ export function allocationLabel(expense: Expense, members: Member[]): string {
       return `일부 ${a.participantIds.length}인`;
     case 'personal':
       return `${nameOf(members, a.ownerId)} 개인`;
+    case 'items':
+      return `항목별 ${a.lines.length}줄`;
   }
 }
 

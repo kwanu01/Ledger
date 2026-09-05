@@ -21,18 +21,43 @@ export type Member = {
 };
 
 /**
+ * 영수증 한 장 안의 한 줄 (§10.4)
+ *
+ * 같이 배달을 시키고 한 사람이 결제하면, 영수증 한 장 안에서 부담이 갈린다.
+ * 마라탕은 시킨 사람이, 배달비는 다 같이. 이 타입은 그 한 줄이다.
+ *
+ * memberIds 가 여럿이면 그 줄 안에서 다시 균등하게 나뉜다. 배달비는
+ * 팀원 전원이 들어 있는 줄일 뿐, 특별한 종류의 줄이 아니다 — 그래야
+ * "배달비도 두 명만 부담" 같은 경우가 예외 없이 그냥 된다.
+ */
+export type ItemLine = {
+  /** 영수증에 적힌 그대로의 품목 이름 */
+  name: string;
+  /** 장부 통화의 최소 단위 정수. 할인 줄은 음수일 수 있다. */
+  amount: number;
+  /** 이 줄을 부담할 사람. 비어 있으면 안 된다. */
+  memberIds: MemberId[];
+};
+
+/**
  * 부담 방식 (§10)
  * - all      전체 팀 공동 부담 (기본값)
  * - partial  일부 인원만 부담
  * - personal 개인 귀속 — 프로젝트 총지출에는 포함, 공동 정산 대상 금액에서는 제외
+ * - items    영수증 줄마다 부담자가 다름 (§10.4)
  *
  * 개인 귀속이라도 "결제자 ≠ 귀속자"인 경우에는 귀속자가 결제자에게 갚아야 하므로
  * balance 계산에는 반영된다. 결제자 = 귀속자이면 자연히 상계되어 영향이 0이 된다.
+ *
+ * items 는 앞의 셋을 전부 흉내 낼 수 있지만 셋을 대체하지 않는다. 한 장부의
+ * 대부분은 여전히 "다 같이 낸 것"이고, 그 줄까지 품목으로 쪼개 적게 하면
+ * 적는 일이 무거워진다. 갈라야 할 때만 가른다.
  */
 export type Allocation =
   | { type: 'all' }
   | { type: 'partial'; participantIds: MemberId[] }
-  | { type: 'personal'; ownerId: MemberId };
+  | { type: 'personal'; ownerId: MemberId }
+  | { type: 'items'; lines: ItemLine[] };
 
 /**
  * 보정과 환불은 원본을 고치지 않고 별도 Expense로 기록한다.
@@ -71,6 +96,13 @@ export type Expense = {
 
   vendor?: string;
   category?: string;
+  /**
+   * 지출 묶음 (§11.3) — '1차 MT', '중간발표' 같은 덩어리의 이름.
+   *
+   * 계산에 한 푼도 들어가지 않는 이름표다. 장부를 접어 보고, 정산할 것을
+   * 골라 담는 기준으로만 쓴다. 없으면 undefined.
+   */
+  group?: string;
   allocation: Allocation;
   productLink?: string;
   receiptImage?: string; // 증빙 (§9)

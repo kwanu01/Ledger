@@ -10,6 +10,9 @@
 import {
   splitEvenly as E_splitEvenly,
   effectiveAmount as E_effectiveAmount,
+  checkItemLines as E_checkItemLines,
+  needsSettling as E_needsSettling,
+  spreadOverLines as E_spreadOverLines,
   allocationLabel,
   breakdownOf,
   computeSettlement,
@@ -20,7 +23,8 @@ import {
   won,
 } from '../lib/domain/settlement.ts';
 import { buildLedger, members } from '../lib/domain/seed.ts';
-import type { SettlementResult } from '../lib/domain/types.ts';
+import { recallFor, recallSeed, categoriesOf } from '../lib/domain/recall.ts';
+import type { Expense, SettlementResult } from '../lib/domain/types.ts';
 
 const ledger = buildLedger();
 const pad = (s: string, n: number) => s + ' '.repeat(Math.max(0, n - [...s].reduce((w, c) => w + (c.charCodeAt(0) > 0x2e80 ? 2 : 1), 0)));
@@ -240,6 +244,174 @@ const continuity = members.every((m) => bal(first, m.id) + bal(second, m.id) ===
 check('사이클별 balance의 합 = 전체 기간 balance (누적 모델 연속성)', continuity);
 check('확정된 Settlement #01 snapshot은 이후 지출에 영향받지 않는다',
   ledger.settlements[0].snapshot.expenseIds.length === 12 && ledger.settlements[0].snapshot.totalAmount === first.totalAmount);
+
+/* --- 항목별 청구 (§10.4) --------------------------------------------- */
+/*
+ * 배달 한 건. 넷이 시켰고 관우가 결제했다.
+ *
+ * 이 지출은 seed 에 넣지 않고 여기서 세운다. 위의 불변식들이 22건이라는
+ * 숫자에 기대고 있어서다. 검사할 것은 장부의 모양이 아니라 계산 규칙이다.
+ */
+console.log('\n[항목별 청구]');
+
+const delivery: Expense = {
+  id: 'x01',
+  ledgerId: ledger.id,
+  date: '2026-10-14',
+  title: '배달(마라탕 외 3건)',
+  // 24,000 + 13,500 + 9,500 + 12,000 + 4,000 - 3,000
+  amount: 60000,
+  payerId: 'kw',
+  teamMemberIds: ['kw', 'hw', 'sj', 'yr'],
+  allocation: {
+    type: 'items',
+    lines: [
+      { name: '마라탕 (중간맛)', amount: 24000, memberIds: ['kw'] },
+      { name: '꿔바로우', amount: 13500, memberIds: ['hw', 'sj'] }, // 둘이 나눠 먹었다
+      { name: '볶음밥', amount: 9500, memberIds: ['sj'] },
+      { name: '탕수육 (소)', amount: 12000, memberIds: ['yr'] },
+      { name: '배달팁', amount: 4000, memberIds: ['kw', 'hw', 'sj', 'yr'] },
+      { name: '첫 주문 할인', amount: -3000, memberIds: ['kw', 'hw', 'sj', 'yr'] },
+    ],
+  },
+  createdAt: '2026-10-14T19:40:00Z',
+  createdBy: 'kw',
+};
+
+const dShares = breakdownOf(delivery).shares;
+check('항목별 지출도 지분의 합 = 금액', dShares.reduce((a, s) => a + s.amount, 0) === 60000,
+  dShares.map((s) => `${nameOf(members, s.memberId)} ${s.amount.toLocaleString('ko-KR')}`).join(' · '));
+
+/* 배달비는 나눠 내고 시킨 것은 각자 낸다 — 이 기능의 존재 이유다. */
+const owe = (id: string) => dShares.find((s) => s.memberId === id)?.amount ?? 0;
+check('시킨 사람에게만 그 항목이 간다 (유란 = 탕수육 + 배달팁 - 할인)',
+  owe('yr') === 12000 + 1000 - 750, `${won(owe('yr'))}`);
+check('한 항목을 둘이 나눠 시키면 그 둘만 반씩 (꿔바로우 13,500/2)',
+  owe('hw') === 6750 + 1000 - 750, `현우 ${won(owe('hw'))}`);
+check('아무것도 안 시킨 사람은 배달비 몫만 진다',
+  E_splitEvenly(4000, ['a', 'b', 'c', 'd']).every((s) => s.amount === 1000));
+
+/* 줄이 여럿이면 나머지 1원이 한 사람에게 몰리지 않아야 한다. */
+const odd: Expense = {
+  ...delivery,
+  id: 'x02',
+  amount: 4,
+  allocation: {
+    type: 'items',
+    lines: [1, 1, 1, 1].map((n, i) => ({
+      name: `줄 ${i + 1}`,
+      amount: n,
+      memberIds: ['kw', 'hw', 'sj', 'yr'],
+    })),
+  },
+};
+const oddShares = breakdownOf(odd).shares;
+check('줄마다 나머지 1원을 받는 사람이 돌아간다 (네 줄 × 1원 → 네 사람 1원씩)',
+  oddShares.length === 4 && oddShares.every((s) => s.amount === 1),
+  oddShares.map((s) => s.amount).join(' · '));
+
+/* 정산까지 통과하는가 */
+const dResult = settleSingle(delivery, members);
+check('항목별 지출 하나로 정산해도 balance 총합 = 0',
+  dResult.balances.reduce((a, b) => a + b.netBalance, 0) === 0);
+check('결제자는 자기 몫을 뺀 만큼만 받는다',
+  dResult.balances.find((b) => b.memberId === 'kw')!.netBalance === 60000 - owe('kw'),
+  `관우 ${won(dResult.balances.find((b) => b.memberId === 'kw')!.netBalance)}`);
+const dOut = new Map<string, number>();
+for (const t of dResult.transfers) {
+  dOut.set(t.fromMemberId, (dOut.get(t.fromMemberId) ?? 0) + t.amount);
+  dOut.set(t.toMemberId, (dOut.get(t.toMemberId) ?? 0) - t.amount);
+}
+check('송금을 모두 실행하면 전원 balance = 0',
+  dResult.balances.every((b) => (dOut.get(b.memberId) ?? 0) === -b.netBalance),
+  `송금 ${dResult.transfers.length}회`);
+
+/* 혼자 시키고 혼자 결제한 것은 정산할 것이 없다 */
+const solo: Expense = {
+  ...delivery,
+  id: 'x03',
+  amount: 24000,
+  allocation: { type: 'items', lines: [{ name: '마라탕', amount: 24000, memberIds: ['kw'] }] },
+};
+check('혼자 시키고 혼자 결제한 항목별 지출은 정산 대상이 아니다', !E_needsSettling(solo));
+check('한 사람이라도 남이 끼면 정산 대상이다', E_needsSettling(delivery));
+
+/* 검사 자체가 옳은가 — 합이 어긋난 줄은 들어오지 못해야 한다 */
+const roster = ['kw', 'hw', 'sj', 'yr'];
+check('줄의 합이 금액과 다르면 막는다',
+  E_checkItemLines({ lines: [{ name: 'a', amount: 100, memberIds: ['kw'] }], total: 200, roster }).length > 0);
+check('부담자가 없는 줄은 막는다',
+  E_checkItemLines({ lines: [{ name: 'a', amount: 100, memberIds: [] }], total: 100, roster }).length > 0);
+check('명단 밖 사람이 섞이면 막는다',
+  E_checkItemLines({ lines: [{ name: 'a', amount: 100, memberIds: ['zz'] }], total: 100, roster }).length > 0);
+check('제대로 된 줄은 통과한다',
+  E_checkItemLines({ lines: delivery.allocation.type === 'items' ? delivery.allocation.lines : [], total: 60000, roster }).length === 0);
+
+/* 보정 차액을 줄에 나눠 얹는 규칙 */
+const lines = delivery.allocation.type === 'items' ? delivery.allocation.lines : [];
+for (const diff of [500, -500, 1, -1, 9999]) {
+  const spread = E_spreadOverLines(lines, diff);
+  check(`보정 차액 ${diff.toLocaleString('ko-KR')}을 줄에 나눠도 합은 정확히 그 값`,
+    spread.reduce((a, l) => a + l.amount, 0) === diff,
+    spread.map((l) => l.amount).join(' · '));
+}
+check('보정은 줄의 이름과 부담자를 그대로 물려받는다',
+  E_spreadOverLines(lines, 500).every((l, i) =>
+    l.name === lines[i].name && l.memberIds.join() === lines[i].memberIds.join()));
+
+/* --- 장부가 스스로 아는 것 (§11.4) ----------------------------------- */
+/*
+ * 되풀이되는 값을 찾아내는 규칙. AI 를 부르지 않으므로 여기서 그대로 검증된다.
+ * 이 검사가 지키는 것은 하나다 — **근거가 없으면 제안하지 않는다.**
+ */
+console.log('\n[장부가 아는 것]');
+
+const seed = recallSeed(ledger);
+const seen = new Map<string, number>();
+for (const e of ledger.expenses) {
+  const v = e.vendor?.trim();
+  if (v && !e.adjustment) seen.set(v, (seen.get(v) ?? 0) + 1);
+}
+const twice = [...seen.entries()].filter(([, n]) => n >= 2).map(([v]) => v);
+const once = [...seen.entries()].filter(([, n]) => n === 1).map(([v]) => v);
+
+check('한 번뿐인 판매처는 제안하지 않는다 (한 번은 우연이다)',
+  once.every((v) => recallFor(seed, { vendor: v }) === null),
+  `${once.length}곳 검사`);
+check('두 번 이상인 판매처는 되짚어 본다',
+  twice.length === 0 || twice.every((v) => recallFor(seed, { vendor: v }) !== null),
+  `${twice.length}곳`);
+check('아무 실마리도 없으면 아무 말도 하지 않는다',
+  recallFor(seed, {}) === null && recallFor(seed, { vendor: '  ' }) === null);
+check('없는 판매처를 물으면 지어내지 않는다',
+  recallFor(seed, { vendor: '있을 리 없는 가게 이름' }) === null);
+
+/* 세는 것이 맞는가 — 만들어 넣은 기록으로 확인한다 */
+const madeUp = [
+  { title: '폼보드', vendor: '호미화방', category: '재료비', allocation: { type: 'all' as const }, payerId: 'kw' },
+  { title: '우드락', vendor: '호미화방', category: '재료비', allocation: { type: 'all' as const }, payerId: 'hw' },
+  { title: '아크릴', vendor: '호미화방', category: '재료비', allocation: { type: 'personal' as const, ownerId: 'sj' }, payerId: 'sj' },
+];
+const r = recallFor(madeUp, { vendor: '호미화방' });
+check('세 번 중 세 번이면 그렇게 말한다',
+  r?.category?.times === 3 && r?.category?.of === 3 && r.category.value === '재료비',
+  `${r?.category?.times}/${r?.category?.of} ${r?.category?.value}`);
+check('갈리면 많은 쪽을 말하되 몇 번 중 몇 번인지 함께 준다',
+  r?.allocation?.times === 2 && r?.allocation?.of === 3 && r.allocation.value.type === 'all',
+  `${r?.allocation?.times}/${r?.allocation?.of}`);
+check('띄어쓰기와 대소문자가 달라도 같은 가게로 본다',
+  recallFor(madeUp, { vendor: ' 호미 화방 ' })?.category?.value === '재료비');
+check('보정·환불 줄은 되짚는 데 세지 않는다',
+  recallFor([...madeUp, { ...madeUp[0], category: '식비', isAdjustment: true }],
+    { vendor: '호미화방' })?.category?.of === 3);
+check('판매처가 없으면 항목 이름으로 되짚는다',
+  recallFor(
+    [{ ...madeUp[0], vendor: undefined }, { ...madeUp[1], title: '폼보드', vendor: undefined }],
+    { title: '폼보드' },
+  )?.category?.value === '재료비');
+check('쓰던 분류를 많이 쓴 순으로 돌려준다',
+  categoriesOf(ledger).length > 0 && categoriesOf(ledger).every((c) => typeof c === 'string'),
+  categoriesOf(ledger).slice(0, 4).join(' · '));
 
 rule();
 console.log(failures === 0 ? `\n모든 불변식 통과 — 이 장부는 검산 가능하다.\n` : `\n실패 ${failures}건\n`);

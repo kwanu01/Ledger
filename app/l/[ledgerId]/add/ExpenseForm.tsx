@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { recordExpense } from '../../../actions/ledger.ts';
+import { recordExpense, recordExpenses } from '../../../actions/ledger.ts';
+import { MAX_BATCH } from '../../../../lib/limits.ts';
 import { attachImage } from '../../../actions/images.ts';
-import { analyzeReceipt } from '../../../actions/receipt.ts';
+import { analyzeReceipt, analyzeReceiptLines, jotExpense } from '../../../actions/receipt.ts';
 import { lookUpRate } from '../../../actions/fx.ts';
 import { splitEvenly } from '../../../../lib/domain/settlement.ts';
+import { recallFor, type Recallable } from '../../../../lib/domain/recall.ts';
 import { translator } from '../../../../lib/i18n.ts';
 import {
   CURRENCIES,
@@ -18,6 +20,8 @@ import {
   type Locale,
 } from '../../../../lib/domain/money.ts';
 import type { Allocation, Member } from '../../../../lib/domain/types.ts';
+import ItemLines, { newDraft, toItemLines, type Draft } from './ItemLines.tsx';
+import BatchRows, { batchSum, ready as rowReady, type Row } from './BatchRows.tsx';
 import { shrinkImage, tooBigToSend } from '../../../../lib/shrink.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
 
@@ -35,6 +39,10 @@ export default function ExpenseForm({
   ledgerId,
   members,
   roster,
+  groups,
+  categories,
+  vendors,
+  past,
   currency,
   meId,
   today,
@@ -43,6 +51,13 @@ export default function ExpenseForm({
   ledgerId: string;
   members: Member[];
   roster: string[];
+  /** 이 장부에 이미 쓰인 묶음 이름들 (§11.3). 고르는 목록으로 쓴다. */
+  groups: string[];
+  /** 이미 쓴 분류·판매처. 자유 입력 칸의 갈라짐을 줄인다 (§11.4). */
+  categories: string[];
+  vendors: string[];
+  /** 되돌아볼 지난 기록. 세는 데 필요한 칸만 온다 (lib/domain/recall.ts). */
+  past: Recallable[];
   currency: CurrencyCode;
   meId: string;
   today: string;
@@ -52,6 +67,9 @@ export default function ExpenseForm({
   // 경고는 도우미 말풍선 한 자리로 모인다(app/helper).
   const { say } = useHelper();
   const T = translator(lang);
+  const groupListId = useId();
+  const catListId = useId();
+  const vendorListId = useId();
 
   const [title, setTitle] = useState('');
   const [curr, setCurr] = useState<CurrencyCode>(currency);
@@ -60,10 +78,20 @@ export default function ExpenseForm({
   const [date, setDate] = useState(today);
   const [vendor, setVendor] = useState('');
   const [category, setCategory] = useState('');
+  const [group, setGroup] = useState('');
   const [payerId, setPayerId] = useState(meId);
   const [kind, setKind] = useState<Allocation['type']>('all');
   const [participants, setParticipants] = useState<string[]>(roster);
   const [ownerId, setOwnerId] = useState(meId);
+  /* 항목별 청구 (§10.4) — 영수증 한 장 안에서 줄마다 부담자가 다를 때 */
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [readingLines, setReadingLines] = useState(false);
+  /* 한 줄로 적기 (§11.4) — 사진도 폼도 아닌 세 번째 문 */
+  const [line, setLine] = useState('');
+  const [jotting, setJotting] = useState(false);
+  /* 몰아서 적기 (§11.4) — 사진 여러 장을 한꺼번에 던졌을 때 */
+  const [rows, setRows] = useState<Row[]>([]);
+  const [big, setBig] = useState<string | null>(null);
   const [productLink, setProductLink] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -81,7 +109,7 @@ export default function ExpenseForm({
   const [fx, setFx] = useState<{ rate: number; on: string } | null>(null);
 
   // 사진 먼저, 폼은 그다음. 손으로 적겠다고 하면 곧장 빈 폼으로 간다.
-  const [step, setStep] = useState<'photo' | 'reading' | 'form'>('photo');
+  const [step, setStep] = useState<'photo' | 'reading' | 'batch' | 'form'>('photo');
   /** 읽기가 길어지고 있는가. 잠자코 기다리게 두지 않으려고 둔다. */
   const [slow, setSlow] = useState(false);
   const [thumb, setThumb] = useState<string | null>(null);
@@ -145,6 +173,118 @@ export default function ExpenseForm({
   const SLOW_MS = 6000;
   /** 몇 번째 읽기인가. 사람이 먼저 나가 버린 뒤 도착한 대답을 버리는 데 쓴다. */
   const runId = useRef(0);
+
+  /*
+   * 사진 여러 장 (§11.4)
+   *
+   * 한 장이면 지금까지처럼 읽어서 폼으로 간다. 두 장부터는 다른 화면이다 —
+   * 폼 한 벌에 열 장을 담을 수 없기 때문이다.
+   *
+   * 읽기는 **한 장씩 차례로** 한다. 열 장을 동시에 던지면 서버 액션 열 개가
+   * 한꺼번에 뜨고, 월 상한 검사도 서로를 못 본 채 열 번 통과한다. 차례로
+   * 읽으면 상한이 상한답게 걸리고, 화면은 몇 장째인지 말해 줄 수 있다.
+   */
+  async function takeMany(files: File[]) {
+    say('');
+    const picked = files.slice(0, MAX_BATCH);
+    if (files.length > MAX_BATCH) say(T('batchSaveAll', { n: MAX_BATCH }));
+
+    const seeded: Row[] = picked.map((f, i) => ({
+      key: `b${Date.now()}-${i}`,
+      file: f,
+      thumb: URL.createObjectURL(f),
+      reading: true,
+      title: '',
+      amount: '',
+      date: today,
+      payerId: meId,
+    }));
+    setRows(seeded);
+    setStep('batch');
+
+    for (const [i, row] of seeded.entries()) {
+      const small = await shrinkImage(row.file);
+      if (tooBigToSend(small)) {
+        setRows((prev) =>
+          prev.map((r) => (r.key === row.key ? { ...r, reading: false, failed: T('photoTooBig') } : r)),
+        );
+        continue;
+      }
+
+      const fd = new FormData();
+      fd.set('ledgerId', ledgerId);
+      fd.set('image', small);
+      const r = await analyzeReceipt(fd);
+
+      setRows((prev) =>
+        prev.map((x) => {
+          if (x.key !== row.key) return x;
+          // 줄인 사진으로 갈아 둔다. 저장할 때 붙는 것도 이 사진이다.
+          const base = { ...x, file: small, reading: false };
+          if (!r.ok) return { ...base, failed: r.message };
+          return {
+            ...base,
+            title: r.value.title,
+            amount: formatNumber(r.value.amount, currency, lang),
+            date: r.value.date ?? x.date,
+            vendor: r.value.vendor,
+            category: r.value.category,
+          };
+        }),
+      );
+      // 화면이 몇 장째인지 말한다. 열 장이면 꽤 걸린다.
+      if (i < seeded.length - 1) say(T('batchReading', { done: i + 1, n: seeded.length }));
+    }
+    say(T('batchTitle', { n: picked.length }));
+  }
+
+  /** 훑은 줄들을 한꺼번에 적는다. 사진은 줄이 생긴 뒤에 붙는다. */
+  async function saveBatch() {
+    const keep = rows.filter((r) => rowReady(r, currency));
+    if (keep.length === 0) return say(T('batchNeed'));
+
+    setBusy(true);
+    const r = await recordExpenses({
+      ledgerId,
+      rows: keep.map((x) => ({
+        date: x.date,
+        title: x.title.trim(),
+        amount: parseMoney(x.amount, currency),
+        payerId: x.payerId,
+        allocation: { type: 'all' as const },
+        vendor: x.vendor,
+        category: x.category,
+      })),
+    });
+    if (!r.ok) {
+      setBusy(false);
+      return say(r.message);
+    }
+
+    /*
+     * 사진은 줄이 적힌 뒤에 붙는다. 붙이다 실패해도 줄은 남는다 —
+     * 사진이 없는 줄은 고쳐 붙일 수 있지만, 줄이 없으면 아무것도 없다.
+     */
+    for (const { at, id } of r.value.saved) {
+      const src = keep[at];
+      if (!src) continue;
+      const fd = new FormData();
+      fd.set('ledgerId', ledgerId);
+      fd.set('expenseId', id);
+      fd.set('kind', 'receipt');
+      fd.set('image', src.file);
+      await attachImage(fd).catch(() => {});
+    }
+
+    setBusy(false);
+    const bad = r.value.failed.length;
+    say(
+      bad === 0
+        ? T('batchDone', { n: r.value.saved.length })
+        : T('batchSome', { ok: r.value.saved.length, bad }),
+    );
+    router.push(`/l/${ledgerId}/book`);
+  }
 
   async function analyze(original: File) {
     const mine = ++runId.current;
@@ -288,6 +428,152 @@ export default function ExpenseForm({
     );
   }
 
+  /*
+   * 영수증을 줄 단위로 읽는다 (§10.4)
+   *
+   * 처음 사진을 올릴 때는 하지 않는다. 총액 하나를 읽는 것보다 오래 걸리고
+   * 값도 더 나가는데, 항목별로 나눌 영수증은 전체의 일부다. 사람이
+   * "항목별로 나눠 청구"를 고른 뒤에, 이미 손에 들고 있는 사진으로 부른다.
+   *
+   * 읽어 온 줄을 기존 줄에 **덧붙이지 않고 갈아 끼운다.** 두 번 눌렀을 때
+   * 줄이 두 벌이 되면 합계가 두 배가 되는데, 그건 눈에 잘 띄지 않는다.
+   */
+  const LINE_WAIT_MS = 30000;
+
+  /*
+   * 한 줄로 적기 (§11.4)
+   *
+   * 사진도 폼도 아닌 세 번째 문이다. "어제 호미화방에서 폼보드 2만7천,
+   * 다 같이" 한 줄이면 칸이 채워진다.
+   *
+   * **저장하지 않는다.** 채워 넣고 폼으로 넘길 뿐이고, 못 읽은 칸은
+   * 무엇이 비었는지 말한다. 짐작해서 채운 값은 확인할 방법이 없어서
+   * 빈칸보다 나쁘다 — 이 자리의 규칙은 영수증 읽기와 같다(§7).
+   */
+  async function writeLine() {
+    const text = line.trim();
+    if (!text) return say(T('jotEmpty'));
+
+    say('');
+    setJotting(true);
+    const r = await jotExpense({ ledgerId, text });
+    setJotting(false);
+    if (!r.ok) return say(r.message);
+
+    const v = r.value;
+    setTitle(v.title);
+    if (v.amount) setAmount(formatNumber(v.amount, currency, lang));
+    if (v.date) setDate(v.date);
+    if (v.vendor) setVendor(v.vendor);
+    if (v.category) setCategory(v.category);
+    if (v.payerId) setPayerId(v.payerId);
+    if (v.allocation) {
+      setKind(v.allocation.type);
+      if (v.allocation.type === 'partial') setParticipants(v.allocation.participantIds);
+      if (v.allocation.type === 'personal') setOwnerId(v.allocation.ownerId);
+    }
+
+    /* 어느 칸이 AI 가 채운 것인지 표시해 둔다. 사람이 무엇을 확인해야 하는지
+       알 수 있어야 하고, 그건 영수증으로 읽었을 때와 같은 규칙이다. */
+    setRead(
+      (['title', 'amount', 'date', 'vendor', 'category'] as const).filter(
+        (k) => v[k] !== undefined && v[k] !== '',
+      ),
+    );
+    setStep('form');
+
+    const what = v.missing
+      .filter((m) => ['amount', 'payer', 'bearers'].includes(m))
+      .map((m) =>
+        T(m === 'amount' ? 'jotMissAmount' : m === 'payer' ? 'jotMissPayer' : 'jotMissBearers'),
+      );
+    say(what.length > 0 ? T('jotMissing', { what: what.join(', ') }) : T('jotFilled'));
+  }
+
+  /*
+   * 장부가 이미 아는 것 (§11.4)
+   *
+   * 판매처(없으면 항목 이름)로 지난 기록을 되짚어, 되풀이된 값을 찾는다.
+   * 전부 순수 함수라 서버를 부르지 않는다 — 세는 일에 모델을 쓸 이유가 없다.
+   *
+   * 값을 몰래 채우지 않고 **몇 번 중 몇 번이었는지와 함께** 제안한다.
+   * 조용히 채워진 '재료비'는 확인할 방법이 없고, 확인할 수 없는 값은
+   * 없는 값보다 나쁘다.
+   */
+  const recall = recallFor(past, { vendor, title });
+
+  /*
+   * 제안에 붙일 짧은 이름.
+   *
+   * 장부의 표에서는 '일부 2인'으로 적는다(lib/labels.ts) — 칸이 좁고 이름은
+   * 옆 칸에 이미 있어서다. 여기는 다르다. "지난 3번 중 3번 일부 2인"은
+   * 어느 둘인지 말해 주지 않아서 누를지 말지를 정할 수가 없다. 이름을 적는다.
+   */
+  const whoName = (id: string) => members.find((m) => m.id === id)?.name ?? id;
+  function bearsSay(a: Allocation): string {
+    if (a.type === 'all') return T('wholeTeam', { n: roster.length });
+    if (a.type === 'partial') return a.participantIds.map(whoName).join(' · ');
+    if (a.type === 'personal') return T('allocPersonal', { who: whoName(a.ownerId) });
+    return '';
+  }
+
+  async function pullLines() {
+    say('');
+    if (!photo) return say(T('needPhotoFirst'));
+
+    setReadingLines(true);
+    const fd = new FormData();
+    fd.set('ledgerId', ledgerId);
+    fd.set('image', photo);
+
+    const r = await Promise.race([
+      analyzeReceiptLines(fd),
+      new Promise<null>((done) => setTimeout(() => done(null), LINE_WAIT_MS)),
+    ]);
+    setReadingLines(false);
+
+    if (r === null) return say(T('linesGaveUp'));
+    if (!r.ok) return say(r.message);
+
+    const v = r.value;
+
+    /*
+     * 다른 통화로 적힌 영수증은 줄을 채우지 않는다.
+     *
+     * 장부에 적히는 금액은 언제나 **실제로 청구된 장부 통화 금액**이다
+     * (§21.14). 환율은 우리가 계산하지 않는다. 그러니 엔화로 읽어 온
+     * 줄들을 원화 장부에 그대로 채워 넣으면, 합계는 맞아 보이는데
+     * 장부의 숫자는 통째로 틀린다. 조용히 틀리는 것이 가장 나쁘다.
+     */
+    if (v.currency !== currency) {
+      return say(T('linesForeign', { code: v.currency, book: currency }));
+    }
+
+    setDrafts(
+      v.lines.map((l) =>
+        newDraft({
+          // 수량이 여럿이면 이름에 남긴다. 그래야 누가 시킨 것인지 알아본다.
+          name: l.qty > 1 ? `${l.name} ×${l.qty}` : l.name,
+          amount: formatNumber(l.amount, currency, lang),
+          // 배달비·수수료는 처음부터 모두로 둔다. 대개 그것이 맞고,
+          // 아니면 단추 한 번으로 푼다. 시킨 것은 비워 둔다 — 우리는 모른다.
+          memberIds: l.kind === 'item' ? [] : [...roster],
+        }),
+      ),
+    );
+
+    /* 읽어 온 총액으로 금액 칸도 채운다. 여기까지 왔으면 그 금액은 장부
+       통화이므로, 장부 통화를 담는 칸에 넣는다 — 해외 결제 중이면 청구액
+       칸이 그 자리다. 줄의 합과 맞는지는 화면이 늘 보여 준다. */
+    if (v.total > 0) (foreign ? setCharged : setAmount)(formatNumber(v.total, currency, lang));
+    if (v.vendor && !vendor) setVendor(v.vendor);
+    if (v.date && !read.includes('date')) setDate(v.date);
+    if (v.title && !title.trim()) setTitle(v.title);
+
+    say(T(v.balanced ? 'linesRead' : 'linesReadOff', { n: v.lines.length }));
+  }
+
+
   async function save() {
     say('');
     if (!title.trim()) return say(T('needTitle'));
@@ -296,12 +582,36 @@ export default function ExpenseForm({
       return say(T('needBearers'));
     }
 
+    let lines: ReturnType<typeof toItemLines> = [];
+    if (kind === 'items') {
+      /*
+       * 여기서 세 가지를 본다. 서버도 DB도 같은 것을 본다(§10.4).
+       * 세 겹으로 두는 이유는, 어긋난 줄이 통과하면 정산 화면의 숫자가
+       * 조용히 틀리기 때문이다. 틀린 채로 송금까지 끝나면 되돌릴 길이 없다.
+       */
+      lines = toItemLines(drafts, currency).filter((l) => l.name !== '' || l.amount !== 0);
+      if (lines.length === 0) return say(T('needLines'));
+      if (lines.some((l) => l.memberIds.length === 0)) return say(T('needLineWho'));
+      const sum = lines.reduce((a, l) => a + l.amount, 0);
+      if (sum !== booked) {
+        return say(
+          T('sumOff', {
+            gap: `${sum - booked > 0 ? '+' : '−'}${formatNumber(Math.abs(sum - booked), currency, lang)}`,
+          }),
+        );
+      }
+      // 이름이 없는 줄은 DB 가 막는다. 여기서 자리 이름을 붙여 준다.
+      lines = lines.map((l, i) => ({ ...l, name: l.name || `${T('newLine')} ${i + 1}` }));
+    }
+
     const allocation: Allocation =
       kind === 'all'
         ? { type: 'all' }
         : kind === 'partial'
           ? { type: 'partial', participantIds: participants }
-          : { type: 'personal', ownerId };
+          : kind === 'items'
+            ? { type: 'items', lines }
+            : { type: 'personal', ownerId };
 
     setBusy(true);
     const r = await recordExpense({
@@ -313,6 +623,7 @@ export default function ExpenseForm({
       allocation,
       vendor: vendor.trim() || undefined,
       category: category.trim() || undefined,
+      group: group.trim() || undefined,
       productLink: productLink.trim() || undefined,
       note: note.trim() || undefined,
     });
@@ -371,20 +682,26 @@ export default function ExpenseForm({
           onDrop={(e) => {
             e.preventDefault();
             setDragging(false);
-            const f = [...e.dataTransfer.files].find((x) => x.type.startsWith('image/'));
-            if (f) analyze(f);
+            const got = [...e.dataTransfer.files].filter((x) => x.type.startsWith('image/'));
+            if (got.length === 1) analyze(got[0]);
+            else if (got.length > 1) takeMany(got);
           }}
         >
           <label className="act primary">
             {T('pickPhoto')}
+            {/* 여러 장을 한꺼번에 고를 수 있다. 한 장이면 지금까지와 같고,
+                두 장부터는 몰아서 적는 화면으로 간다 (§11.4). */}
             <input
               ref={fileRef}
               type="file"
               accept="image/*"
+              multiple
               hidden
               onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) analyze(f);
+                const got = [...(e.target.files ?? [])];
+                if (got.length === 1) analyze(got[0]);
+                else if (got.length > 1) takeMany(got);
+                e.target.value = '';
               }}
             />
           </label>
@@ -433,6 +750,39 @@ export default function ExpenseForm({
           {T('photoSentTo2')}
         </p>
 
+        {/*
+          세 번째 문 — 한 줄로 적기 (§11.4)
+
+          사진을 찍어 두는 것도 일이고 칸 여섯 개를 채우는 것도 일이다.
+          그런데 사람은 그 자리에서 이미 말로 알고 있다. 말한 것을 그대로
+          받아 적는 길을 두면 미룰 이유가 하나 줄어든다. 기입이 밀리면
+          장부는 죽으므로, 이 자리는 사진 다음이 아니라 사진 옆이다.
+        */}
+        <div className="jot">
+          <div className="caption">{T('jotOr')}</div>
+          <div className="jot-row">
+            <input
+              type="text"
+              value={line}
+              placeholder={T('jotPlace')}
+              maxLength={300}
+              onChange={(e) => setLine(e.target.value)}
+              onKeyDown={(e) => {
+                // 한글 조합 중의 Enter 는 글자를 고르는 것이지 보내는 것이 아니다.
+                if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                writeLine();
+              }}
+            />
+            <button className="act" disabled={jotting} onClick={writeLine}>
+              <span className={`swap${jotting ? ' on' : ''}`}>
+                <span className="rest">{T('jotDo')}</span>
+                <span className="wait">{T('jotDoing')}</span>
+              </span>
+            </button>
+          </div>
+        </div>
+
         {/* 사진 없이 가는 길. 사진 받는 판과 같은 축에 세운다 — 둘은
             나란한 두 갈래지 본문과 그 아래 딸린 말이 아니다. */}
         <p className="drop-out">
@@ -440,6 +790,71 @@ export default function ExpenseForm({
             {T('writeManually')}
           </button>
         </p>
+      </section>
+    );
+  }
+
+  if (step === 'batch') {
+    const keep = rows.filter((r) => rowReady(r, currency));
+    const busyReading = rows.some((r) => r.reading);
+    return (
+      <section>
+        <div className="caption">{T('expenseEntry')}</div>
+
+        <BatchRows
+          rows={rows}
+          onRows={setRows}
+          members={members}
+          roster={roster}
+          currency={currency}
+          lang={lang}
+          onOpen={setBig}
+        />
+
+        {/*
+          훑고 나서 "이게 다 맞나"를 한 숫자로 확인하는 자리.
+          몇 줄이 적히는지, 합이 얼마인지. 빠지는 줄이 있으면 그것도 말한다 —
+          조용히 빼고 성공했다고 하면 사람은 열 줄을 적은 줄 안다.
+        */}
+        <div className="batch-foot">
+          <span className="lab">{T('batchOf', { n: keep.length })}</span>
+          <strong className="num">{batchSum(rows, currency, lang)}</strong>
+          {keep.length < rows.length && (
+            <span className="debit">{T('batchNeed')}</span>
+          )}
+        </div>
+
+        <div className="row" style={{ marginTop: 20 }}>
+          <button
+            className={`act primary${busy ? ' waiting' : ''}`}
+            disabled={busy || busyReading || keep.length === 0}
+            onClick={saveBatch}
+          >
+            <span className={`swap${busy ? ' on' : ''}`}>
+              <span className="rest">{T('batchSaveAll', { n: keep.length })}</span>
+              <span className="wait">{T('batchSaving')}</span>
+            </span>
+          </button>
+          <button
+            className="plain"
+            disabled={busy}
+            onClick={() => {
+              setRows([]);
+              setStep('photo');
+            }}
+          >
+            {T('close')}
+          </button>
+        </div>
+
+        {/* 사진을 크게 본다. 대조는 이 자리에서 일어난다. */}
+        {big && (
+          <div className="lightbox" role="dialog" onClick={() => setBig(null)}>
+            <figure onClick={(e) => e.stopPropagation()}>
+              <img src={big} alt="" />
+            </figure>
+          </div>
+        )}
       </section>
     );
   }
@@ -661,6 +1076,32 @@ export default function ExpenseForm({
 
       <fieldset style={{ marginTop: 26 }}>
         <legend>{T('whoSplits')}</legend>
+      {/* 지난 기록이 아는 것. 근거를 그대로 적고, 누르면 그렇게 채운다. */}
+      {recall?.allocation && kind !== recall.allocation.value.type && (
+        <p className="recall">
+          <span>
+            {T(recall.allocation.sameVendor ? 'recallSame' : 'recallLike', {
+              by: recall.by,
+              times: recall.allocation.times,
+              of: recall.allocation.of,
+              value: bearsSay(recall.allocation.value),
+            })}
+          </span>
+          <button
+            type="button"
+            className="plain"
+            onClick={() => {
+              const a = recall.allocation!.value;
+              setKind(a.type);
+              if (a.type === 'partial') setParticipants(a.participantIds);
+              if (a.type === 'personal') setOwnerId(a.ownerId);
+            }}
+          >
+            {T('recallUse')}
+          </button>
+        </p>
+      )}
+
 
         <label className="pick">
           <input
@@ -694,6 +1135,44 @@ export default function ExpenseForm({
               </label>
             ))}
           </div>
+        )}
+
+        {/*
+          항목별 청구 (§10.4)
+
+          앞의 셋 다음에 둔다. 대부분의 지출은 여전히 다 같이 낸 것이고,
+          이건 배달처럼 한 장 안에서 부담이 갈릴 때만 고르는 자리다.
+          맨 위에 두면 매번 지나쳐야 하는 문이 된다.
+        */}
+        <label className="pick">
+          <input
+            type="radio"
+            name="alloc"
+            checked={kind === 'items'}
+            onChange={() => {
+              setKind('items');
+              // 처음 고르면 빈 줄 하나. 무엇을 하는 자리인지 보여야 한다.
+              if (drafts.length === 0) setDrafts([newDraft()]);
+            }}
+          />
+          <span>
+            {T('byItem')}
+            <span className="pick-say">{T('byItemHint')}</span>
+          </span>
+        </label>
+        {kind === 'items' && (
+          <ItemLines
+            drafts={drafts}
+            onDrafts={setDrafts}
+            members={members}
+            roster={roster}
+            currency={currency}
+            lang={lang}
+            total={booked}
+            onTotal={(n) => (foreign ? setCharged : setAmount)(formatNumber(n, currency, lang))}
+            onRead={pullLines}
+            reading={readingLines}
+          />
         )}
 
         <label className="pick">
@@ -737,13 +1216,64 @@ export default function ExpenseForm({
         아무 문제가 되지 않는다 — 장부의 칸은 원래 그렇다.
       */}
       <div className="fields" style={{ marginTop: 24 }}>
+        {/*
+          분류와 판매처는 자유롭게 적는 칸이다. 자유롭게 적으면 '식비'와
+          '식대'와 '밥값'이 따로 선다. 쓰던 것을 먼저 보여 주는 것만으로
+          그 갈라짐이 크게 준다 — 고르게 강제하지 않으면서.
+        */}
         <label className="field">
           <span className="lab">{T('category')}{fromAI('category')}</span>
-          <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} />
+          <input type="text" list={catListId} value={category}
+            onChange={(e) => setCategory(e.target.value)} />
+          <datalist id={catListId}>
+            {categories.map((c) => <option key={c} value={c} />)}
+          </datalist>
+          {recall?.category && category.trim() !== recall.category.value && (
+            <span className="recall">
+              <span>
+                {T(recall.category.sameVendor ? 'recallSame' : 'recallLike', {
+                  by: recall.by,
+                  times: recall.category.times,
+                  of: recall.category.of,
+                  value: recall.category.value,
+                })}
+              </span>
+              <button type="button" className="plain"
+                onClick={() => setCategory(recall.category!.value)}>
+                {T('recallUse')}
+              </button>
+            </span>
+          )}
         </label>
         <label className="field">
           <span className="lab">{T('vendor')}{fromAI('vendor')}</span>
-          <input type="text" value={vendor} onChange={(e) => setVendor(e.target.value)} />
+          <input type="text" list={vendorListId} value={vendor}
+            onChange={(e) => setVendor(e.target.value)} />
+          <datalist id={vendorListId}>
+            {vendors.map((v) => <option key={v} value={v} />)}
+          </datalist>
+        </label>
+
+        {/*
+          묶음 (§11.3)
+
+          자유롭게 적되 **이미 쓴 이름이 먼저 보인다.** 목록에서 고르게만 하면
+          새 묶음을 만들 때 따로 만드는 자리를 찾아야 하고, 그냥 적게만 하면
+          '1차 MT'와 '1차MT'가 따로 선다. datalist 는 둘 다 된다.
+        */}
+        <label className="field">
+          <span className="lab">{T('groupField')}</span>
+          <input
+            type="text"
+            list={`${groupListId}`}
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+          />
+          <datalist id={groupListId}>
+            {groups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
         </label>
         <label className="field">
           <span className="lab">{T('currency')}{fromAI('currency')}</span>
@@ -773,8 +1303,9 @@ export default function ExpenseForm({
       {/* 마무리 줄. 폰에서는 화면 아래에 붙어 따라온다 — 다 적고 나서
           저장 단추를 찾아 스크롤을 되짚어 내려가지 않게. */}
       <div className="formbar">
-        {/* 저장하기 전에 어떻게 갈라지는지 미리 보여 준다. 저장한 뒤에 놀랄 일이 없어야 한다. */}
-        {each.length > 0 && (
+        {/* 저장하기 전에 어떻게 갈라지는지 미리 보여 준다. 저장한 뒤에 놀랄 일이 없어야 한다.
+            항목별일 때는 사람마다 금액이 다르므로 줄 판 안에서 이미 보여 주고 있다. */}
+        {kind !== 'items' && each.length > 0 && (
           <span className="split-say">
             {T('perPerson', {
               n: bearers.length,

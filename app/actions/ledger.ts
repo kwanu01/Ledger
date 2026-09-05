@@ -18,10 +18,32 @@ import {
   removeExpense,
   editExpense,
   relabelExpense,
+  renameGroup,
 } from '../../lib/db/repo.ts';
-import { currentRoster } from '../../lib/domain/settlement.ts';
+import { checkItemLines, currentRoster } from '../../lib/domain/settlement.ts';
 import { failed } from '../../lib/fail.ts';
 import type { Allocation } from '../../lib/domain/types.ts';
+import { MAX_BATCH } from '../../lib/limits.ts';
+
+/**
+ * 부담 방식이 성립하는가 (§10)
+ *
+ * 화면에서도 같은 것을 검사한다. 그래도 여기서 다시 하는 이유는, 서버 액션은
+ * 화면을 거치지 않고도 부를 수 있기 때문이다. DB 에도 같은 규칙이 걸려 있다
+ * (0002_guards.sql, 0018_item_lines.sql). 회계 규칙은 세 겹으로 둔다.
+ *
+ * 맞으면 null, 틀리면 사람이 읽을 수 있는 첫 이유 하나를 돌려준다.
+ */
+function vetAllocation(a: Allocation, amount: number, roster: string[]): string | null {
+  if (a.type === 'partial' && a.participantIds.length === 0) {
+    return '부담할 사람을 골라 주세요.';
+  }
+  if (a.type === 'items') {
+    const bad = checkItemLines({ lines: a.lines, total: amount, roster });
+    if (bad.length > 0) return bad[0];
+  }
+  return null;
+}
 
 /**
  * 서버 액션.
@@ -49,6 +71,8 @@ export type ExpenseInput = {
   allocation: Allocation;
   vendor?: string;
   category?: string;
+  /** 지출 묶음 이름 (§11.3). 계산에 들어가지 않는 이름표다. */
+  group?: string;
   productLink?: string;
   receiptPath?: string;
   note?: string;
@@ -63,6 +87,11 @@ export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: s
     }
 
     const ledger = await loadLedger(input.ledgerId);
+    // '전체 팀'은 지금 팀원이 아니라 기록하는 이 순간의 팀원을 뜻한다.
+    const roster = currentRoster(ledger);
+
+    const wrong = vetAllocation(input.allocation, input.amount, roster);
+    if (wrong) return { ok: false, message: wrong };
 
     const id = await insertExpense({
       ledgerId: input.ledgerId,
@@ -70,11 +99,11 @@ export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: s
       title: input.title.trim(),
       amount: input.amount,
       payerId: input.payerId,
-      // '전체 팀'은 지금 팀원이 아니라 기록하는 이 순간의 팀원을 뜻한다.
-      teamMemberIds: currentRoster(ledger),
+      teamMemberIds: roster,
       allocation: input.allocation,
       vendor: input.vendor,
       category: input.category,
+      group: input.group,
       productLink: input.productLink,
       receiptImage: input.receiptPath,
       note: input.note,
@@ -86,6 +115,79 @@ export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: s
     revalidatePath(`/l/${input.ledgerId}`, 'layout');
     revalidatePath('/teams');
     return { ok: true, value: { id } };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/**
+ * 여러 줄을 한꺼번에 적기 (§11.4)
+ *
+ * 팀플 정산은 대개 "끝나고 몰아서"다. 영수증이 열 장 쌓여 있고, 그걸 한 장씩
+ * 폼을 열었다 닫았다 하며 적게 하면 대부분 도중에 그만둔다.
+ *
+ * 한 번에 보내는 이유는 왕복 횟수만이 아니다. 한 줄씩 보내면 중간에 회선이
+ * 끊겼을 때 **몇 줄까지 적혔는지 사람도 화면도 모른다.** 여기서 한 번에
+ * 받고, 적힌 줄의 id 를 순서대로 돌려준다 — 사진은 그 id 를 보고 붙는다.
+ *
+ * 한 줄이 실패해도 나머지는 계속 적는다. 그리고 어느 줄이 실패했는지 말한다.
+ * 조용히 반쯤 적어 놓고 성공했다고 하는 것이 가장 나쁘다. (deleteExpenses 와 같은 규칙)
+ */
+export async function recordExpenses(input: {
+  ledgerId: string;
+  rows: Omit<ExpenseInput, 'ledgerId'>[];
+}): Promise<Result<{ saved: { at: number; id: string }[]; failed: { at: number; why: string }[] }>> {
+  try {
+    const pass = await requireLedgerAccess(input.ledgerId);
+    if (input.rows.length === 0) return { ok: false, message: '적을 줄이 없습니다.' };
+    if (input.rows.length > MAX_BATCH) {
+      return { ok: false, message: `한 번에 ${MAX_BATCH}줄까지 적을 수 있습니다.` };
+    }
+
+    // 장부는 한 번만 읽는다. 줄마다 읽으면 열 줄에 열 번이다.
+    const ledger = await loadLedger(input.ledgerId);
+    const roster = currentRoster(ledger);
+
+    const saved: { at: number; id: string }[] = [];
+    const bad: { at: number; why: string }[] = [];
+
+    for (const [at, row] of input.rows.entries()) {
+      try {
+        if (!row.title.trim()) throw new Error('항목 이름이 비어 있습니다.');
+        if (!Number.isInteger(row.amount) || row.amount === 0) {
+          throw new Error('금액이 비어 있습니다.');
+        }
+        const wrong = vetAllocation(row.allocation, row.amount, roster);
+        if (wrong) throw new Error(wrong);
+
+        const id = await insertExpense({
+          ledgerId: input.ledgerId,
+          date: row.date,
+          title: row.title.trim(),
+          amount: row.amount,
+          payerId: row.payerId,
+          teamMemberIds: roster,
+          allocation: row.allocation,
+          vendor: row.vendor,
+          category: row.category,
+          group: row.group,
+          productLink: row.productLink,
+          receiptImage: row.receiptPath,
+          note: row.note,
+          createdBy: pass.memberId,
+        });
+        saved.push({ at, id });
+      } catch (e) {
+        bad.push({ at, why: e instanceof Error ? e.message : '적지 못했습니다.' });
+      }
+    }
+
+    if (saved.length > 0) {
+      await reopenLedger(input.ledgerId);
+      revalidatePath(`/l/${input.ledgerId}`, 'layout');
+      revalidatePath('/teams');
+    }
+    return { ok: true, value: { saved, failed: bad } };
   } catch (e) {
     return failed(e);
   }
@@ -150,6 +252,31 @@ export async function recordRefund(args: {
     });
     revalidatePath(`/l/${args.ledgerId}`);
     return { ok: true, value: { id } };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/**
+ * 묶음 이름 바꾸기 (§11.3)
+ *
+ * 이름을 바꾸고, 합치고, 푸는 일이 전부 이 하나다. 이미 있는 이름을 적으면
+ * 두 묶음이 합쳐지고, 비우면 그 줄들이 묶음에서 풀린다. 묶음은 계산에
+ * 들어가지 않으므로 정산이 끝난 줄도 함께 바뀐다.
+ */
+export async function renameExpenseGroup(input: {
+  ledgerId: string;
+  from: string;
+  to: string;
+}): Promise<Result> {
+  try {
+    await requireLedgerAccess(input.ledgerId);
+    if (!input.from.trim()) return { ok: false, message: '바꿀 묶음을 고르세요.' };
+    if (input.from.trim() === input.to.trim()) return { ok: true };
+
+    await renameGroup({ ledgerId: input.ledgerId, from: input.from, to: input.to });
+    revalidatePath(`/l/${input.ledgerId}`, 'layout');
+    return { ok: true };
   } catch (e) {
     return failed(e);
   }
@@ -242,6 +369,7 @@ export async function editExpenseLine(input: {
   allocation: Allocation;
   vendor?: string;
   category?: string;
+  group?: string;
   productLink?: string;
   note?: string;
 }): Promise<Result> {
@@ -251,9 +379,17 @@ export async function editExpenseLine(input: {
     if (!Number.isInteger(input.amount) || input.amount === 0) {
       return { ok: false, message: '금액은 0이 아닌 정수여야 합니다.' };
     }
-    if (input.allocation.type === 'partial' && input.allocation.participantIds.length === 0) {
-      return { ok: false, message: '부담할 사람을 골라 주세요.' };
-    }
+    /*
+     * 고칠 때의 기준 명단은 **그 줄에 박혀 있는 명단**이다. 지금 팀원이
+     * 아니다. team_member_ids 는 고치지 않으므로, 지금 들어온 팀원을
+     * 항목 부담자로 고르면 지분 합이 어긋난다.
+     */
+    const ledger = await loadLedger(input.ledgerId);
+    const line = ledger.expenses.find((e) => e.id === input.expenseId);
+    if (!line) return { ok: false, message: '고칠 지출을 찾을 수 없습니다.' };
+
+    const wrong = vetAllocation(input.allocation, input.amount, line.teamMemberIds);
+    if (wrong) return { ok: false, message: wrong };
 
     await editExpense({
       expenseId: input.expenseId,
@@ -265,6 +401,7 @@ export async function editExpenseLine(input: {
       allocation: input.allocation,
       vendor: input.vendor?.trim() || undefined,
       category: input.category?.trim() || undefined,
+      group: input.group?.trim() || undefined,
       productLink: input.productLink?.trim() || undefined,
       note: input.note?.trim() || undefined,
     });
@@ -292,6 +429,7 @@ export async function relabelExpenseLine(input: {
   title: string;
   vendor?: string;
   category?: string;
+  group?: string;
   productLink?: string;
   note?: string;
 }): Promise<Result> {
@@ -305,6 +443,7 @@ export async function relabelExpenseLine(input: {
       title: input.title.trim(),
       vendor: input.vendor?.trim() || undefined,
       category: input.category?.trim() || undefined,
+      group: input.group?.trim() || undefined,
       productLink: input.productLink?.trim() || undefined,
       note: input.note?.trim() || undefined,
     });

@@ -11,9 +11,29 @@ import {
   type NewExpense,
   type SettlementRow,
 } from './mapping.ts';
-import { computeSettlement, unsettledExpenses } from '../domain/settlement.ts';
+import { computeSettlement, spreadOverLines, unsettledExpenses } from '../domain/settlement.ts';
 import type { Allocation } from '../domain/types.ts';
-import type { Expense, Ledger } from '../domain/types.ts';
+import type { Expense, ItemLine, Ledger } from '../domain/types.ts';
+
+/**
+ * 보정 항목이 물려받을 줄들 (§10.4)
+ *
+ * 줄의 이름과 부담자는 원본 그대로 — DB 가드가 그것을 요구한다. 금액만
+ * 차액을 비례로 나눠 담는다. 원본이 항목별 지출이 아니면 null 이다.
+ */
+function itemLinesForAdjustment(raw: unknown, diff: number): ItemLine[] | null {
+  if (!Array.isArray(raw)) return null;
+  const lines = raw.map((v) => {
+    const o = (v ?? {}) as Record<string, unknown>;
+    const n = Number(o.amount);
+    return {
+      name: typeof o.name === 'string' ? o.name : '',
+      amount: Number.isFinite(n) ? Math.round(n) : 0,
+      memberIds: Array.isArray(o.memberIds) ? (o.memberIds as string[]) : [],
+    };
+  });
+  return spreadOverLines(lines, diff);
+}
 
 /**
  * DB와 도메인 사이의 유일한 통로.
@@ -120,6 +140,7 @@ export async function editExpense(args: {
   allocation: Allocation;
   vendor?: string;
   category?: string;
+  group?: string;
   productLink?: string;
   note?: string;
 }): Promise<void> {
@@ -134,8 +155,10 @@ export async function editExpense(args: {
       allocation: a.type,
       participant_member_ids: a.type === 'partial' ? a.participantIds : null,
       owner_member_id: a.type === 'personal' ? a.ownerId : null,
+      item_lines: a.type === 'items' ? a.lines : null,
       vendor: args.vendor ?? null,
       category: args.category ?? null,
+      group_name: args.group?.trim() || null,
       product_link: args.productLink ?? null,
       note: args.note ?? null,
     })
@@ -161,6 +184,7 @@ export async function relabelExpense(args: {
   title: string;
   vendor?: string;
   category?: string;
+  group?: string;
   productLink?: string;
   note?: string;
 }): Promise<void> {
@@ -170,11 +194,37 @@ export async function relabelExpense(args: {
       title: args.title,
       vendor: args.vendor ?? null,
       category: args.category ?? null,
+      group_name: args.group?.trim() || null,
       product_link: args.productLink ?? null,
       note: args.note ?? null,
     })
     .eq('id', args.expenseId)
     .eq('ledger_id', args.ledgerId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * 묶음 이름 바꾸기 · 합치기 · 떼어내기 (§11.3)
+ *
+ * 묶음은 표가 아니라 이름표라서(0019_expense_group.sql), 이름을 바꾸는 일은
+ * 같은 이름을 단 줄들을 한 번에 고치는 일이다. 이미 있는 이름으로 바꾸면
+ * 두 묶음이 자연히 합쳐지고, 빈 이름으로 바꾸면 묶음에서 풀린다.
+ *
+ * 정산이 끝난 줄도 함께 바뀐다. 묶음은 계산에 들어가지 않으므로 0013 의
+ * 가드가 막지 않는다 — 한 학기가 끝나고 아카이브를 훑으며 묶는 것이
+ * 오히려 자연스럽다.
+ */
+export async function renameGroup(args: {
+  ledgerId: string;
+  from: string;
+  to: string;
+}): Promise<void> {
+  const to = args.to.trim();
+  const { error } = await db
+    .from('expenses')
+    .update({ group_name: to || null })
+    .eq('ledger_id', args.ledgerId)
+    .eq('group_name', args.from);
   if (error) throw new Error(error.message);
 }
 
@@ -217,11 +267,25 @@ export async function insertAdjustment(args: {
       allocation: target.allocation,
       participant_member_ids: target.participant_member_ids,
       owner_member_id: target.owner_member_id,
+      /*
+       * 줄마다 부담자가 다른 지출을 보정할 때 (§10.4)
+       *
+       * 물려받는 것은 줄의 **이름과 부담자**다. 금액은 물려받을 것이 아니라
+       * 이 보정이 정하는 것이다. 그래서 모든 줄을 0원으로 세워 두고, 차액
+       * 전체를 첫 줄에 얹는다 — 그러면 합은 args.amount 와 맞고, 부담 구조는
+       * 원본과 같다는 DB 가드도 통과한다.
+       *
+       * 어느 줄을 얼마나 되돌릴지 사람이 고르게 하는 것은 그다음 일이다.
+       * 지금은 "이 영수증 전체에서 얼마가 달라졌다"까지만 적는다.
+       */
+      item_lines: itemLinesForAdjustment(target.item_lines, args.amount),
       adjustment_kind: args.kind,
       adjustment_target_id: args.targetId,
       adjustment_reason: args.reason ?? null,
       vendor: target.vendor,
       category: target.category,
+      // 보정은 원본과 같은 묶음에 선다. 따로 떨어지면 묶음 소계가 거짓말을 한다.
+      group_name: target.group_name,
     })
     .select('id')
     .single();

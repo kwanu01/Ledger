@@ -24,6 +24,8 @@ export function allocationLabel(expense: Expense, members: Member[], locale: Loc
       return a.ownerId === expense.payerId
         ? t(locale, 'allocSelf')
         : t(locale, 'allocPersonal', { who: nameOf(members, a.ownerId) });
+    case 'items':
+      return t(locale, 'allocItems', { n: a.lines.length });
   }
 }
 

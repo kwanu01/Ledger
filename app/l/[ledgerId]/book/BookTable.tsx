@@ -6,11 +6,13 @@ import { deleteExpenses, settle } from '../../../actions/ledger.ts';
 import {
   adjustmentsFor,
   breakdownOf,
+  lineSharesOf,
   effectiveAmount,
   nameOf,
   settledExpenseIds,
   needsSettling,
   byEntryOrder,
+  groupsOf,
 } from '../../../../lib/domain/settlement.ts';
 import { adjustmentLabel, allocationLabel } from '../../../../lib/labels.ts';
 import { translator } from '../../../../lib/i18n.ts';
@@ -35,6 +37,7 @@ import Relabel from './Relabel.tsx';
  */
 
 type SortKey = 'date' | 'amount';
+type FoldKey = 'none' | 'group' | 'month' | 'category' | 'payer';
 
 export default function BookTable({
   ledger,
@@ -66,11 +69,25 @@ export default function BookTable({
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [lastPicked, setLastPicked] = useState<string | null>(null);
   const [openRow, setOpenRow] = useState<string | null>(null);
+  /*
+   * 접어 보기 (§11.3)
+   *
+   * 장부가 스무 줄을 넘어가면 통째로는 안 읽힌다. 읽는 사람이 실제로 하는
+   * 물음은 "MT 때 얼마 썼지", "이번 달 얼마지", "현우가 얼마나 결제했지"
+   * 같은 것이고, 그건 전부 **같은 줄들을 다른 기준으로 묶어 소계를 보는 일**이다.
+   *
+   * 그러니 화면만 접는다. 저장된 것은 하나도 달라지지 않는다.
+   */
+  const [fold, setFold] = useState<FoldKey>('none');
+  /** 접어 둔 덩어리. 펴 둔 것이 기본이라 '접은 것'만 센다. */
+  const [shut, setShut] = useState<Set<string>>(new Set());
   /** 지금 고치는 중인 줄. 한 번에 하나만 연다. */
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const settled = useMemo(() => settledExpenseIds(ledger), [ledger]);
+  /** 이미 쓰인 묶음 이름들. 고치는 자리의 고를 목록으로 내려보낸다. */
+  const groups = useMemo(() => groupsOf(ledger), [ledger]);
 
   // 전표 번호는 언제나 시간 순서로 매긴다. 정렬을 바꿔도 번호는 따라 움직이지 않는다.
   const slips = useMemo(() => {
@@ -93,7 +110,8 @@ export default function BookTable({
   }, [ledger, key, dir]);
 
   // 마감선은 시간 순서 위에서만 뜻이 있다. 금액순으로 늘어놓으면 구획이 성립하지 않는다.
-  const chronological = key === 'date' && dir === 'asc';
+  // 접어 놓으면 시간 순서가 덩어리 안에서만 성립하므로 마감선도 성립하지 않는다.
+  const chronological = key === 'date' && dir === 'asc' && fold === 'none';
   const closings = chronological
     ? [...ledger.settlements].sort((a, b) => (a.date < b.date ? -1 : 1))
     : [];
@@ -123,6 +141,46 @@ export default function BookTable({
    * 판정은 한 군데서만 한다.
    */
   const pickable = list.filter((e) => !settled.has(e.id) && needsSettling(e)).map((e) => e.id);
+
+  /*
+   * 줄들을 덩어리로 나눈다.
+   *
+   * 덩어리의 순서는 **처음 나온 순서**다. 가나다순으로 세우면 '1차 MT' 다음이
+   * '2차 MT'가 아닐 수 있고, 무엇보다 정렬을 바꿀 때마다 덩어리가 자리를 옮겨
+   * 다녀 손이 기억한 위치가 소용없어진다.
+   */
+  const sections = useMemo(() => {
+    if (fold === 'none') return [{ key: '', label: '', items: list }];
+
+    const keyOf = (e: (typeof list)[number]) => {
+      if (fold === 'group') return e.group?.trim() || '';
+      if (fold === 'month') return e.date.slice(0, 7);
+      if (fold === 'category') return e.category?.trim() || '';
+      return e.payerId;
+    };
+    const labelOf = (k: string) => {
+      if (k === '') return T(fold === 'group' ? 'ungrouped' : 'uncategorized');
+      if (fold === 'month') return k.replace('-', '. ');
+      if (fold === 'payer') return who(k);
+      return k;
+    };
+
+    const order: string[] = [];
+    const bag = new Map<string, typeof list>();
+    for (const e of list) {
+      const k = keyOf(e);
+      if (!bag.has(k)) {
+        bag.set(k, []);
+        order.push(k);
+      }
+      bag.get(k)?.push(e);
+    }
+    /* 이름 없는 덩어리('묶음 없음')는 언제나 맨 아래다. 이름이 붙은 것이
+       읽는 사람이 찾는 것이고, 안 붙은 것은 나머지다. */
+    order.sort((a, b) => (a === '' ? 1 : b === '' ? -1 : 0));
+    return order.map((k) => ({ key: k, label: labelOf(k), items: bag.get(k) ?? [] }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list, fold, lang, ledger.members]);
 
   /** 쉬프트를 누른 채 누르면 마지막으로 고른 줄과 이번 줄 사이가 한꺼번에 처리된다. */
   function pick(id: string, on: boolean, withShift: boolean) {
@@ -272,7 +330,55 @@ export default function BookTable({
     </tr>
   );
 
-  for (const e of list) {
+  for (const sec of sections) {
+    if (fold !== 'none') {
+      const folded = shut.has(sec.key);
+      const subtotal = sec.items.reduce((a, x) => a + x.amount, 0);
+      rows.push(
+        /*
+          덩어리의 머리.
+
+          이름 · 건수 · 소계 셋을 한 줄에 둔다. 접어 놓은 채로도 소계는
+          보여야 한다 — 접는 이유가 "안에 뭐가 있는지 말고 얼마인지만
+          보고 싶다"이기 때문이다.
+        */
+        <tr className={`foldhead${folded ? ' shut' : ''}`} key={`h-${sec.key}`}>
+          {/*
+            소계는 **금액 칸 아래**에 선다.
+
+            처음에는 머리 전체를 한 칸(colSpan 8)으로 두고 소계를 오른쪽 끝에
+            붙였다. 그러면 소계가 '상태' 칸 아래에 서서, 위아래 숫자와 자릿수가
+            맞지 않는다. 장부에서 세로로 늘어선 숫자가 어긋나 보이면 더할 수가
+            없다 — 그게 표를 쓰는 이유다. 그래서 칸 구조를 그대로 따른다.
+          */}
+          <td className="tick" />
+          <td colSpan={4}>
+            <button
+              type="button"
+              className="foldbtn"
+              aria-expanded={!folded}
+              onClick={() =>
+                setShut((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(sec.key)) next.delete(sec.key);
+                  else next.add(sec.key);
+                  return next;
+                })
+              }
+            >
+              <span className="caret" aria-hidden="true">{folded ? '▸' : '▾'}</span>
+              <span className="foldname">{sec.label}</span>
+              <span className="muted foldn">{T('nOfM', { n: sec.items.length })}</span>
+            </button>
+          </td>
+          <td className="r money foldsum">{entry(subtotal)}</td>
+          <td colSpan={2} />
+        </tr>,
+      );
+      if (folded) continue;
+    }
+
+  for (const e of sec.items) {
     while (ci < closings.length && closings[ci].date < e.date) {
       rows.push(closingRow(closings[ci]));
       ci += 1;
@@ -414,6 +520,34 @@ export default function BookTable({
                   </table>
                 </div>
 
+                {/*
+                  항목별 청구를 펼친 자리 (§10.4)
+
+                  위의 '각자 부담'은 사람별 합계고, 여기는 그 합계가 어느
+                  줄에서 나왔는지다. 배달 영수증 한 장에서 "내가 왜 만이천
+                  원이지"의 답은 언제나 줄 안에 있다.
+                */}
+                {e.allocation.type === 'items' && (
+                  <div>
+                    <div className="caption" style={{ marginBottom: 8 }}>
+                      {T('itemBreakdown')}
+                    </div>
+                    <table className="tally lines-read-out">
+                      <tbody>
+                        {lineSharesOf(e).map((row, i) => (
+                          <tr key={`${row.line.name}-${i}`}>
+                            <td className="l">{row.line.name}</td>
+                            <td className="v">{cash(row.line.amount)}</td>
+                            <td className="l faint">
+                              {row.shares.map((s) => who(s.memberId)).join(' · ')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
                 <div>
                   <table className="facts">
                     <tbody>
@@ -482,6 +616,7 @@ export default function BookTable({
                   <Relabel
                     ledgerId={ledger.id}
                     expense={e}
+                    groups={groups}
                     lang={lang}
                     onDone={() => setEditing(null)}
                   />
@@ -489,6 +624,7 @@ export default function BookTable({
                   <EditExpense
                     ledgerId={ledger.id}
                     expense={e}
+                    groups={groups}
                     members={ledger.members}
                     currency={ledger.currency ?? 'KRW'}
                     lang={lang}
@@ -558,13 +694,68 @@ export default function BookTable({
       );
     }
   }
+  }
   while (ci < closings.length) {
     rows.push(closingRow(closings[ci]));
     ci += 1;
   }
 
+  const groupCount = groups.length;
+
   return (
     <section>
+
+      {/*
+        묶어 보는 기준 (§11.3)
+
+        표 위에 둔다. 표 안에 두면 정렬 단추와 섞이는데, 정렬은 줄의 앞뒤를
+        바꾸는 일이고 이것은 줄을 덩어리로 묶는 일이라 다른 종류다.
+
+        '묶음' 기준은 묶음 이름이 하나라도 있을 때만 나온다. 아무것도 안
+        붙였는데 그 기준이 서 있으면, 눌러 봐야 전부 '묶음 없음' 한 덩어리다.
+      */}
+      <div className="foldbar">
+        <span className="lab">{T('foldBy')}</span>
+        {(['none', ...(groupCount > 0 ? (['group'] as const) : []), 'month', 'category', 'payer'] as FoldKey[]).map(
+          (f) => (
+            <button
+              key={f}
+              type="button"
+              className={`chip${fold === f ? ' on' : ''}`}
+              aria-pressed={fold === f}
+              onClick={() => {
+                setFold(f);
+                setShut(new Set());
+              }}
+            >
+              {T(
+                f === 'none'
+                  ? 'foldNone'
+                  : f === 'group'
+                    ? 'foldGroup'
+                    : f === 'month'
+                      ? 'foldMonth'
+                      : f === 'category'
+                        ? 'foldCategory'
+                        : 'foldPayer',
+              )}
+            </button>
+          ),
+        )}
+        {fold !== 'none' && (
+          <button
+            type="button"
+            className="plain foldall"
+            onClick={() =>
+              setShut((prev) =>
+                prev.size > 0 ? new Set() : new Set(sections.map((x) => x.key)),
+              )
+            }
+          >
+            {shut.size > 0 ? T('unfoldAll') : T('foldAll')}
+          </button>
+        )}
+      </div>
 
       <div className="scroll" style={{ marginTop: 14 }}>
         <table className="book entries">

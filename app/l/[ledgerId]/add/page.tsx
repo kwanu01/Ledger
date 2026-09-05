@@ -3,7 +3,8 @@ import LedgerShell from '../LedgerShell.tsx';
 import ExpenseForm from './ExpenseForm.tsx';
 import { requireLedgerAccess } from '../../../../lib/access.ts';
 import { loadLedger } from '../../../../lib/db/repo.ts';
-import { currentRoster } from '../../../../lib/domain/settlement.ts';
+import { currentRoster, groupsOf } from '../../../../lib/domain/settlement.ts';
+import { categoriesOf, recallSeed, vendorsOf } from '../../../../lib/domain/recall.ts';
 
 /**
  * 영수증 읽기가 이 화면에서 일어난다.
@@ -42,6 +43,10 @@ export default async function AddExpense({ params }: { params: Promise<{ ledgerI
           ledgerId={ledgerId}
           members={ledger.members}
           roster={currentRoster(ledger)}
+          groups={groupsOf(ledger)}
+          categories={categoriesOf(ledger)}
+          vendors={vendorsOf(ledger)}
+          past={recallSeed(ledger)}
           currency={ledger.currency ?? 'KRW'}
           meId={pass.memberId}
           today={today}

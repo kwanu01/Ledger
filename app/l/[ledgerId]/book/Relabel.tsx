@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { relabelExpenseLine } from '../../../actions/ledger.ts';
 import { translator } from '../../../../lib/i18n.ts';
@@ -28,11 +28,14 @@ import type { Expense } from '../../../../lib/domain/types.ts';
 export default function Relabel({
   ledgerId,
   expense,
+  groups,
   lang,
   onDone,
 }: {
   ledgerId: string;
   expense: Expense;
+  /** 이 장부에 이미 쓰인 묶음 이름들 (§11.3) */
+  groups: string[];
   lang: Locale;
   onDone: () => void;
 }) {
@@ -44,6 +47,10 @@ export default function Relabel({
   const [title, setTitle] = useState(expense.title);
   const [vendor, setVendor] = useState(expense.vendor ?? '');
   const [category, setCategory] = useState(expense.category ?? '');
+  /* 묶음도 이름표다. 계산에 한 푼도 들어가지 않으므로 정산이 끝난 뒤에
+     오히려 제대로 붙는다 — 학기가 끝나고 훑으면서 묶는 순간이 온다. */
+  const [group, setGroup] = useState(expense.group ?? '');
+  const groupListId = useId();
   const [note, setNote] = useState(expense.note ?? '');
   // 링크도 이름표다. 돈이 아니라 그 줄이 무엇이었는지를 가리키는 것이므로,
   // 정산이 끝난 뒤에도 고칠 수 있어야 한다.
@@ -57,6 +64,7 @@ export default function Relabel({
         title,
         vendor,
         category,
+        group,
         note,
         productLink,
       });
@@ -88,6 +96,21 @@ export default function Relabel({
         <label className="field">
           <span className="lab">{T('category')}</span>
           <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} />
+        </label>
+
+        <label className="field">
+          <span className="lab">{T('groupField')}</span>
+          <input
+            type="text"
+            list={groupListId}
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+          />
+          <datalist id={groupListId}>
+            {groups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
         </label>
 
         <label className="field">

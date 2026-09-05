@@ -1,6 +1,7 @@
 import 'server-only';
 import type { CurrencyCode } from '../domain/money.ts';
-import { ENDPOINT, MODEL, meter, type Usage } from './usage.ts';
+import { callTool, type ToolSchema } from './call.ts';
+import { MODEL, type Usage } from './usage.ts';
 
 /**
  * 영수증 읽기 (§7, §18.4)
@@ -37,7 +38,7 @@ export type ExtractResult =
 
 export type { Usage };
 
-const SCHEMA = {
+const SCHEMA: ToolSchema = {
   name: 'receipt',
   description: '영수증 또는 결제 화면에서 읽어낸 값',
   input_schema: {
@@ -63,7 +64,7 @@ const SCHEMA = {
     },
     required: ['title', 'amount', 'currency'],
   },
-} as const;
+};
 
 const PROMPT = `이 이미지는 영수증, 결제 완료 화면, 주문 내역, 또는 이체 내역입니다.
 보이는 그대로 읽어 receipt 도구로 넘기세요.
@@ -126,80 +127,19 @@ export async function readReceipt(args: {
   base64: string;
   mediaType: string;
 }): Promise<ExtractResult> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return { ok: false, message: '영수증 분석이 아직 설정되지 않았습니다. 직접 적어 주세요.' };
+  const r = await callTool({
+    model: MODEL,
+    timeoutMs: TIMEOUT_MS,
+    maxTokens: 1024,
+    tool: SCHEMA,
+    prompt: PROMPT,
+    base64: args.base64,
+    mediaType: args.mediaType,
+  });
+  if (!r.ok) return r;
 
-  /*
-   * 기다림에 끝을 둔다.
-   *
-   * 끝이 없으면 화면에는 '읽는 중'만 남는다. 사람은 그게 오래 걸리는 것인지
-   * 영영 안 오는 것인지 알 수 없어서 계속 기다린다. 그러다 서버 쪽 시간 제한에
-   * 먼저 걸리면 대답도 오류도 없이 끊긴다 — 가장 나쁜 끝이다.
-   *
-   * 그래서 우리가 먼저 끊고, 끊었다고 말한다. 손으로 적는 길은 언제나 열려 있다.
-   */
-  const stop = new AbortController();
-  const bell = setTimeout(() => stop.abort(), TIMEOUT_MS);
-
-  let res: Response;
-  try {
-    res = await fetch(ENDPOINT, {
-      method: 'POST',
-      signal: stop.signal,
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 1024,
-        tools: [SCHEMA],
-        tool_choice: { type: 'tool', name: 'receipt' },
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: args.mediaType, data: args.base64 } },
-              { type: 'text', text: PROMPT },
-            ],
-          },
-        ],
-      }),
-    });
-  } catch (e) {
-    const timedOut = e instanceof Error && e.name === 'AbortError';
-    return {
-      ok: false,
-      message: timedOut
-        ? '읽는 데 너무 오래 걸립니다. 직접 적어 주세요.'
-        : '분석 서버에 닿지 못했습니다. 직접 적어 주세요.',
-    };
-  } finally {
-    clearTimeout(bell);
-  }
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    if (res.status === 401) return { ok: false, message: 'API 키가 맞지 않습니다.' };
-    if (res.status === 429) return { ok: false, message: '잠시 뒤에 다시 시도해 주세요.' };
-    if (detail.includes('credit balance')) {
-      return { ok: false, message: '크레딧이 부족합니다. 직접 적어 주세요.' };
-    }
-    return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.' };
-  }
-
-  const body = (await res.json()) as {
-    content?: { type: string; name?: string; input?: Record<string, unknown> }[];
-    usage?: { input_tokens?: number; output_tokens?: number };
-  };
-
-  const usage = meter(body.usage);
-
-  const block = body.content?.find((c) => c.type === 'tool_use' && c.name === 'receipt');
-  if (!block?.input) return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.', usage };
-
-  const raw = block.input as Record<string, unknown>;
+  const usage = r.usage;
+  const raw = r.input;
   const amount = Math.round(Number(raw.amount));
   if (!Number.isFinite(amount) || amount <= 0) {
     return { ok: false, message: '금액을 읽지 못했습니다. 직접 적어 주세요.', usage };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { editExpenseLine } from '../../../actions/ledger.ts';
 import { translator } from '../../../../lib/i18n.ts';
@@ -8,6 +8,7 @@ import { formatNumber, parseMoney } from '../../../../lib/domain/money.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
 import type { CurrencyCode, Locale } from '../../../../lib/domain/money.ts';
 import type { Allocation, Expense, Member } from '../../../../lib/domain/types.ts';
+import ItemLines, { newDraft, toItemLines, type Draft } from '../add/ItemLines.tsx';
 
 /**
  * 지출 한 줄 고치기 (§12)
@@ -26,6 +27,7 @@ export default function EditExpense({
   ledgerId,
   expense,
   members,
+  groups,
   currency,
   lang,
   onDone,
@@ -33,6 +35,8 @@ export default function EditExpense({
   ledgerId: string;
   expense: Expense;
   members: Member[];
+  /** 이 장부에 이미 쓰인 묶음 이름들 (§11.3) */
+  groups: string[];
   currency: CurrencyCode;
   lang: Locale;
   onDone: () => void;
@@ -52,8 +56,16 @@ export default function EditExpense({
     a.type === 'partial' ? a.participantIds : [],
   );
   const [ownerId, setOwnerId] = useState(a.type === 'personal' ? a.ownerId : expense.payerId);
+  /* 항목별 청구 (§10.4). 읽어 온 줄이 틀렸을 때 고치는 자리는 여기다. */
+  const [drafts, setDrafts] = useState<Draft[]>(() =>
+    a.type === 'items'
+      ? a.lines.map((l) => newDraft({ name: l.name, amount: formatNumber(l.amount, currency, lang), memberIds: l.memberIds }))
+      : [],
+  );
   const [vendor, setVendor] = useState(expense.vendor ?? '');
   const [category, setCategory] = useState(expense.category ?? '');
+  const [group, setGroup] = useState(expense.group ?? '');
+  const groupListId = useId();
   const [note, setNote] = useState(expense.note ?? '');
   // 기입할 때 받아 놓고 고칠 때는 못 고치던 칸. 링크야말로 나중에 고쳐야
   // 하는 것이다 — 적을 때는 장바구니 주소였다가 나중에 상품 주소가 된다.
@@ -69,12 +81,31 @@ export default function EditExpense({
 
   function save() {
     const money = parseMoney(amount, currency);
+
+    let lines: ReturnType<typeof toItemLines> = [];
+    if (kind === 'items') {
+      lines = toItemLines(drafts, currency).filter((l) => l.name !== '' || l.amount !== 0);
+      if (lines.length === 0) return say(T('needLines'));
+      if (lines.some((l) => l.memberIds.length === 0)) return say(T('needLineWho'));
+      const sum = lines.reduce((acc, l) => acc + l.amount, 0);
+      if (sum !== money) {
+        return say(
+          T('sumOff', {
+            gap: `${sum - money > 0 ? '+' : '\u2212'}${formatNumber(Math.abs(sum - money), currency, lang)}`,
+          }),
+        );
+      }
+      lines = lines.map((l, i) => ({ ...l, name: l.name || `${T('newLine')} ${i + 1}` }));
+    }
+
     const allocation: Allocation =
       kind === 'all'
         ? { type: 'all' }
         : kind === 'partial'
           ? { type: 'partial', participantIds: participants }
-          : { type: 'personal', ownerId };
+          : kind === 'items'
+            ? { type: 'items', lines }
+            : { type: 'personal', ownerId };
 
     start(async () => {
       const r = await editExpenseLine({
@@ -87,6 +118,7 @@ export default function EditExpense({
         allocation,
         vendor,
         category,
+        group,
         note,
         productLink,
       });
@@ -142,6 +174,21 @@ export default function EditExpense({
         </label>
 
         <label className="field">
+          <span className="lab">{T('groupField')}</span>
+          <input
+            type="text"
+            list={groupListId}
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+          />
+          <datalist id={groupListId}>
+            {groups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+        </label>
+
+        <label className="field">
           <span className="lab">{T('productLink')}</span>
           <input
             type="text"
@@ -190,6 +237,33 @@ export default function EditExpense({
               </label>
             ))}
           </div>
+        )}
+
+        <label className="pick">
+          <input
+            type="radio"
+            checked={kind === 'items'}
+            onChange={() => {
+              setKind('items');
+              if (drafts.length === 0) setDrafts([newDraft()]);
+            }}
+          />
+          <span>
+            {T('byItem')}
+            <span className="pick-say">{T('byItemHint')}</span>
+          </span>
+        </label>
+        {kind === 'items' && (
+          <ItemLines
+            drafts={drafts}
+            onDrafts={setDrafts}
+            members={members}
+            roster={expense.teamMemberIds}
+            currency={currency}
+            lang={lang}
+            total={parseMoney(amount, currency)}
+            onTotal={(n) => setAmount(formatNumber(n, currency, lang))}
+          />
         )}
 
         <label className="pick">
