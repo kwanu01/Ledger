@@ -858,6 +858,39 @@ tr.foldhead > td:nth-child(2){padding:0}
 td.foldsum{font-weight:700;white-space:nowrap}
 
 /*
+   확인할 것 (§13)
+
+   장부 표 위에 서는 띠. 상자를 만들지 않는다 — 이 서비스의 다른 자리와
+   같은 말로, 괘선과 납작한 단추로만 짓는다(§21). 다만 왼쪽에 색 하나를
+   세운다. 여기만은 "그냥 지나가도 되는 줄이 아니다"라고 말해야 해서다.
+
+   그 색은 새로 만들지 않고 도장 잉크(--stamp)를 쓴다. 장부가 종이 위에서
+   말을 거는 자리는 지금까지 도장 하나였고, 이것도 같은 성격이다. 색을
+   하나 더 만들면 어두운 화면과 고대비 화면에서 각각 다시 골라야 한다.
+*/
+.watch{margin:0 0 18px; border-left:2px solid var(--stamp); padding-left:12px}
+.watch-head{display:flex;align-items:baseline;gap:8px;width:100%;
+  font:inherit;font-weight:700;color:inherit;text-align:left;cursor:pointer;
+  background:none;border:0;padding:2px 0}
+.watch-head .caret{flex:0 0 10px;color:var(--ink-3);font-size:11px;
+  transition:transform .12s ease}
+.watch-head .caret.on{transform:rotate(90deg)}
+.watch-list{list-style:none;margin:10px 0 0;padding:0}
+.watch-list li{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+  padding:9px 0;border-top:1px solid var(--rule-2);font-size:14px}
+.watch-list li:first-child{border-top:0}
+.watch-list .ask{flex:1 1 260px;min-width:0;line-height:1.6}
+/* 넘긴 줄은 지우지 않고 가라앉힌다. 되돌릴 자리가 남아 있어야 한다.
+   취소선은 긋지 않는다 — 네 줄짜리 문장에 선을 그으면 읽을 수도 없고
+   지워진 것처럼 보이는데, 지워진 것이 아니라 넘어간 것이다. */
+.watch-list li.gone .ask{color:var(--ink-3)}
+/* 좁은 화면에서는 단추가 늘 문장 아래로 간다. 문장 길이에 따라 옆에 붙었다
+   아래로 갔다 하면, 같은 종류의 단추가 줄마다 다른 자리에 선다. */
+@media (max-width:560px){
+  .watch-list .ask{flex:1 1 100%}
+}
+
+/*
    한 줄로 적기 (§11.4)
 
    사진 받는 판 아래, 손으로 적는 길 위. 셋은 나란한 갈래지 하나가 다른

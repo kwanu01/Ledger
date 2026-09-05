@@ -3,7 +3,13 @@ import LedgerShell from '../LedgerShell.tsx';
 import IncomePanel from './IncomePanel.tsx';
 import { requireLedgerAccess } from '../../../../lib/access.ts';
 import { loadLedger } from '../../../../lib/db/repo.ts';
-import { duesBoard, fundBook, usesFund, collectsDues } from '../../../../lib/domain/closing.ts';
+import {
+  duesBoard,
+  fundBook,
+  guessDuesPerHead,
+  usesFund,
+  collectsDues,
+} from '../../../../lib/domain/closing.ts';
 import { redirect } from 'next/navigation';
 
 /**
@@ -23,6 +29,16 @@ export default async function IncomePage({ params }: { params: Promise<{ ledgerI
 
   if (!usesFund(ledger)) redirect(`/l/${ledgerId}`);
 
+  /*
+   * 미납의 기준 (§12.2)
+   *
+   * 적어 둔 값이 먼저고, 없으면 장부가 스스로 알아낸다 — 세 사람이 3만원씩
+   * 냈으면 기준은 3만원이다. 그래서 회비 납부 표를 보려고 설정을 먼저 하러
+   * 갈 일이 없다. 알아낸 값일 때만 guessed 가 차고, 화면은 그렇다고 적는다.
+   */
+  const guess = collectsDues(ledger) ? guessDuesPerHead(ledger) : null;
+  const perHead = ledger.duesPerHead ?? guess?.amount ?? 0;
+
   return (
     <>
       <LedgerShell
@@ -40,7 +56,9 @@ export default async function IncomePage({ params }: { params: Promise<{ ledgerI
           ledger={ledger}
           members={ledger.members}
           book={fundBook(ledger)}
-          dues={collectsDues(ledger) && ledger.duesPerHead ? duesBoard(ledger, ledger.members) : []}
+          dues={collectsDues(ledger) && perHead > 0 ? duesBoard(ledger, ledger.members) : []}
+          perHead={perHead}
+          guessed={!ledger.duesPerHead && guess ? { times: guess.times, of: guess.of } : null}
           meId={pass.memberId}
           today={new Date().toISOString().slice(0, 10)}
           lang={lang}

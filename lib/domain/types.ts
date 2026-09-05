@@ -117,6 +117,23 @@ export type Expense = {
   receiptImage?: string; // 증빙 (§9)
   representativeImage?: string; // 시각적 썸네일 — 증빙 아님 (§9)
   note?: string;
+
+  /**
+   * 사진에서 읽은 금액 (§13.2)
+   *
+   * 사람이 폼에서 고쳐도 이 값은 안 바뀐다. 둘이 다르면 나중에 물을 수 있다 —
+   * 38,400 을 34,800 으로 치는 일은 놀랄 만큼 흔하고, **읽은 값을 버리지
+   * 않는 것만이 그걸 잡는 방법**이다. 손으로 적은 줄에는 없다.
+   */
+  readAmount?: number;
+  /**
+   * 사람이 검사의 물음에 "괜찮다"고 답한 시각 (§13)
+   *
+   * 끄지 못하는 경고는 두 번째부터 배경이 되고, 배경이 된 경고는 진짜 하나를
+   * 같이 묻어 버린다. 그래서 모든 물음은 한 번 답하면 사라진다.
+   */
+  checkedAt?: string;
+
   createdAt: string;
   createdBy: MemberId;
 };

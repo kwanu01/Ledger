@@ -24,8 +24,9 @@ import {
 } from '../lib/domain/settlement.ts';
 import { buildLedger, members } from '../lib/domain/seed.ts';
 import { recallFor, recallSeed, categoriesOf } from '../lib/domain/recall.ts';
-import { fundBook, duesBoard, unpaid, carryOut, fromFund, usesFund } from '../lib/domain/closing.ts';
+import { fundBook, duesBoard, unpaid, carryOut, fromFund, usesFund, guessDuesPerHead } from '../lib/domain/closing.ts';
 import { inSettlement } from '../lib/domain/settlement.ts';
+import { twins, spikes, offReceipt, leftOut, median, watch } from '../lib/domain/watch.ts';
 import type { Income } from '../lib/domain/types.ts';
 import type { Expense, Ledger, SettlementResult } from '../lib/domain/types.ts';
 
@@ -497,8 +498,30 @@ check('한 번도 안 낸 사람은 1인당 회비 전부가 모자란다',
   board.find((r) => r.memberId === 'yr')?.short === 30000);
 check('미납자는 모자란 사람만 센다', unpaid(club, members).length === 2,
   unpaid(club, members).map((r) => nameOf(members, r.memberId)).join(' · '));
-check('회비 기준이 없으면 미납을 세지 않는다',
-  unpaid({ ...club, duesPerHead: undefined }, members).length === 0);
+
+/*
+ * 기준을 장부가 스스로 알아낸다 (§12.2)
+ *
+ * 1인당 회비를 사람이 설정하지 않아도 미납이 세어져야 한다. 그 값은 이미
+ * 장부 안에 있기 때문이다 — 세는 일이지 묻는 일이 아니다.
+ */
+const noStandard = { ...club, duesPerHead: undefined };
+check('기준을 안 적어도 걷힌 회비에서 알아낸다',
+  guessDuesPerHead(noStandard)?.amount === 30000,
+  `${won(guessDuesPerHead(noStandard)?.amount ?? 0)} — 3명 중 2명`);
+check('알아낸 기준은 평균이 아니라 최빈값이다',
+  guessDuesPerHead(noStandard)?.amount !== Math.round((30000 + 30000 + 15000) / 3),
+  '반만 낸 사람 하나가 기준을 끌어내리지 않는다');
+check('기준을 안 적어도 미납은 세어진다',
+  unpaid(noStandard, members).length === 2,
+  unpaid(noStandard, members).map((r) => nameOf(members, r.memberId)).join(' \u00b7 '));
+check('사람이 적어 둔 기준이 알아낸 값을 이긴다',
+  duesBoard({ ...club, duesPerHead: 50000 }, members)[0].due === 50000);
+check('낸 사람이 하나뿐이면 기준을 말하지 않는다',
+  guessDuesPerHead({ ...noStandard, incomes: club.incomes.slice(0, 2) }) === null,
+  '한 번은 우연이다');
+check('회비가 하나도 없으면 미납도 없다',
+  unpaid({ ...noStandard, incomes: [] }, members).length === 0);
 
 check('남은 돈이 음수면 다음으로 넘기지 않는다',
   carryOut({ ...book, left: -5000 }) === 0);
@@ -508,6 +531,96 @@ check('넘길 돈은 남은 돈 그대로', carryOut(book) === book.left, won(ca
 check('각자 결제하는 장부는 공금을 쓰지 않는다', !usesFund(ledger));
 check('옛 장부의 정산 결과는 그대로', whole.totalAmount === 715050 - 0,
   `${won(whole.totalAmount)}`);
+
+/* --- 검사 (§13) ------------------------------------------------------- */
+/*
+ * 검사는 순수 함수다. 같은 장부를 몇 번 훑든 같은 답이 나와야 하고,
+ * 물음은 사람이 한 번 답하면 사라져야 한다. 이 절이 그 둘을 지킨다.
+ */
+console.log('\n[검사]');
+
+const base = (over: Partial<Expense> & { id: string }): Expense => ({
+  ledgerId: 'w', date: '2026-04-01', title: '무엇', amount: 10000,
+  payerId: 'kw', teamMemberIds: ['kw', 'hw', 'sj', 'yr'],
+  allocation: { type: 'all' }, createdAt: `2026-04-01T00:00:0${over.id.slice(-1)}Z`,
+  createdBy: 'kw', ...over,
+});
+
+/* 중복 */
+const pair = [
+  base({ id: 'a1', amount: 48000, date: '2026-04-10' }),
+  base({ id: 'a2', amount: 48000, date: '2026-04-10' }),
+];
+check('같은 날 같은 금액 같은 결제자면 중복으로 묻는다',
+  twins(pair).length === 1 && twins(pair)[0].expenseId === 'a2',
+  '나중에 적힌 줄을 가리킨다');
+check('결제자가 다르면 중복이 아니다',
+  twins([pair[0], { ...pair[1], payerId: 'hw' }]).length === 0,
+  '각자 자기 몫을 결제한 것은 두 건이다');
+check('금액이 100원이라도 다르면 묻지 않는다',
+  twins([pair[0], { ...pair[1], amount: 48100 }]).length === 0,
+  '느슨하게 잡으면 물음이 배경이 된다');
+check('자정을 넘겨 하루 차이는 중복으로 본다',
+  twins([pair[0], { ...pair[1], date: '2026-04-11' }]).length === 1);
+check('이틀 차이는 중복이 아니다',
+  twins([pair[0], { ...pair[1], date: '2026-04-12' }]).length === 0);
+check('보정·환불 줄은 원본과 닮아도 묻지 않는다',
+  twins([pair[0], { ...pair[1], adjustment: { kind: 'correction', targetExpenseId: 'a1' } }]).length === 0);
+check('셋이 같아도 물음은 둘이지 셋이 아니다',
+  twins([...pair, base({ id: 'a3', amount: 48000, date: '2026-04-10' })]).length === 2,
+  '한 줄이 여러 짝에 서서 부풀지 않는다');
+
+/* 튀는 금액 */
+const many = [1, 2, 3, 4, 5].map((n) => base({ id: `b${n}`, amount: 10000 }));
+check('다섯 줄이 안 되면 보통을 말하지 않는다',
+  spikes(many.slice(0, 4).concat(base({ id: 'bx', amount: 900000 })).slice(0, 4)).length === 0);
+check('중앙값의 여섯 배부터 묻는다',
+  spikes([...many, base({ id: 'b9', amount: 60000 })]).length === 1);
+check('다섯 배는 아직 안 묻는다',
+  spikes([...many, base({ id: 'b8', amount: 50000 })]).length === 0);
+check('튀는 값 하나가 기준을 끌어올리지 못한다',
+  spikes([...many, base({ id: 'b7', amount: 400000 })])[0]?.expenseId === 'b7',
+  '평균이었다면 자기 자신을 통과시켰다');
+check('환불로 음수인 줄도 크기로 잰다',
+  spikes([...many, base({ id: 'b6', amount: -400000 })]).length === 1);
+check('중앙값은 짝수 개에서도 정수다',
+  Number.isInteger(median([1, 2, 3, 4])) && median([1, 2, 3, 4]) === 3);
+
+/* 영수증과 적힌 값 */
+check('읽은 값과 적힌 값이 다르면 묻는다',
+  offReceipt([base({ id: 'c1', amount: 34800, readAmount: 38400 })])[0]?.facts.gap === 3600);
+check('같으면 묻지 않는다',
+  offReceipt([base({ id: 'c2', amount: 38400, readAmount: 38400 })]).length === 0);
+check('손으로 적은 줄은 견줄 것이 없다',
+  offReceipt([base({ id: 'c3', amount: 34800 })]).length === 0);
+
+/* 빠진 사람 */
+const only2 = [base({ id: 'd1', allocation: { type: 'partial', participantIds: ['kw', 'hw'] } })];
+check('어느 줄에도 없는 팀원을 찾아낸다',
+  leftOut({ ...ledger, expenses: only2 }, members).length === 2,
+  leftOut({ ...ledger, expenses: only2 }, members).map((f) => nameOf(members, f.memberId!)).join(' \u00b7 '));
+check('결제자로만 나와도 나온 것이다',
+  leftOut({ ...ledger, expenses: [base({ id: 'd2', payerId: 'yr',
+    allocation: { type: 'partial', participantIds: ['kw', 'hw', 'sj'] } })] }, members).length === 0);
+check('공금 지출만 있는 장부에서는 아무도 안 묻는다',
+  leftOut({ ...ledger, expenses: [base({ id: 'd3', allocation: { type: 'common' } })] }, members).length === 0,
+  '공금 지출에는 부담자가 없다');
+check('빈 장부는 조용하다',
+  leftOut({ ...ledger, expenses: [] }, members).length === 0);
+
+/* 한 번 답하면 사라진다 */
+const noisy = { ...ledger, expenses: pair };
+check('물음은 한 번 답하면 사라진다',
+  watch(noisy, members).some((f) => f.kind === 'twin') &&
+  !watch({ ...noisy, expenses: [pair[0], { ...pair[1], checkedAt: '2026-04-11T00:00:00Z' }] }, members)
+    .some((f) => f.kind === 'twin'),
+  '끄지 못하는 경고는 두 번째부터 배경이 된다');
+check('검사는 몇 번을 훑어도 같은 답이다',
+  JSON.stringify(watch(ledger, members)) === JSON.stringify(watch(ledger, members)),
+  'AI 를 부르지 않는 이유');
+check('검사는 장부를 건드리지 않는다',
+  (() => { const before = JSON.stringify(ledger); watch(ledger, members); return JSON.stringify(ledger) === before; })(),
+  '가리키기만 한다');
 
 rule();
 console.log(failures === 0 ? `\n모든 불변식 통과 — 이 장부는 검산 가능하다.\n` : `\n실패 ${failures}건\n`);

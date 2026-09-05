@@ -5,6 +5,8 @@ import { aiUsageThisMonth, recordAiUsage, MONTHLY_AI_LIMIT } from '../../lib/db/
 import { readReceipt, type Extracted } from '../../lib/ai/receipt.ts';
 import { readReceiptLines, type ExtractedItems } from '../../lib/ai/items.ts';
 import { jot } from '../../lib/ai/jot.ts';
+import { jotIncome } from '../../lib/ai/income.ts';
+import { collectsDues, usesFund } from '../../lib/domain/closing.ts';
 import { loadLedger } from '../../lib/db/repo.ts';
 import type { Allocation } from '../../lib/domain/types.ts';
 
@@ -205,6 +207,70 @@ export async function jotExpense(input: { ledgerId: string; text: string }): Pro
         payerId,
         allocation,
         missing: [...new Set(missing)],
+      },
+    };
+  } catch (e) {
+    if (e instanceof AccessError) return { ok: false, message: e.message };
+    return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.' };
+  }
+}
+
+/* ── 들어온 돈도 한 줄로 (§12.2) ──────────────────────────────────────── */
+
+export type IncomeFilled = {
+  title: string;
+  amount?: number;
+  date?: string;
+  kind: string;
+  /** 이름이 아니라 id. 이름 → id 는 여기서 한다. */
+  memberId?: string;
+  missing: string[];
+};
+
+export type IncomeOut = { ok: true; value: IncomeFilled } | { ok: false; message: string };
+
+/**
+ * "현우 3월 회비 3만원" → 수입 한 줄.
+ *
+ * 갈래를 사람이 고르지 않는 것이 이 함수의 존재 이유다. 스무 명 회비를
+ * 적으면서 드롭다운을 스무 번 여는 일은, 서비스를 바꿔도 엑셀에서 하던
+ * 그 일과 같다.
+ */
+export async function jotIncomeLine(input: { ledgerId: string; text: string }): Promise<IncomeOut> {
+  try {
+    await requireLedgerAccess(input.ledgerId);
+    const text = input.text.trim();
+    if (!text) return { ok: false, message: '무엇으로 들어왔는지 한 줄 적어 주세요.' };
+
+    const used = await aiUsageThisMonth(input.ledgerId);
+    if (used >= MONTHLY_AI_LIMIT) {
+      return { ok: false, message: `이번 달 분석 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건). 직접 적어 주세요.` };
+    }
+
+    const ledger = await loadLedger(input.ledgerId);
+    if (!usesFund(ledger)) return { ok: false, message: '이 장부에는 들어온 돈을 적지 않습니다.' };
+
+    const roster = ledger.members.filter((m) => m.active !== false);
+    const r = await jotIncome({
+      text,
+      today: new Date().toISOString().slice(0, 10),
+      names: roster.map((m) => m.name),
+      me: roster[0]?.name ?? '',
+      dues: collectsDues(ledger),
+    });
+    await bill(input.ledgerId, r);
+    if (!r.ok) return { ok: false, message: r.message };
+
+    const v = r.value;
+    return {
+      ok: true,
+      value: {
+        title: v.title,
+        amount: v.amount,
+        date: v.date,
+        kind: v.kind,
+        memberId: v.payerName ? roster.find((m) => m.name === v.payerName)?.id : undefined,
+        missing: v.missing,
       },
     };
   } catch (e) {

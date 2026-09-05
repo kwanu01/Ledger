@@ -42,6 +42,11 @@ export type Row = {
   payerId: string;
   vendor?: string;
   category?: string;
+  /**
+   * 사진에서 읽은 금액 (§13.2). 화면에 안 보이고 고칠 수도 없다.
+   * 사람이 이 줄의 금액을 고쳐도 그대로 실려 가서, 나중에 견주는 데 쓰인다.
+   */
+  readAmount?: number;
 };
 
 /** 이 줄이 적힐 수 있는가. 저장할 것을 고르는 기준이자 화면 표시의 기준이다. */

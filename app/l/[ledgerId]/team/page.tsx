@@ -6,6 +6,7 @@ import { requireLedgerAccess } from '../../../../lib/access.ts';
 import { loadLedger } from '../../../../lib/db/repo.ts';
 import { amOwner, liveInvites, teamMembers } from '../../../actions/teams.ts';
 import { siteOrigin } from '../../../../lib/origin.ts';
+import { guessDuesPerHead } from '../../../../lib/domain/closing.ts';
 
 export default async function Team({ params }: { params: Promise<{ ledgerId: string }> }) {
   const { ledgerId } = await params;
@@ -52,6 +53,9 @@ export default async function Team({ params }: { params: Promise<{ ledgerId: str
           fundSource={ledger.fundSource ?? 'each'}
           termCarry={ledger.termCarry ?? false}
           duesPerHead={ledger.duesPerHead}
+          /* 적어 두지 않아도 장부가 알아낸다. 그 값을 빈칸에 미리 비춰 두면
+             '안 적으면 안 돌아가는 칸'이 아니라 '고칠 수 있는 칸'이 된다. */
+          duesGuess={guessDuesPerHead(ledger)?.amount}
           currency={ledger.currency ?? 'KRW'}
           lang={lang}
           owner={owner}

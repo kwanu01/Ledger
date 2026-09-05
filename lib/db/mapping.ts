@@ -55,6 +55,10 @@ export type ExpenseRow = {
   receipt_path: string | null;
   representative_image_path: string | null;
   note: string | null;
+  /** AI 가 사진에서 읽은 금액. 한 번 적히면 안 바뀐다 (0021) */
+  read_amount: number | string | null;
+  /** 검사의 물음에 사람이 답한 시각 (0021) */
+  checked_at: string | null;
   created_at: string;
   created_by_member_id: string | null;
 };
@@ -188,6 +192,9 @@ export function toExpense(row: ExpenseRow): Expense {
     receiptImage: row.receipt_path ?? undefined,
     representativeImage: row.representative_image_path ?? undefined,
     note: row.note ?? undefined,
+    /* 0021 이전 장부에는 이 칸이 없다. 없는 것은 '읽은 적 없음'이 맞다. */
+    readAmount: row.read_amount != null ? won(row.read_amount) : undefined,
+    checkedAt: row.checked_at ?? undefined,
     createdAt: row.created_at,
     createdBy: row.created_by_member_id ?? row.payer_member_id,
   };
@@ -251,7 +258,13 @@ export function toIncomeInsert(i: NewIncome): Omit<IncomeRow, 'id' | 'created_at
 
 export type NewExpense = Omit<Expense, 'id' | 'createdAt'>;
 
-export function toExpenseInsert(e: NewExpense): Omit<ExpenseRow, 'id' | 'created_at'> {
+/*
+ * checked_at 은 여기서 안 쓴다. 적히는 순간 '괜찮다'고 답해 둔 줄은 없다 —
+ * 아직 아무도 물어보지 않았기 때문이다. 그 칸은 사람이 답할 때만 채워진다.
+ */
+export function toExpenseInsert(
+  e: NewExpense,
+): Omit<ExpenseRow, 'id' | 'created_at' | 'checked_at'> {
   const a = e.allocation;
   return {
     ledger_id: e.ledgerId,
@@ -276,6 +289,7 @@ export function toExpenseInsert(e: NewExpense): Omit<ExpenseRow, 'id' | 'created
     receipt_path: e.receiptImage ?? null,
     representative_image_path: e.representativeImage ?? null,
     note: e.note ?? null,
+    read_amount: e.readAmount ?? null,
     created_by_member_id: e.createdBy ?? null,
   };
 }

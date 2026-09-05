@@ -96,9 +96,13 @@ export type Key =
   | 'kindDues' | 'kindGrant' | 'kindDonation' | 'kindCarryover'
   | 'fundLeft' | 'fundIn' | 'fundOut' | 'fundCarried' | 'fundBook'
   | 'duesBoard' | 'duesPerHead' | 'duesPaid' | 'duesShort' | 'duesAllIn' | 'duesUnpaidN'
+  | 'duesGuessed' | 'inJotPlace' | 'inJotEmpty' | 'duesFromBook' | 'duesOptional'
+  // 검사 (§13)
+  | 'watchN' | 'watchTwin' | 'watchSpike' | 'watchOff' | 'watchLeft'
+  | 'watchOk' | 'watchUndo'
   | 'closeTerm' | 'closeWarn' | 'closeDone' | 'reopenTerm' | 'closedMarkTerm' | 'carryNext'
   | 'bookKind' | 'kindEach' | 'kindEachSay' | 'kindDuesBook' | 'kindDuesSay'
-  | 'kindGrantBook' | 'kindGrantSay' | 'carryOn' | 'carryOnSay'
+  | 'kindGrantBook' | 'kindGrantSay'
   | 'memberWord' | 'needIncomeTitle' | 'needIncomeAmount' | 'needDuesWho'
   // 항목별 청구 (§10.4)
   | 'byItem' | 'byItemHint' | 'readLines' | 'readingLines' | 'lineName' | 'lineAmount'
@@ -262,6 +266,25 @@ const ko: Record<Key, string> = {
   fundCarried: '시작 잔고', fundBook: '결산',
   duesBoard: '회비 납부', duesPerHead: '1인당 회비', duesPaid: '낸 돈', duesShort: '모자란 돈',
   duesAllIn: '모두 냈습니다.', duesUnpaidN: '{n}명이 아직 다 안 냈습니다',
+  duesGuessed: '{of}명 중 {times}명이 이 금액을 냈기에 기준으로 삼았습니다. 팀 설정에서 바꿀 수 있습니다.',
+  inJotPlace: '현우 3월 회비 3만원',
+  inJotEmpty: '무엇으로 들어왔는지 한 줄 적어 주세요.',
+  duesFromBook: '비워 두면 걷힌 회비에서 장부가 알아낸 금액을 씁니다.',
+  duesOptional: '비워 두어도 됩니다. 회비가 몇 건 쌓이면 장부가 기준을 알아냅니다.',
+  /*
+   * 조사를 붙이지 않는다.
+   *
+   * 이 문장들에 들어가는 것은 사람 이름과 항목 이름이라, 받침이 있을 수도
+   * 없을 수도 있다. '유란는', '「현수막」와' 같은 것이 나온다. 받침을 세는
+   * 함수를 두는 길도 있지만, 그러면 여섯 개 언어 중 하나에만 있는 장치를
+   * 문장마다 끼워 넣어야 한다. **줄표로 끊어 조사가 설 자리를 아예 없앤다.**
+   */
+  watchN: '확인할 것 {n}가지',
+  watchTwin: '같은 사람이 같은 날 같은 금액을 두 번 냈습니다 — 「{title}」, {date} 「{other}」 ({amount}). 한 건을 두 번 적은 것이라면 한 줄을 지워 주세요.',
+  watchSpike: '「{title}」 {amount} — 이 장부에서 보통 한 줄은 {usual}쯤이라 {times}배입니다. 0을 하나 더 치지 않았는지 봐 주세요.',
+  watchOff: '「{title}」 — 사진에서 읽은 값은 {read}, 적힌 값은 {amount}입니다. {gap} 차이입니다.',
+  watchLeft: '{who} — 이 장부의 {rows}줄 어디에도 없습니다. 부담자에서 빠뜨리지 않았는지 봐 주세요.',
+  watchOk: '괜찮습니다', watchUndo: '되돌리기',
   closeTerm: '회기 닫기',
   closeWarn: '닫으면 이 회기의 수입을 더 넣거나 고칠 수 없습니다. 다시 열 수 있습니다.',
   closeDone: '회기를 닫았습니다.', reopenTerm: '다시 열기',
@@ -270,7 +293,6 @@ const ko: Record<Key, string> = {
   kindEach: '각자 결제하고 나중에 나누기', kindEachSay: '팀플, 여행, 모임 — 지금까지의 장부입니다',
   kindDuesBook: '회비를 모아서 쓰기', kindDuesSay: '동아리, 학회, 반 모임 — 수입과 결산이 함께 켜집니다',
   kindGrantBook: '정해진 예산 안에서 쓰기', kindGrantSay: '지원금, 사업비 — 받은 돈 안에서 집행합니다',
-  carryOn: '회기를 끊고 남은 돈을 다음으로 넘기기', carryOnSay: '한 학기, 한 해처럼 회기가 있는 장부',
   memberWord: '팀원',
   needIncomeTitle: '무엇으로 들어왔는지 적어 주세요.',
   needIncomeAmount: '금액을 적어 주세요.',
@@ -528,6 +550,17 @@ const en: Record<Key, string> = {
   fundCarried: 'Opening balance', fundBook: 'Closing',
   duesBoard: 'Dues', duesPerHead: 'Dues per head', duesPaid: 'Paid', duesShort: 'Short',
   duesAllIn: 'Everyone has paid.', duesUnpaidN: '{n} have not paid in full',
+  duesGuessed: '{times} of {of} paid this amount, so it is used as the standard. You can change it in team settings.',
+  inJotPlace: 'March dues 30,000 from Hyunwoo',
+  inJotEmpty: 'Write in one line what came in.',
+  duesFromBook: 'Leave it empty and the ledger uses the amount it worked out from the dues paid.',
+  duesOptional: 'You can leave this empty. Once a few dues come in, the ledger works out the standard.',
+  watchN: '{n} to check',
+  watchTwin: '“{title}” and “{other}” on {date} have the same amount and the same payer ({amount}). If it was entered twice, delete one row.',
+  watchSpike: '“{title}” is {amount}. A typical row in this ledger is around {usual}, so this is {times}× that. Check for an extra zero.',
+  watchOff: '“{title}” was read as {read} from the photo but entered as {amount} — a gap of {gap}.',
+  watchLeft: '{who} does not appear in any of the {rows} rows in this ledger. Check they were not left out.',
+  watchOk: 'It is fine', watchUndo: 'Undo',
   closeTerm: 'Close the term',
   closeWarn: 'Once closed, income for this term cannot be added or edited. You can reopen it.',
   closeDone: 'Term closed.', reopenTerm: 'Reopen',
@@ -536,7 +569,6 @@ const en: Record<Key, string> = {
   kindEach: 'Each pays, split later', kindEachSay: 'Group projects, trips — the ledger as it was',
   kindDuesBook: 'Pooled from dues', kindDuesSay: 'Clubs, societies — income and closing turn on',
   kindGrantBook: 'Within a set budget', kindGrantSay: 'Grants — spend within what was received',
-  carryOn: 'Close terms and carry the rest forward', carryOnSay: 'Ledgers with terms — a semester, a year',
   memberWord: 'member',
   needIncomeTitle: 'Say what came in.',
   needIncomeAmount: 'Enter the amount.',
@@ -792,6 +824,17 @@ const ja: Record<Key, string> = {
   fundCarried: '期首残高', fundBook: '決算',
   duesBoard: '会費の納入', duesPerHead: '一人あたり会費', duesPaid: '納めた額', duesShort: '不足額',
   duesAllIn: '全員納めました。', duesUnpaidN: '{n}人がまだ完納していません',
+  duesGuessed: '{of}人中{times}人がこの金額を納めたので基準にしました。チーム設定で変えられます。',
+  inJotPlace: 'ヒョヌ 3月の会費 3万円',
+  inJotEmpty: '何で入ったか一行で書いてください。',
+  duesFromBook: '空欄にすると、集まった会費から帳簿が割り出した金額を使います。',
+  duesOptional: '空欄でかまいません。会費が数件たまれば帳簿が基準を割り出します。',
+  watchN: '確認するもの {n}件',
+  watchTwin: '「{title}」と{date}の「{other}」は金額も支払者も同じです（{amount}）。二重に記入したのなら一行を削除してください。',
+  watchSpike: '「{title}」は{amount}です。この帳簿の一行はふつう{usual}ほどなので{times}倍です。0を一つ多く打っていないか確かめてください。',
+  watchOff: '「{title}」は写真では{read}と読みましたが{amount}と記入されています。差は{gap}です。',
+  watchLeft: '{who}はこの帳簿の{rows}行のどこにもいません。負担者から漏れていないか確かめてください。',
+  watchOk: '問題ありません', watchUndo: '戻す',
   closeTerm: '会期を閉じる',
   closeWarn: '閉じるとこの会期の収入は追加も修正もできません。開き直すことはできます。',
   closeDone: '会期を閉じました。', reopenTerm: '開き直す',
@@ -800,7 +843,6 @@ const ja: Record<Key, string> = {
   kindEach: '各自払って後で分ける', kindEachSay: 'グループ課題、旅行 — これまでの帳簿',
   kindDuesBook: '会費を集めて使う', kindDuesSay: 'サークル、学会 — 収入と決算が有効になります',
   kindGrantBook: '決まった予算の中で使う', kindGrantSay: '助成金 — 受け取った額の中で執行します',
-  carryOn: '会期を区切って残りを次へ', carryOnSay: '学期や年度のような会期がある帳簿',
   memberWord: 'メンバー',
   needIncomeTitle: '何で入ったのか記入してください。',
   needIncomeAmount: '金額を記入してください。',
@@ -1056,6 +1098,17 @@ const zh: Record<Key, string> = {
   fundCarried: '期初余额', fundBook: '结算',
   duesBoard: '会费缴纳', duesPerHead: '每人会费', duesPaid: '已缴', duesShort: '差额',
   duesAllIn: '全部缴清了。', duesUnpaidN: '{n} 人尚未缴清',
+  duesGuessed: '{of} 人中有 {times} 人缴了这个金额，所以以此为准。可在团队设置里更改。',
+  inJotPlace: '贤宇 3月会费 3万',
+  inJotEmpty: '请用一句话写下这笔钱从哪来。',
+  duesFromBook: '留空的话，账本会用已缴会费推算出的金额。',
+  duesOptional: '可以留空。会费记上几笔后，账本会自己推算标准。',
+  watchN: '待确认 {n} 项',
+  watchTwin: '“{title}”与 {date} 的“{other}”金额和付款人都相同（{amount}）。若是重复记录，请删掉一行。',
+  watchSpike: '“{title}”是 {amount}。这本账里一行通常在 {usual} 左右，是它的 {times} 倍。请看看是否多打了一个 0。',
+  watchOff: '“{title}”在照片上读到的是 {read}，但记的是 {amount}，相差 {gap}。',
+  watchLeft: '{who} 没有出现在这本账的 {rows} 行中的任何一行。请确认是否漏掉了。',
+  watchOk: '没问题', watchUndo: '撤销',
   closeTerm: '结束本期',
   closeWarn: '结束后本期收入不能再添加或修改。可以重新打开。',
   closeDone: '本期已结束。', reopenTerm: '重新打开',
@@ -1064,7 +1117,6 @@ const zh: Record<Key, string> = {
   kindEach: '各自付款，之后分摊', kindEachSay: '小组作业、旅行 — 之前的账本',
   kindDuesBook: '收会费统一使用', kindDuesSay: '社团、学会 — 会启用收入与结算',
   kindGrantBook: '在既定预算内使用', kindGrantSay: '补助金 — 在收到的金额内支出',
-  carryOn: '分期结算，余额结转下期', carryOnSay: '有学期或年度分期的账本',
   memberWord: '成员',
   needIncomeTitle: '请写明是什么收入。',
   needIncomeAmount: '请填写金额。',
@@ -1325,6 +1377,17 @@ const es: Record<Key, string> = {
   fundCarried: 'Saldo inicial', fundBook: 'Cierre',
   duesBoard: 'Cuotas', duesPerHead: 'Cuota por persona', duesPaid: 'Pagado', duesShort: 'Falta',
   duesAllIn: 'Todos han pagado.', duesUnpaidN: '{n} no han pagado del todo',
+  duesGuessed: '{times} de {of} pagaron esta cantidad, así que se toma como referencia. Puedes cambiarla en los ajustes del equipo.',
+  inJotPlace: 'cuota de marzo 30.000 de Hyunwoo',
+  inJotEmpty: 'Escribe en una línea de dónde vino el dinero.',
+  duesFromBook: 'Si lo dejas vacío, el libro usa la cantidad que deduce de las cuotas pagadas.',
+  duesOptional: 'Puedes dejarlo vacío. Con unas pocas cuotas el libro deduce la referencia.',
+  watchN: '{n} por comprobar',
+  watchTwin: '«{title}» y «{other}» del {date} tienen el mismo importe y el mismo pagador ({amount}). Si se anotó dos veces, borra una fila.',
+  watchSpike: '«{title}» es {amount}. Una fila típica de este libro ronda los {usual}, o sea {times} veces menos. Comprueba si sobra un cero.',
+  watchOff: '«{title}» se leyó como {read} en la foto pero está anotado como {amount}: una diferencia de {gap}.',
+  watchLeft: '{who} no aparece en ninguna de las {rows} filas de este libro. Comprueba que no se haya quedado fuera.',
+  watchOk: 'Está bien', watchUndo: 'Deshacer',
   closeTerm: 'Cerrar el periodo',
   closeWarn: 'Una vez cerrado no se pueden añadir ni editar ingresos. Se puede reabrir.',
   closeDone: 'Periodo cerrado.', reopenTerm: 'Reabrir',
@@ -1333,7 +1396,6 @@ const es: Record<Key, string> = {
   kindEach: 'Cada uno paga y se reparte luego', kindEachSay: 'Trabajos en grupo, viajes — el libro de siempre',
   kindDuesBook: 'Fondo común de cuotas', kindDuesSay: 'Clubes, asociaciones — activa ingresos y cierre',
   kindGrantBook: 'Dentro de un presupuesto', kindGrantSay: 'Subvenciones — se gasta lo recibido',
-  carryOn: 'Cerrar periodos y pasar el resto', carryOnSay: 'Libros con periodos — un semestre, un año',
   memberWord: 'miembro',
   needIncomeTitle: 'Escribe qué ha entrado.',
   needIncomeAmount: 'Escribe el importe.',
@@ -1591,6 +1653,17 @@ const vi: Record<Key, string> = {
   fundCarried: 'Số dư đầu kỳ', fundBook: 'Quyết toán',
   duesBoard: 'Nộp hội phí', duesPerHead: 'Hội phí mỗi người', duesPaid: 'Đã nộp', duesShort: 'Còn thiếu',
   duesAllIn: 'Mọi người đã nộp đủ.', duesUnpaidN: '{n} người chưa nộp đủ',
+  duesGuessed: '{times} trong {of} người đã nộp mức này nên lấy làm chuẩn. Có thể đổi trong cài đặt nhóm.',
+  inJotPlace: 'Hyunwoo hội phí tháng 3 30.000',
+  inJotEmpty: 'Hãy ghi một dòng khoản tiền này từ đâu.',
+  duesFromBook: 'Để trống thì sổ dùng mức tự suy ra từ hội phí đã nộp.',
+  duesOptional: 'Có thể để trống. Khi có vài khoản hội phí, sổ sẽ tự suy ra mức chuẩn.',
+  watchN: '{n} điều cần xem',
+  watchTwin: '“{title}” và “{other}” ngày {date} có cùng số tiền và cùng người trả ({amount}). Nếu ghi hai lần, hãy xoá một dòng.',
+  watchSpike: '“{title}” là {amount}. Một dòng thường thấy trong sổ này khoảng {usual}, tức gấp {times} lần. Hãy xem có thừa một số 0 không.',
+  watchOff: '“{title}” đọc từ ảnh là {read} nhưng ghi là {amount}, lệch {gap}.',
+  watchLeft: '{who} không có mặt trong bất kỳ dòng nào trong {rows} dòng của sổ này. Hãy kiểm tra xem có bị bỏ sót không.',
+  watchOk: 'Không sao', watchUndo: 'Hoàn tác',
   closeTerm: 'Đóng kỳ',
   closeWarn: 'Đóng rồi thì không thêm hay sửa khoản thu của kỳ này được. Có thể mở lại.',
   closeDone: 'Đã đóng kỳ.', reopenTerm: 'Mở lại',
@@ -1599,7 +1672,6 @@ const vi: Record<Key, string> = {
   kindEach: 'Mỗi người trả, sau chia', kindEachSay: 'Bài nhóm, chuyến đi — sổ như trước nay',
   kindDuesBook: 'Gom hội phí rồi dùng', kindDuesSay: 'CLB, hội — bật khoản thu và quyết toán',
   kindGrantBook: 'Trong ngân sách đã định', kindGrantSay: 'Tài trợ — chi trong số đã nhận',
-  carryOn: 'Chia kỳ và chuyển số dư', carryOnSay: 'Sổ có kỳ — một học kỳ, một năm',
   memberWord: 'thành viên',
   needIncomeTitle: 'Hãy ghi khoản thu là gì.',
   needIncomeAmount: 'Hãy nhập số tiền.',

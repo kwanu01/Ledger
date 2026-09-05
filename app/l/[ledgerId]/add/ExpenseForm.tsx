@@ -91,6 +91,14 @@ export default function ExpenseForm({
   const [readingLines, setReadingLines] = useState(false);
   /* 한 줄로 적기 (§11.4) — 사진도 폼도 아닌 세 번째 문 */
   const [line, setLine] = useState('');
+  /*
+   * 사진에서 읽은 금액 (§13.2)
+   *
+   * 사람이 아래 금액 칸을 고쳐도 이 값은 안 바뀐다. 저장할 때 함께 실려
+   * 가고, 둘이 다르면 나중에 장부가 묻는다 — "사진에는 38,400인데
+   * 칸에는 34,800입니다." **읽은 값을 버리면 못 잡는 오류가 있다.**
+   */
+  const [readAmount, setReadAmount] = useState<number | undefined>(undefined);
   const [jotting, setJotting] = useState(false);
   /* 몰아서 적기 (§11.4) — 사진 여러 장을 한꺼번에 던졌을 때 */
   const [rows, setRows] = useState<Row[]>([]);
@@ -229,6 +237,8 @@ export default function ExpenseForm({
             ...base,
             title: r.value.title,
             amount: formatNumber(r.value.amount, currency, lang),
+            // 사람이 줄에서 금액을 고쳐도 읽은 값은 그대로 실려 간다 (§13.2)
+            readAmount: r.value.currency === currency ? r.value.amount : undefined,
             date: r.value.date ?? x.date,
             vendor: r.value.vendor,
             category: r.value.category,
@@ -257,6 +267,7 @@ export default function ExpenseForm({
         allocation: { type: 'all' as const },
         vendor: x.vendor,
         category: x.category,
+        readAmount: x.readAmount,
       })),
     });
     if (!r.ok) {
@@ -365,6 +376,9 @@ export default function ExpenseForm({
     setCurr(v.currency);
     // 폼에는 사람이 읽는 형태로 채운다. 저장할 때 다시 최소 단위로 되돌린다.
     setAmount(formatNumber(v.amount, v.currency, lang));
+    // 장부 통화로 결제한 것만 견줄 수 있다. 해외 결제는 영수증 통화가 달라서
+    // 뺄셈이 뜻을 잃는다 — 그럴 때는 아예 안 남긴다.
+    setReadAmount(v.currency === currency ? v.amount : undefined);
     setRead(r.fields);
     setStep('form');
   }
@@ -466,6 +480,9 @@ export default function ExpenseForm({
     const v = r.value;
     setTitle(v.title);
     if (v.amount) setAmount(formatNumber(v.amount, currency, lang));
+    /* 글에서 읽은 금액은 남기지 않는다. 견줄 원본(영수증)이 없어서,
+       다르면 사람이 마음을 바꾼 것이지 잘못 친 것이 아니다. */
+    setReadAmount(undefined);
     if (v.date) setDate(v.date);
     if (v.vendor) setVendor(v.vendor);
     if (v.category) setCategory(v.category);
@@ -631,6 +648,7 @@ export default function ExpenseForm({
       group: group.trim() || undefined,
       productLink: productLink.trim() || undefined,
       note: note.trim() || undefined,
+      readAmount,
     });
     if (!r.ok) {
       setBusy(false);

@@ -1,6 +1,8 @@
 import { getLang } from '../../../../lib/lang.ts';
 import LedgerShell from '../LedgerShell.tsx';
 import BookTable from './BookTable.tsx';
+import WatchBand from './WatchBand.tsx';
+import { watch } from '../../../../lib/domain/watch.ts';
 import { requireLedgerAccess } from '../../../../lib/access.ts';
 import { loadLedger, openTransfers } from '../../../../lib/db/repo.ts';
 
@@ -33,6 +35,13 @@ export default async function Book({ params }: { params: Promise<{ ledgerId: str
       />
 
       <main>
+        {/*
+          확인할 것 (§13)
+
+          검사는 순수 함수라 서버에서 그냥 부른다 — 질의도, 모델 호출도
+          없다. 물음이 없으면 WatchBand 가 아무것도 그리지 않는다.
+        */}
+        <WatchBand ledger={ledger} flags={watch(ledger, ledger.members)} lang={lang} />
         <BookTable ledger={ledger} lang={lang} openSeqs={openSeqs} />
       </main>
     </>

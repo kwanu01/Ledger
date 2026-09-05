@@ -245,6 +245,27 @@ export async function editExpense(args: {
  * 섞여 들어가지 않도록 조심하는 것보다 낫다. DB 에도 같은 규칙이 걸려 있다
  * (0013_relabel_settled.sql).
  */
+/**
+ * 검사의 물음에 답한 표시 (§13, 0021)
+ *
+ * ledger_id 를 함께 걸어 두는 이유는 다른 장부의 줄을 실수로 건드리지 않게
+ * 하기 위해서다 — 이 파일의 모든 update 가 같은 모양이다.
+ *
+ * 정산에 든 줄에도 걸린다. checked_at 은 0013 이 잠근 목록에 없다.
+ */
+export async function setExpenseChecked(args: {
+  expenseId: string;
+  ledgerId: string;
+  checked: boolean;
+}): Promise<void> {
+  const { error } = await db
+    .from('expenses')
+    .update({ checked_at: args.checked ? new Date().toISOString() : null })
+    .eq('id', args.expenseId)
+    .eq('ledger_id', args.ledgerId);
+  if (error) throw new Error(error.message);
+}
+
 export async function relabelExpense(args: {
   expenseId: string;
   ledgerId: string;

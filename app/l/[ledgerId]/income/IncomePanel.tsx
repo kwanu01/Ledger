@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { closeTerm, deleteIncome, recordIncome } from '../../../actions/ledger.ts';
+import { jotIncomeLine } from '../../../actions/receipt.ts';
 import { translator } from '../../../../lib/i18n.ts';
 import { memberWord } from '../../../../lib/labels.ts';
 import { formatMoney, formatNumber, parseMoney } from '../../../../lib/domain/money.ts';
@@ -30,6 +31,22 @@ import type { Income, IncomeKind, Ledger, Member } from '../../../../lib/domain/
  * ── 미납은 참·거짓이 아니라 모자란 금액이다
  *
  * 반만 낸 사람이 안 낸 사람과 같은 칸에 서면 독촉할 말이 틀려진다.
+ *
+ * ── 적는 문은 한 줄이다 (§12.2)
+ *
+ * 원래 이 화면에서 수입 한 건을 적으려면 칸 다섯 개를 만져야 했다. 이름,
+ * 금액, 날짜, **갈래 드롭다운, 낸 사람 드롭다운.** 회비는 스무 명이 내면
+ * 스무 번이고, 그 스무 번은 사람이 이미 아는 것을 기계에게 다시 알려 주는
+ * 일이다. 그건 회계 담당자가 엑셀에서 하던 바로 그 일이라, 서비스를 바꿔도
+ * 하는 일이 같으면 바꿀 이유가 없다.
+ *
+ * 그래서 **한 줄 칸이 앞문이고 다섯 칸짜리 폼은 고치는 자리로 접어 둔다.**
+ * "현우 3월 회비 3만원" 하나면 갈래도 낸 사람도 날짜도 채워진다.
+ * 사람은 사실만 말하고, 갈래·기준은 장부가 알아낸다.
+ *
+ * 채우기만 하고 저장은 하지 않는다 — 마지막으로 보는 것은 사람이다.
+ * 지출 기입(§11.4)과 같은 규칙이고, 같은 규칙이어야 두 화면을 따로
+ * 배우지 않는다.
  */
 
 const KINDS: IncomeKind[] = ['dues', 'grant', 'donation', 'carryover'];
@@ -39,6 +56,8 @@ export default function IncomePanel({
   members,
   book,
   dues,
+  perHead,
+  guessed,
   meId,
   today,
   lang,
@@ -48,6 +67,10 @@ export default function IncomePanel({
   book: FundBook;
   /** 회비를 걷는 장부일 때만 채워진다 */
   dues: DuesRow[];
+  /** 미납을 세는 기준. 사람이 적었거나 장부가 알아낸 값이다. */
+  perHead: number;
+  /** 그 기준을 장부가 알아냈다면, 몇 명 중 몇 명이 그렇게 냈는지 */
+  guessed: { times: number; of: number } | null;
   meId: string;
   today: string;
   lang: Locale;
@@ -69,6 +92,12 @@ export default function IncomePanel({
   const [date, setDate] = useState(today);
   const [memberId, setMemberId] = useState(meId);
 
+  /** 한 줄 칸 */
+  const [line, setLine] = useState('');
+  const [jotting, setJotting] = useState(false);
+  /** 어느 칸을 장부가 채웠는지. 사람이 무엇을 확인해야 하는지 알아야 한다. */
+  const [read, setRead] = useState<string[]>([]);
+
   const kindWord = (k: IncomeKind) =>
     T(k === 'dues' ? 'kindDues' : k === 'grant' ? 'kindGrant' : k === 'donation' ? 'kindDonation' : 'kindCarryover');
 
@@ -86,10 +115,52 @@ export default function IncomePanel({
       if (!r.ok) return say(r.message);
       setTitle('');
       setAmount('');
+      setLine('');
+      setRead([]);
       setOpen(false);
       router.refresh();
     });
   }
+
+  /*
+   * 한 줄로 적기 (§12.2)
+   *
+   * 저장하지 않는다. 칸을 채우고 폼을 펴 줄 뿐이다 — 갈래를 잘못 읽었을 때
+   * 되돌릴 자리가 있어야 하고, 그 자리는 이미 있는 폼이다.
+   *
+   * 못 읽은 칸은 무엇이 비었는지 말한다. 짐작해서 채운 값은 확인할 방법이
+   * 없어서 빈칸보다 나쁘다 (§7).
+   */
+  async function writeLine() {
+    const text = line.trim();
+    if (!text) return say(T('inJotEmpty'));
+
+    say('');
+    setJotting(true);
+    const r = await jotIncomeLine({ ledgerId: ledger.id, text });
+    setJotting(false);
+    if (!r.ok) return say(r.message);
+
+    const v = r.value;
+    const filled: string[] = [];
+    if (v.title) { setTitle(v.title); filled.push('title'); }
+    if (v.amount) { setAmount(formatNumber(v.amount, currency, lang)); filled.push('amount'); }
+    if (v.date) { setDate(v.date); filled.push('date'); }
+    setKind(v.kind as IncomeKind);
+    filled.push('kind');
+    if (v.memberId) { setMemberId(v.memberId); filled.push('who'); }
+    setRead(filled);
+    setOpen(true);
+
+    const what = v.missing
+      .filter((m) => m === 'amount' || m === 'payer')
+      .map((m) => (m === 'amount' ? T('jotMissAmount') : T('incomeWho')));
+    say(what.length > 0 ? T('jotMissing', { what: what.join(', ') }) : T('jotFilled'));
+  }
+
+  /** 장부가 채운 칸에 붙는 표시. 지출 기입과 같은 표시여야 같은 뜻으로 읽힌다. */
+  const fromAI = (f: string) =>
+    read.includes(f) ? <span className="ai-mark">{T('fromAI')}</span> : null;
 
   function drop(income: Income) {
     start(async () => {
@@ -123,9 +194,17 @@ export default function IncomePanel({
         </tbody>
       </table>
 
-      {ledger.termCarry && (
+      {/*
+        넘길 돈은 설정이 아니라 사실이다 (§12.2)
+
+        예전에는 팀 설정의 '회기 이월' 체크칸이 이 줄을 켜고 껐다. 그런데
+        남은 돈이 있으면 넘길 돈이 있는 것이고, 그건 켜고 끌 일이 아니라
+        잔고에서 그냥 나오는 숫자다. 넘길지 말지를 정하는 자리는 바로 아래
+        '회기 닫기'이고, 그때는 이 금액이 눈앞에 있다.
+      */}
+      {book.left > 0 && (
         <p className="aside" style={{ marginTop: 14 }}>
-          {T('carryNext')} — <b className="num">{cash(Math.max(0, book.left))}</b>
+          {T('carryNext')} — <b className="num">{cash(book.left)}</b>
         </p>
       )}
 
@@ -162,8 +241,20 @@ export default function IncomePanel({
         <>
           <div className="caption" style={{ marginTop: 34 }}>
             {T('duesBoard')}
-            <span className="faint"> · {T('duesPerHead')} {cash(ledger.duesPerHead ?? 0)}</span>
+            <span className="faint"> · {T('duesPerHead')} {cash(perHead)}</span>
           </div>
+          {/*
+            기준을 장부가 알아냈으면 그렇다고 적는다 (§12.2)
+
+            사람이 설정한 적 없는 숫자가 말없이 기준 노릇을 하면, 미납이
+            틀렸을 때 어디를 봐야 하는지 알 수가 없다. 몇 명 중 몇 명이
+            그렇게 냈는지까지 적으면 눈으로 검산이 된다.
+          */}
+          {guessed && (
+            <p className="aside" style={{ marginTop: 8, marginBottom: 14 }}>
+              {T('duesGuessed', { times: guessed.times, of: guessed.of })}
+            </p>
+          )}
           <div className="scroll">
             <table className="book">
               <thead>
@@ -240,10 +331,38 @@ export default function IncomePanel({
       )}
 
       {/* ── 적는 자리 ────────────────────────────────────────────── */}
+      {!closed && (
+        <div className="jot">
+          <div className="caption">{T('incomeAdd')}</div>
+          <div className="jot-row">
+            <input
+              type="text"
+              value={line}
+              placeholder={T('inJotPlace')}
+              maxLength={300}
+              onChange={(e) => setLine(e.target.value)}
+              onKeyDown={(e) => {
+                // 한글 조합 중의 Enter 는 글자를 고르는 것이지 보내는 것이 아니다.
+                if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                writeLine();
+              }}
+            />
+            <button className="act" disabled={jotting} onClick={writeLine}>
+              <span className={`swap${jotting ? ' on' : ''}`}>
+                <span className="rest">{T('jotDo')}</span>
+                <span className="wait">{T('jotDoing')}</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 한 줄이 안 통할 때의 길. 접혀 있다가 필요할 때만 펴진다. */}
       {!closed && !open && (
-        <p style={{ marginTop: 18 }}>
-          <button className="act small primary" onClick={() => setOpen(true)}>
-            {T('incomeAdd')}
+        <p className="drop-out">
+          <button className="plain" onClick={() => setOpen(true)}>
+            {T('writeManually')}
           </button>
         </p>
       )}
@@ -252,21 +371,21 @@ export default function IncomePanel({
         <div className="editline" style={{ marginTop: 18 }}>
           <div className="fields">
             <label className="field wide">
-              <span className="lab">{T('itemName')}</span>
+              <span className="lab">{T('itemName')}{fromAI('title')}</span>
               <input type="text" value={title} placeholder={kindWord(kind)}
                 onChange={(e) => setTitle(e.target.value)} />
             </label>
             <label className="field">
-              <span className="lab">{T('amount')}</span>
+              <span className="lab">{T('amount')}{fromAI('amount')}</span>
               <input type="text" inputMode="decimal" className="num" value={amount}
                 onChange={(e) => setAmount(e.target.value)} />
             </label>
             <label className="field">
-              <span className="lab">{T('date')}</span>
+              <span className="lab">{T('date')}{fromAI('date')}</span>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </label>
             <label className="field">
-              <span className="lab">{T('incomeWhat')}</span>
+              <span className="lab">{T('incomeWhat')}{fromAI('kind')}</span>
               <select value={kind} onChange={(e) => setKind(e.target.value as IncomeKind)}>
                 {KINDS
                   // 회비를 안 걷는 장부에는 회비 갈래가 없다.
@@ -278,7 +397,7 @@ export default function IncomePanel({
             </label>
             {kind === 'dues' && (
               <label className="field">
-                <span className="lab">{T('incomeWho')}</span>
+                <span className="lab">{T('incomeWho')}{fromAI('who')}</span>
                 <select value={memberId} onChange={(e) => setMemberId(e.target.value)}>
                   {members.filter((m) => m.active !== false).map((m) => (
                     <option key={m.id} value={m.id}>{m.name}</option>
@@ -288,13 +407,14 @@ export default function IncomePanel({
             )}
           </div>
 
-          {/* 회비는 1인당 금액이 정해져 있다. 매번 타자를 칠 이유가 없다. */}
-          {kind === 'dues' && ledger.duesPerHead && (
+          {/* 회비는 1인당 금액이 정해져 있다. 매번 타자를 칠 이유가 없다.
+              적어 둔 값이 없어도 장부가 알아낸 값으로 제안한다. */}
+          {kind === 'dues' && perHead > 0 && (
             <p className="recall" style={{ marginTop: 12 }}>
-              <span>{T('duesPerHead')} {cash(ledger.duesPerHead)}</span>
+              <span>{T('duesPerHead')} {cash(perHead)}</span>
               <button type="button" className="plain"
                 onClick={() => {
-                  setAmount(formatNumber(ledger.duesPerHead ?? 0, currency, lang));
+                  setAmount(formatNumber(perHead, currency, lang));
                   if (!title.trim()) setTitle(T('kindDues'));
                 }}>
                 {T('recallUse')}
@@ -306,7 +426,9 @@ export default function IncomePanel({
             <button className="act small primary" disabled={pending} onClick={save}>
               {pending ? T('working') : T('incomeAdd')}
             </button>
-            <button className="plain" onClick={() => setOpen(false)}>{T('close')}</button>
+            <button className="plain" onClick={() => { setOpen(false); setRead([]); }}>
+              {T('close')}
+            </button>
           </div>
         </div>
       )}

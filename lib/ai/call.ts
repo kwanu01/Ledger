@@ -4,8 +4,10 @@ import { ENDPOINT, meter, type Usage } from './usage.ts';
 /**
  * 모델을 한 번 부른다 (§7)
  *
- * 영수증 읽기와 항목별 읽기가 같은 자리를 쓴다. 기다림에 끝을 두는 방식,
- * 오류를 사람 말로 바꾸는 방식이 두 벌이면 한쪽만 고쳐진다.
+ * 영수증 읽기, 항목별 읽기, 한 줄로 적기가 다 이 자리를 쓴다. 기다림에
+ * 끝을 두는 방식, 오류를 사람 말로 바꾸는 방식이 여러 벌이면 한쪽만 고쳐진다.
+ *
+ * 사진은 있을 수도 없을 수도 있다 — 글만 읽는 자리도 같은 문을 쓴다.
  *
  * 실패해도 던지지 않는다. 이 자리에서 실패는 흔한 일이고, 흔한 일은
  * 예외가 아니라 결과여야 한다. 어느 쪽이든 손으로 적는 길은 열려 있다.
@@ -27,13 +29,17 @@ export async function callTool(args: {
   timeoutMs: number;
   maxTokens: number;
   tool: ToolSchema;
+  /** 사람이 보낸 말. 사진이 있으면 사진 뒤에 붙는다. */
   prompt: string;
-  base64: string;
-  mediaType: string;
+  /** 모델에게 미리 일러 두는 규칙. 없으면 prompt 하나로 간다. */
+  system?: string;
+  /** 사진 없이 글만 읽는 자리도 있다. */
+  base64?: string;
+  mediaType?: string;
 }): Promise<CallResult> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
-    return { ok: false, message: '영수증 분석이 아직 설정되지 않았습니다. 직접 적어 주세요.' };
+    return { ok: false, message: '아직 설정되지 않았습니다. 직접 적어 주세요.' };
   }
 
   const stop = new AbortController();
@@ -54,16 +60,19 @@ export async function callTool(args: {
         max_tokens: args.maxTokens,
         tools: [args.tool],
         tool_choice: { type: 'tool', name: args.tool.name },
+        ...(args.system ? { system: args.system } : {}),
         messages: [
           {
             role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: { type: 'base64', media_type: args.mediaType, data: args.base64 },
-              },
-              { type: 'text', text: args.prompt },
-            ],
+            content: args.base64
+              ? [
+                  {
+                    type: 'image',
+                    source: { type: 'base64', media_type: args.mediaType, data: args.base64 },
+                  },
+                  { type: 'text', text: args.prompt },
+                ]
+              : args.prompt,
           },
         ],
       }),

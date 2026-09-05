@@ -100,7 +100,8 @@ export type DuesRow = {
  * 낸 돈은 이미 잔고에 들어 있다.
  */
 export function duesBoard(ledger: Ledger, members: Member[]): DuesRow[] {
-  const due = ledger.duesPerHead ?? 0;
+  // 적어 둔 값이 먼저, 없으면 장부가 알아낸 값. 둘 다 없으면 안 센다.
+  const due = ledger.duesPerHead ?? guessDuesPerHead(ledger)?.amount ?? 0;
   const paidBy = new Map<MemberId, number>();
   for (const i of ledger.incomes ?? []) {
     if (i.kind !== 'dues' || !i.memberId) continue;
@@ -117,7 +118,7 @@ export function duesBoard(ledger: Ledger, members: Member[]): DuesRow[] {
 
 /** 아직 다 안 낸 사람들. 독촉의 입력이 되는 목록이다. */
 export function unpaid(ledger: Ledger, members: Member[]): DuesRow[] {
-  if (!ledger.duesPerHead) return [];
+  if (!ledger.duesPerHead && !guessDuesPerHead(ledger)) return [];
   return duesBoard(ledger, members).filter((r) => r.short > 0);
 }
 
@@ -134,6 +135,45 @@ export function usesFund(ledger: Pick<Ledger, 'fundSource'>): boolean {
 /** 회비를 걷는 장부인가. 미납 셈은 이때만 뜻이 있다. */
 export function collectsDues(ledger: Pick<Ledger, 'fundSource'>): boolean {
   return (ledger.fundSource ?? 'each') === 'dues';
+}
+
+/**
+ * 회비 기준을 장부가 스스로 알아낸다 (§12.2)
+ *
+ * 1인당 회비를 사람이 적게 하면, 장부를 쓰기 전에 설정을 하나 더 해야 한다.
+ * 그런데 그 값은 **이미 장부 안에 있다** — 세 사람이 3만원씩 냈으면 기준은
+ * 3만원이다. 세는 일이지 묻는 일이 아니다.
+ *
+ * 최빈값으로 고른다. 평균이 아닌 이유는, 반만 낸 사람 하나가 평균을 끌어내려
+ * 기준 자체를 틀리게 만들기 때문이다. 스무 명 중 열여덟이 3만원이면 기준은
+ * 3만원이지 28,500원이 아니다.
+ *
+ * 두 사람은 있어야 말한다. 한 번은 우연이다(recall.ts 와 같은 규칙).
+ * 사람이 직접 적어 둔 값이 있으면 그것이 이긴다 — 알아낸 것이 적어 둔 것을
+ * 덮어쓰지 않는다.
+ */
+export function guessDuesPerHead(ledger: Ledger): { amount: number; times: number; of: number } | null {
+  const paid = new Map<MemberId, number>();
+  for (const i of ledger.incomes ?? []) {
+    if (i.kind !== 'dues' || !i.memberId) continue;
+    paid.set(i.memberId, (paid.get(i.memberId) ?? 0) + i.amount);
+  }
+  if (paid.size < 2) return null;
+
+  const count = new Map<number, number>();
+  for (const v of paid.values()) count.set(v, (count.get(v) ?? 0) + 1);
+
+  let best = 0;
+  let times = 0;
+  for (const [amount, n] of count) {
+    // 같은 횟수면 큰 쪽이 기준이다. 덜 낸 사람이 기준을 정하면 안 된다.
+    if (n > times || (n === times && amount > best)) {
+      best = amount;
+      times = n;
+    }
+  }
+  if (times < 2) return null;
+  return { amount: best, times, of: paid.size };
 }
 
 /**

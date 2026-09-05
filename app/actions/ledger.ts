@@ -19,6 +19,7 @@ import {
   editExpense,
   relabelExpense,
   renameGroup,
+  setExpenseChecked,
   insertIncome,
   removeIncome,
   setLedgerKind,
@@ -81,6 +82,13 @@ export type ExpenseInput = {
   productLink?: string;
   receiptPath?: string;
   note?: string;
+  /**
+   * AI 가 사진에서 읽은 금액 (§13.2)
+   *
+   * 사람이 폼에서 금액을 고쳐도 이 값은 읽은 그대로 온다. 둘이 다르면
+   * 나중에 검사가 묻는다 — 읽은 값을 버리면 못 잡는 종류의 오류가 있다.
+   */
+  readAmount?: number;
 };
 
 export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: string }>> {
@@ -112,6 +120,7 @@ export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: s
       productLink: input.productLink,
       receiptImage: input.receiptPath,
       note: input.note,
+      readAmount: input.readAmount,
       createdBy: pass.memberId,
     });
 
@@ -179,6 +188,7 @@ export async function recordExpenses(input: {
           productLink: row.productLink,
           receiptImage: row.receiptPath,
           note: row.note,
+          readAmount: row.readAmount,
           createdBy: pass.memberId,
         });
         saved.push({ at, id });
@@ -419,6 +429,42 @@ export async function renameExpenseGroup(input: {
     if (input.from.trim() === input.to.trim()) return { ok: true };
 
     await renameGroup({ ledgerId: input.ledgerId, from: input.from, to: input.to });
+    revalidatePath(`/l/${input.ledgerId}`, 'layout');
+    return { ok: true };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/**
+ * 검사의 물음에 "괜찮다"고 답한다 (§13)
+ *
+ * 지우는 것도 고치는 것도 아니다. **이 줄은 사람이 보고 넘겼다**는 표시
+ * 하나를 남길 뿐이고, 그 뒤로 검사는 이 줄을 안 묻는다.
+ *
+ * ── 왜 되돌릴 수 있어야 하는가
+ *
+ * 급해서 넘긴 것과 확인하고 넘긴 것이 화면에서 구별되지 않는다. 되돌릴 수
+ * 없으면 잘못 누른 한 번이 영영 조용해진다. 그래서 undo 를 함께 둔다.
+ *
+ * ── 왜 정산된 줄에도 되는가
+ *
+ * checked_at 은 계산에 안 들어간다(0021). 오히려 검사가 제일 쓸모 있는
+ * 순간이 정산 직전이라, 그때 답한 것이 확정 뒤에 되살아나면 아카이브가
+ * 물음표로 뒤덮인다.
+ */
+export async function markChecked(input: {
+  ledgerId: string;
+  expenseId: string;
+  checked: boolean;
+}): Promise<Result> {
+  try {
+    await requireLedgerAccess(input.ledgerId);
+    await setExpenseChecked({
+      ledgerId: input.ledgerId,
+      expenseId: input.expenseId,
+      checked: input.checked,
+    });
     revalidatePath(`/l/${input.ledgerId}`, 'layout');
     return { ok: true };
   } catch (e) {
