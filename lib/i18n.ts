@@ -113,7 +113,7 @@ export type Key =
   | 'deleteBook' | 'deleteWarn' | 'deleteForReal' | 'gotAll'
   | 'iSent' | 'undoSent' | 'sentWaiting' | 'saysSent' | 'simpleSplit'
   | 'notLinked'
-  | 'contact' | 'privacy' | 'sendOneByOne' | 'rename'
+  | 'contact' | 'privacy' | 'updates' | 'updatesKo' | 'sendOneByOne' | 'rename'
   | 'receipt' | 'itemPhoto' | 'addPhoto' | 'replacePhoto' | 'deletePhoto' | 'reallyDelete' | 'photoDropWarn' | 'photoTooBig'
   | 'myInfo' | 'accountWhatStays' | 'accountStays1' | 'accountStays2' | 'accountGoes'
   | 'accountGoes1' | 'accountGoes2' | 'accountBooks' | 'accountEntries' | 'accountAlone'
@@ -312,7 +312,8 @@ const ko: Record<Key, string> = {
   allSettled: '정산 완료', openN: '미정산 {n}건', close: '닫기',
   deleteBook: '이 장부 지우기', deleteWarn: '지출과 정산 기록이 모두 사라집니다. 되돌릴 수 없습니다.',
   deleteForReal: '삭제합니다', gotAll: '{n}건 전부 받았어요',
-  notLinked: '계정 연결 전', contact: '문의', privacy: '개인정보 처리방침', sendOneByOne: '한 사람씩 보내기', rename: '바꾸기',
+  notLinked: '계정 연결 전', contact: '문의', privacy: '개인정보 처리방침',
+  updates: '업데이트 내역', updatesKo: '', sendOneByOne: '한 사람씩 보내기', rename: '바꾸기',
   receipt: '영수증', itemPhoto: '품목 사진', addPhoto: '사진 올리기', replacePhoto: '사진 바꾸기', deletePhoto: '사진 지우기',
   reallyDelete: '정말 지웁니다', photoDropWarn: '이 사진을 지웁니다. 되돌릴 수 없습니다.',
   photoTooBig: '사진이 너무 큽니다. 다른 사진으로 해 보시거나 직접 적어 주세요.',
@@ -555,7 +556,8 @@ const en: Record<Key, string> = {
   allSettled: 'settled', openN: '{n} open', close: 'Close',
   deleteBook: 'Delete this ledger', deleteWarn: 'Every expense and settlement goes with it. This cannot be undone.',
   deleteForReal: 'Yes, delete', gotAll: 'Received all {n}',
-  notLinked: 'not linked yet', contact: 'Contact', privacy: 'Privacy', sendOneByOne: 'Send one by one', rename: 'Rename',
+  notLinked: 'not linked yet', contact: 'Contact', privacy: 'Privacy',
+  updates: "What's new", updatesKo: 'These notes are written in Korean.', sendOneByOne: 'Send one by one', rename: 'Rename',
   receipt: 'Receipt', itemPhoto: 'Item photo', addPhoto: 'Add a photo', replacePhoto: 'Replace photo', deletePhoto: 'Delete photo',
   reallyDelete: 'Delete for real', photoDropWarn: 'This photo will be deleted. This cannot be undone.',
   photoTooBig: 'That photo is too large. Try another one, or type it in yourself.',
@@ -796,7 +798,8 @@ const ja: Record<Key, string> = {
   allSettled: '精算完了', openN: '未精算 {n}件', close: '閉じる',
   deleteBook: 'この帳簿を削除', deleteWarn: '支出と精算の記録がすべて消えます。元に戻せません。',
   deleteForReal: '削除する', gotAll: '{n}件すべて受け取りました',
-  notLinked: 'アカウント未連携', contact: 'お問い合わせ', privacy: 'プライバシー', sendOneByOne: '一人ずつ送る', rename: '変更',
+  notLinked: 'アカウント未連携', contact: 'お問い合わせ', privacy: 'プライバシー',
+  updates: '更新履歴', updatesKo: 'この更新履歴は韓国語で書かれています。', sendOneByOne: '一人ずつ送る', rename: '変更',
   receipt: 'レシート', itemPhoto: '品目写真', addPhoto: '写真を追加', replacePhoto: '写真を差し替え', deletePhoto: '写真を削除',
   reallyDelete: '本当に削除', photoDropWarn: 'この写真を削除します。元に戻せません。',
   photoTooBig: '写真が大きすぎます。別の写真にするか、手で入力してください。',
@@ -1037,7 +1040,8 @@ const zh: Record<Key, string> = {
   allSettled: '已结算', openN: '未结算 {n}笔', close: '收起',
   deleteBook: '删除此账本', deleteWarn: '所有支出与结算记录都会一并消失，且无法恢复。',
   deleteForReal: '确认删除', gotAll: '{n}笔全部已收到',
-  notLinked: '尚未关联账号', contact: '联系', privacy: '隐私政策', sendOneByOne: '逐个发送', rename: '修改',
+  notLinked: '尚未关联账号', contact: '联系', privacy: '隐私政策',
+  updates: '更新记录', updatesKo: '本更新记录以韩语撰写。', sendOneByOne: '逐个发送', rename: '修改',
   receipt: '收据', itemPhoto: '物品照片', addPhoto: '添加照片', replacePhoto: '更换照片', deletePhoto: '删除照片',
   reallyDelete: '确认删除', photoDropWarn: '将删除这张照片，无法恢复。',
   photoTooBig: '照片太大了。换一张，或者手动填写。',
@@ -1283,7 +1287,8 @@ const es: Record<Key, string> = {
   allSettled: 'liquidado', openN: '{n} sin liquidar', close: 'Cerrar',
   deleteBook: 'Eliminar este libro', deleteWarn: 'Se van con él todos los gastos y liquidaciones. No se puede deshacer.',
   deleteForReal: 'Eliminar', gotAll: 'Recibí las {n}',
-  notLinked: 'sin cuenta vinculada', contact: 'Contacto', privacy: 'Privacidad', sendOneByOne: 'Enviar uno por uno', rename: 'Cambiar',
+  notLinked: 'sin cuenta vinculada', contact: 'Contacto', privacy: 'Privacidad',
+  updates: 'Novedades', updatesKo: 'Estas notas están escritas en coreano.', sendOneByOne: 'Enviar uno por uno', rename: 'Cambiar',
   receipt: 'Recibo', itemPhoto: 'Foto del artículo', addPhoto: 'Añadir foto', replacePhoto: 'Cambiar foto', deletePhoto: 'Eliminar foto',
   reallyDelete: 'Eliminar de verdad', photoDropWarn: 'Esta foto se eliminará. No se puede deshacer.',
   photoTooBig: 'Esa foto es demasiado grande. Prueba con otra o escríbelo a mano.',
@@ -1526,7 +1531,8 @@ const vi: Record<Key, string> = {
   allSettled: 'đã chia xong', openN: 'chưa chia {n}', close: 'Đóng',
   deleteBook: 'Xoá sổ này', deleteWarn: 'Mọi khoản chi và lần chia tiền sẽ mất theo. Không thể hoàn tác.',
   deleteForReal: 'Xoá', gotAll: 'Đã nhận cả {n} khoản',
-  notLinked: 'chưa liên kết', contact: 'Liên hệ', privacy: 'Quyền riêng tư', sendOneByOne: 'Gửi từng người', rename: 'Đổi tên',
+  notLinked: 'chưa liên kết', contact: 'Liên hệ', privacy: 'Quyền riêng tư',
+  updates: 'Cập nhật', updatesKo: 'Phần này được viết bằng tiếng Hàn.', sendOneByOne: 'Gửi từng người', rename: 'Đổi tên',
   receipt: 'Hóa đơn', itemPhoto: 'Ảnh món đồ', addPhoto: 'Thêm ảnh', replacePhoto: 'Đổi ảnh', deletePhoto: 'Xóa ảnh',
   reallyDelete: 'Xóa thật', photoDropWarn: 'Ảnh này sẽ bị xóa. Không thể hoàn tác.',
   photoTooBig: 'Ảnh quá lớn. Bạn thử ảnh khác hoặc nhập tay nhé.',

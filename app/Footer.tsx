@@ -29,6 +29,10 @@ export default function Footer({ lang }: { lang: Locale }) {
           광고가 없어도 남의 돈 이야기를 맡아 두는 이상 있어야 한다. */}
       <span className="foot-sep" aria-hidden="true" />
       <Link href="/privacy">{T('privacy')}</Link>
+      {/* 무엇이 달라졌는지. 처방침과 문의 사이 — 이 셋이 '서비스에 대해
+          알아보는 자리'로 한 덩어리다. */}
+      <span className="foot-sep" aria-hidden="true" />
+      <Link href="/updates">{T('updates')}</Link>
       {MAIL && (
         <>
           <span className="foot-sep" aria-hidden="true" />
