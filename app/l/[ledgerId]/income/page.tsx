@@ -10,6 +10,7 @@ import {
   usesFund,
   collectsDues,
 } from '../../../../lib/domain/closing.ts';
+import { burn } from '../../../../lib/domain/ahead.ts';
 import { redirect } from 'next/navigation';
 
 /**
@@ -58,6 +59,7 @@ export default async function IncomePage({ params }: { params: Promise<{ ledgerI
           book={fundBook(ledger)}
           dues={collectsDues(ledger) && perHead > 0 ? duesBoard(ledger, ledger.members) : []}
           perHead={perHead}
+          spend={burn(ledger, new Date().toISOString().slice(0, 10))}
           guessed={!ledger.duesPerHead && guess ? { times: guess.times, of: guess.of } : null}
           meId={pass.memberId}
           today={new Date().toISOString().slice(0, 10)}

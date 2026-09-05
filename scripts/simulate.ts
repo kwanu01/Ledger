@@ -27,6 +27,8 @@ import { recallFor, recallSeed, categoriesOf } from '../lib/domain/recall.ts';
 import { fundBook, duesBoard, unpaid, carryOut, fromFund, usesFund, guessDuesPerHead } from '../lib/domain/closing.ts';
 import { inSettlement } from '../lib/domain/settlement.ts';
 import { twins, spikes, offReceipt, leftOut, median, watch } from '../lib/domain/watch.ts';
+import { burn, budgetOf, weeksBetween } from '../lib/domain/ahead.ts';
+import { nudges, weeksSinceSettle } from '../lib/domain/nudge.ts';
 import type { Income } from '../lib/domain/types.ts';
 import type { Expense, Ledger, SettlementResult } from '../lib/domain/types.ts';
 
@@ -621,6 +623,114 @@ check('검사는 몇 번을 훑어도 같은 답이다',
 check('검사는 장부를 건드리지 않는다',
   (() => { const before = JSON.stringify(ledger); watch(ledger, members); return JSON.stringify(ledger) === before; })(),
   '가리키기만 한다');
+
+/* --- 앞을 보기 (§14) --------------------------------------------------- */
+/*
+ * 예산은 묻지 않고 알아낸다. 그리고 근거가 모자라면 아무 말도 안 한다 —
+ * 이 절이 지키는 것은 그 침묵이다. 짐작을 숫자로 내놓으면 틀린 줄도 모른다.
+ */
+console.log('\n[앞을 보기]');
+
+check('예산을 안 적으면 들어온 돈이 예산이다',
+  budgetOf(club).amount === 47000 + 275000 && budgetOf(club).told === false,
+  won(budgetOf(club).amount) + ' — 이월 + 회비 + 지원금');
+check('적어 둔 예산이 알아낸 값을 이긴다',
+  budgetOf({ ...club, budget: 500000 }).amount === 500000 &&
+  budgetOf({ ...club, budget: 500000 }).told === true);
+
+/* 속도를 말하려면 공금 지출이 셋은 있어야 한다. 동아리 장부에는 둘뿐이라
+   한 줄을 더한 장부를 따로 세운다 — 기준을 낮추는 대신 표본을 맞춘다. */
+const clubMore: Ledger = {
+  ...club,
+  expenses: [
+    ...club.expenses,
+    { id: 'c4', ledgerId: 'club', date: '2026-04-05', title: '간식', amount: 0,
+      payerId: 'kw', teamMemberIds: ['kw','hw','sj','yr'], allocation: { type: 'common' },
+      createdAt: '2026-04-05T00:00:00Z', createdBy: 'kw' },
+  ],
+};
+const b1 = burn(clubMore, '2026-05-01');
+check('집행률 = 공금 지출 ÷ 예산',
+  Math.round(b1.ran * 1000) === Math.round((158000 / 322000) * 1000),
+  `${won(b1.spent)} / ${won(b1.budget)} = ${(b1.ran * 100).toFixed(1)}%`);
+check('남은 돈 = 예산 − 쓴 돈', b1.left === b1.budget - b1.spent, won(b1.left));
+check('넉 주가 지나야 속도를 말한다',
+  burn(clubMore, '2026-03-15').weeksLeft === null && b1.weeksLeft !== null,
+  '두 주치로 낸 날짜는 틀릴 뿐 아니라 틀린 줄도 모르게 만든다');
+check('공금 지출이 셋은 되어야 말한다',
+  burn(club, '2026-05-01').weeksLeft === null,
+  '한두 건으로 낸 평균은 평균이 아니다');
+check('바닥날 날짜는 주 수를 옮긴 것이지 따로 센 것이 아니다',
+  b1.dryOn === new Date(Date.parse('2026-05-01T00:00:00Z') + (b1.weeksLeft as number) * 7 * 86400000)
+    .toISOString().slice(0, 10),
+  `${b1.weeksLeft}주 · ${b1.dryOn}`);
+check('예산을 넘겼으면 버틸 주 수를 세지 않는다',
+  burn({ ...club, budget: 100000 }, '2026-05-01').weeksLeft === null,
+  '이미 지난 일이라 앞을 볼 것이 없다');
+check('예산을 넘긴 것은 넘긴 대로 적는다',
+  burn({ ...club, budget: 100000 }, '2026-05-01').left === -58000 &&
+  burn({ ...club, budget: 100000 }, '2026-05-01').ran > 1,
+  '집행률이 1을 넘는 것도 사실이다');
+check('첫 주도 한 주다', weeksBetween('2026-03-01', '2026-03-02') === 1,
+  '0으로 나누지 않는다');
+check('말할 수 없을 때 null 은 "안 바닥난다"가 아니다',
+  burn({ ...club, expenses: [] }, '2026-05-01').weeksLeft === null &&
+  burn({ ...club, expenses: [] }, '2026-05-01').left > 0,
+  '남은 돈은 있지만 속도를 모른다');
+
+/* --- 말 걸 때 (§15) ---------------------------------------------------- */
+/*
+ * 장부가 먼저 말을 거는 자리는 하나뿐이라 규칙이 까다롭다. 이 절이 지키는
+ * 것은 **안 하는 말**이다 — 조건 하나만 맞을 때 말을 걸면 헛말이 나온다.
+ */
+console.log('\n[말 걸 때]');
+
+const fresh = { ...ledger, settlements: [] };
+/* 이 장부는 2026-09-01 에 열렸다. 넉 주 뒤를 '오늘'로 삼는다 —
+   지나지 않은 날을 오늘이라고 하면 지난 주 수가 0 이 되어 아무 말도 안 한다. */
+const later = '2026-11-01';
+check('미룬 것이 없으면 아무 말도 안 한다',
+  nudges({ ...fresh, expenses: [] }, members, later).length === 0,
+  '조용한 것이 이 기능의 절반이다');
+check('줄은 쌓였는데 아직 3주가 안 됐으면 말하지 않는다',
+  nudges(fresh, members, fresh.startedAt).filter((n) => n.kind === 'settle').length === 0);
+check('3주가 지났어도 줄이 두 개면 말하지 않는다',
+  nudges({ ...fresh, expenses: fresh.expenses.slice(0, 2) }, members, later)
+    .filter((n) => n.kind === 'settle').length === 0,
+  '한두 줄은 정산할 것이 아니라 그냥 줄이다');
+check('둘 다 맞으면 그때 말한다',
+  nudges(fresh, members, later).some((n) => n.kind === 'settle'));
+
+const said = nudges(fresh, members, later).find((n) => n.kind === 'settle');
+check('1인당은 부담의 합을 사람 수로 나눈 것이다',
+  said !== undefined && said.kind === 'settle' &&
+  Math.abs(said.perHead * members.length - said.total) <= members.length,
+  '지분의 합 = 금액이라는 불변식 위에 선 숫자다');
+check('정산하면 사라진다',
+  nudges({ ...ledger, expenses: [] }, members, later)
+    .filter((n) => n.kind === 'settle').length === 0);
+check('마지막 정산 이후로 센다',
+  weeksSinceSettle({ ...ledger, settlements: [
+    { id: 's', ledgerId: 'x', seq: 1, date: '2026-10-25', label: '1차', isFinal: true,
+      snapshot: { expenseIds: [], totalAmount: 0, sharedAmount: 0, personalAmount: 0,
+        balances: [], transfers: [], breakdowns: [] } },
+  ] }, '2026-11-01') === 1,
+  '장부를 연 날이 아니라 지난번 확정한 날이다');
+check('정산한 적이 없으면 장부를 연 날부터 센다',
+  weeksSinceSettle(fresh, later) >= 8);
+
+check('회비를 안 걷는 장부는 회비 얘기를 안 한다',
+  nudges(fresh, members, later).every((n) => n.kind !== 'dues'));
+check('첫 달에는 회비를 독촉하지 않는다',
+  nudges(club, members, '2026-03-08').every((n) => n.kind !== 'dues'),
+  '넉 주가 지나야 말한다');
+check('넉 주가 지나고 미납이 있으면 말한다',
+  nudges(club, members, '2026-06-01').some((n) => n.kind === 'dues'));
+/* 다 낸 두 사람만 남긴 장부. 미납이 0 이면 회비 얘기는 사라져야 한다. */
+const allPaid = { ...club, members: club.members.filter((m) => m.id === 'kw' || m.id === 'hw') };
+check('회비를 다 걷으면 사라진다',
+  nudges(allPaid, allPaid.members, '2026-06-01').every((n) => n.kind !== 'dues'),
+  '할 일이 없으면 말도 없다');
 
 rule();
 console.log(failures === 0 ? `\n모든 불변식 통과 — 이 장부는 검산 가능하다.\n` : `\n실패 ${failures}건\n`);

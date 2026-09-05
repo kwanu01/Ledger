@@ -85,6 +85,8 @@ export type LedgerRow = {
   term_carry?: boolean | null;
   dues_per_head?: number | string | null;
   closed_at?: string | null;
+  /** 0022. 없는 데이터베이스도 있어서 optional 이다 */
+  budget?: number | string | null;
 };
 
 /** 들어온 돈 (0020_income_and_fund.sql 과 1:1) */
@@ -231,6 +233,8 @@ export function toLedger(
     termCarry: ledger.term_carry ?? false,
     duesPerHead: ledger.dues_per_head != null ? won(ledger.dues_per_head) : undefined,
     closedAt: ledger.closed_at ?? undefined,
+    /* 0022 이전 데이터베이스에는 이 칸이 없다. 없으면 장부가 알아낸다 (§14). */
+    budget: ledger.budget != null ? won(ledger.budget) : undefined,
     incomes: incomeRows.map(toIncome).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1)),
     members: toMembers(memberRows),
     expenses: expenseRows.map(toExpense),

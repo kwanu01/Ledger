@@ -1,13 +1,13 @@
-# Ledger 배포 가이드 — v54 → v65
+# Ledger 배포 가이드 — v54 → v67
 
-배포되어 있는 것은 **v54**이고, 이 코드는 **v65**입니다. 그 사이 열한 판이
+배포되어 있는 것은 **v54**이고, 이 코드는 **v67**입니다. 그 사이 열세 판이
 한 번에 올라갑니다. 순서대로만 하면 됩니다.
 
 ---
 
 ## 0. 먼저 알아 둘 것
 
-**마이그레이션은 순서대로 다 돌려도 안전합니다.** 0012부터 0021까지 전부
+**마이그레이션은 순서대로 다 돌려도 안전합니다.** 0012부터 0022까지 전부
 `create or replace` · `if not exists` · `drop … if exists` 로 되어 있어서,
 이미 돌린 것을 다시 돌려도 아무 일도 일어나지 않습니다. **어느 것까지
 돌렸는지 기억할 필요가 없습니다** — 0012부터 차례로 다 돌리세요.
@@ -31,7 +31,7 @@ cd <저장소>
 git status --porcelain | grep -i env    # 아무것도 안 나와야 정상
 
 git add -A
-git commit -m "v65 — 검사: 중복·튀는 금액·영수증 대조·빠진 사람"
+git commit -m "v67 — 결산 보고서, 말 걸 때, 말 대신 써 주기"
 git push
 ```
 
@@ -51,7 +51,9 @@ Vercel 이 GitHub 에 붙어 있으므로 push 하면 배포가 시작됩니다.
 
 ---
 
-## 2. Supabase 마이그레이션 (0012 → 0021)
+## 2. Supabase 마이그레이션 (0012 → 0022)
+
+> v67 에는 새 마이그레이션이 없습니다. 0022 까지가 전부입니다.
 
 Supabase Dashboard → SQL Editor 에서 **파일 하나씩, 번호 순서대로** 실행합니다.
 
@@ -67,6 +69,7 @@ Supabase Dashboard → SQL Editor 에서 **파일 하나씩, 번호 순서대로
 | **0019** | **지출 묶음** — `group_name` 칸 | ← 새것 |
 | **0020** | **들어온 돈과 공금** — `incomes` 표, 열거형에 `common`, 장부의 성격 | ← 새것 |
 | **0021** | **검사** — `read_amount`(사진에서 읽은 금액), `checked_at`(넘긴 표시) | ← 새것 |
+| **0022** | **예산과 경계** — `budget`(비워 두면 장부가 알아냄), `plan`(지금은 전부 pro) | ← 새것 |
 
 ### 0018 과 0020 에서 한 번씩 걸릴 수 있습니다
 
@@ -126,7 +129,11 @@ select
   exists (select 1 from information_schema.columns
           where table_schema = 'public' and table_name = 'expenses'
             and column_name = 'read_amount')
-    as "0021 검사";
+    as "0021 검사",
+  exists (select 1 from information_schema.columns
+          where table_schema = 'public' and table_name = 'ledgers'
+            and column_name = 'budget')
+    as "0022 예산";
 ```
 
 `false` 가 하나라도 있으면 그 번호의 파일만 다시 실행하면 됩니다.
@@ -263,7 +270,7 @@ select count(*) from public.incomes;
 
 ---
 
-## 이번에 올라가는 것 (v55 → v65)
+## 이번에 올라가는 것 (v55 → v67)
 
 | 판 | 내용 |
 |---|---|
@@ -278,6 +285,8 @@ select count(*) from public.incomes;
 | v63 | **수입과 공금** — 수입 항목, 공금 지출, 회비 납부, 결산, 장부 성격, 부르는 이름 |
 | v64 | **설정을 걷어 냄** — 수입도 한 줄로 적기(갈래·낸 사람을 글에서 읽음), 1인당 회비를 장부가 알아냄, '회기 이월' 체크칸 삭제 |
 | v65 | **검사** — 중복 탐지, 튀는 금액, 영수증과 적힌 값 대조, 빠진 사람. 전부 순수 함수(AI 안 부름), 한 번 답하면 안 묻는다 |
+| v66 | **예산과 집행률** — 예산은 들어온 돈에서 알아냄, "이 속도면 8주쯤 더 갑니다". `plan` 칸 하나(아직 안 읽음) |
+| v67 | **결산 보고서**(인쇄용, 모델 안 부름) · **말 걸 때**(미룬 것이 쌓였을 때 한 줄) · **말 대신 써 주기**(독촉 문장) |
 
 같이 고친 기존 버그
 - 정산이 끝난 지출을 고칠 때 `item_lines` 가 잠기지 않던 것 (0018 에서 함께)
@@ -286,4 +295,4 @@ select count(*) from public.incomes;
 - 모바일에서 `.pick-sub input` 규칙이 체크박스가 아닌 글자 칸까지
   18px 네모로 찌그러뜨리던 것
 
-검산 불변식은 **22개 → 102개**로 늘었고 전부 통과합니다 (`npm run simulate`).
+검산 불변식은 **22개 → 125개**로 늘었고 전부 통과합니다 (`npm run simulate`).

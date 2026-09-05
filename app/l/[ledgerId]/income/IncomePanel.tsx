@@ -2,14 +2,16 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { closeTerm, deleteIncome, recordIncome } from '../../../actions/ledger.ts';
+import { closeTerm, deleteIncome, recordIncome, setBudget } from '../../../actions/ledger.ts';
 import { jotIncomeLine } from '../../../actions/receipt.ts';
+import SayIt from '../../../SayIt.tsx';
 import { translator } from '../../../../lib/i18n.ts';
 import { memberWord } from '../../../../lib/labels.ts';
 import { formatMoney, formatNumber, parseMoney } from '../../../../lib/domain/money.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
 import type { CurrencyCode, Locale } from '../../../../lib/domain/money.ts';
 import type { DuesRow, FundBook } from '../../../../lib/domain/closing.ts';
+import type { Burn } from '../../../../lib/domain/ahead.ts';
 import type { Income, IncomeKind, Ledger, Member } from '../../../../lib/domain/types.ts';
 
 /**
@@ -58,6 +60,7 @@ export default function IncomePanel({
   dues,
   perHead,
   guessed,
+  spend,
   meId,
   today,
   lang,
@@ -71,6 +74,8 @@ export default function IncomePanel({
   perHead: number;
   /** 그 기준을 장부가 알아냈다면, 몇 명 중 몇 명이 그렇게 냈는지 */
   guessed: { times: number; of: number } | null;
+  /** 예산과 집행률, 그리고 이 속도면 얼마나 가는지 (§14) */
+  spend: Burn;
   meId: string;
   today: string;
   lang: Locale;
@@ -91,6 +96,12 @@ export default function IncomePanel({
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(today);
   const [memberId, setMemberId] = useState(meId);
+
+  /** 예산을 고치는 칸. 접혀 있다 — 대개 고칠 일이 없다. */
+  const [fixing, setFixing] = useState(false);
+  const [budget, setBudgetText] = useState(
+    ledger.budget ? formatNumber(ledger.budget, ledger.currency ?? 'KRW', lang) : '',
+  );
 
   /** 한 줄 칸 */
   const [line, setLine] = useState('');
@@ -195,6 +206,78 @@ export default function IncomePanel({
       </table>
 
       {/*
+        집행률 (§14)
+
+        결산이 "얼마 남았나"라면 이것은 **"얼마나 갔나"**다. 같은 숫자를 두
+        번 적는 것처럼 보이지만 다르다 — 결산은 잔고고, 이쪽은 예산 대비
+        위치다. 예산을 안 적어 두었으면 둘이 같은 값이 되는데, 그때도 띠는
+        뜻이 있다: 절반을 썼는지 다 썼는지는 잔고 숫자만으로는 안 보인다.
+
+        띠 하나에 색을 다 쓰지 않는다. 넘겼을 때만 붉어진다.
+      */}
+      <div className="caption" style={{ marginTop: 34 }}>{T('ranTitle')}</div>
+      <div className="ran">
+        <div className="ran-bar" role="img"
+          aria-label={`${Math.round(spend.ran * 100)}%`}>
+          <i className={spend.ran > 1 ? 'over' : undefined}
+            style={{ width: `${Math.min(100, Math.round(spend.ran * 100))}%` }} />
+        </div>
+        <p className="ran-say">
+          <span className="num big">{Math.round(spend.ran * 100)}%</span>
+          <span className="muted">
+            {T('ranSpent')} <b className="num">{cash(spend.spent)}</b>
+            {' · '}
+            {T('budgetWord')} <b className="num">{cash(spend.budget)}</b>
+            {/* 알아낸 값이면 어디서 나왔는지 적는다. 사람이 설정한 적 없는
+                숫자가 말없이 기준 노릇을 하면 안 된다 (§12.2 와 같은 규칙). */}
+            {!spend.told && <span className="faint"> · {T('budgetGuess')}</span>}
+          </span>
+          {!closed && (
+            <button className="plain" onClick={() => setFixing(!fixing)}>{T('budgetFix')}</button>
+          )}
+        </p>
+
+        {fixing && (
+          <div className="fields" style={{ marginTop: 12 }}>
+            <label className="field">
+              <span className="lab">{T('budgetWord')}</span>
+              <input type="text" inputMode="decimal" className="num" value={budget}
+                placeholder={formatNumber(spend.budget, currency, lang)}
+                onChange={(e) => setBudgetText(e.target.value)} />
+            </label>
+            <p className="aside" style={{ flexBasis: '100%', marginTop: 6 }}>{T('budgetFree')}</p>
+            <div className="row" style={{ flexBasis: '100%', marginTop: 12 }}>
+              <button className="act small primary" disabled={pending}
+                onClick={() => start(async () => {
+                  const n = parseMoney(budget, currency);
+                  const r = await setBudget({ ledgerId: ledger.id, budget: n > 0 ? n : undefined });
+                  if (!r.ok) return say(r.message);
+                  setFixing(false);
+                  router.refresh();
+                })}>
+                {pending ? T('working') : T('saveEdit')}
+              </button>
+              <button className="plain" onClick={() => setFixing(false)}>{T('close')}</button>
+            </div>
+          </div>
+        )}
+
+        {/*
+          이 속도면 얼마나 가는가.
+
+          말할 근거가 모자라면 weeksLeft 가 null 이고, 그때는 날짜 대신
+          **언제쯤 말해 줄 수 있는지**를 적는다. 침묵보다 낫고 짐작보다 낫다.
+        */}
+        <p className="aside" style={{ marginTop: 12 }}>
+          {spend.left < 0
+            ? T('ranOver', { amount: cash(-spend.left) })
+            : spend.weeksLeft !== null
+              ? T('ranDry', { n: spend.weeksLeft, date: (spend.dryOn ?? '').slice(5).replace('-', '.') })
+              : T('ranQuiet')}
+        </p>
+      </div>
+
+      {/*
         넘길 돈은 설정이 아니라 사실이다 (§12.2)
 
         예전에는 팀 설정의 '회기 이월' 체크칸이 이 줄을 켜고 껐다. 그런데
@@ -235,6 +318,10 @@ export default function IncomePanel({
         )}
         {!closed && <span className="faint">{T('closeWarn')}</span>}
       </div>
+      {/* 회기를 닫는 순간이 보고서를 뽑는 순간이다. 그 자리에 함께 둔다. */}
+      <p style={{ marginTop: 12 }}>
+        <a className="plain" href={`/l/${ledger.id}/report`}>{T('reportTab')}</a>
+      </p>
 
       {/* ── 회비 납부 ────────────────────────────────────────────── */}
       {dues.length > 0 && (
@@ -262,6 +349,7 @@ export default function IncomePanel({
                   <th>{memberWord(lang, ledger.fundSource)}</th>
                   <th className="r">{T('duesPaid')}</th>
                   <th className="r">{T('duesShort')}</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -271,6 +359,18 @@ export default function IncomePanel({
                     <td className="r num">{cash(r.paid)}</td>
                     {/* 다 낸 사람의 0은 적지 않는다. 빈칸이 곧 '다 냈다'다. */}
                     <td className="r num debit">{r.short > 0 ? cash(r.short) : ''}</td>
+                    {/*
+                      말 대신 써 주기 (§15.2)
+
+                      모자란 사람 줄에만 선다. 다 낸 사람 옆에 회색 단추가
+                      서 있으면, 누를 일 없는 단추를 표의 절반이 지고 있게 된다.
+                    */}
+                    <td className="r">
+                      {r.short > 0 && !closed && (
+                        <SayIt ledgerId={ledger.id} toMemberId={r.memberId}
+                          toName={who(r.memberId)} why="dues" lang={lang} />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

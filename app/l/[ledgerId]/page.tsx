@@ -11,6 +11,7 @@ import {
 } from '../../../lib/domain/settlement.ts';
 import { adjustmentLabel, allocationLabel } from '../../../lib/labels.ts';
 import { fundBook, unpaid, usesFund, collectsDues } from '../../../lib/domain/closing.ts';
+import { nudges } from '../../../lib/domain/nudge.ts';
 import { translator } from '../../../lib/i18n.ts';
 import { formatEntryAmount, formatMoney } from '../../../lib/domain/money.ts';
 import Moving from './Moving.tsx';
@@ -40,6 +41,14 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
      "얼마 남았나"가 이 화면에 들어오는 사람의 첫 물음이기 때문이다. */
   const fund = usesFund(ledger) ? fundBook(ledger) : null;
   const owing = collectsDues(ledger) && ledger.duesPerHead ? unpaid(ledger, ledger.members) : [];
+  /*
+   * 장부가 먼저 말을 거는 자리 (§15)
+   *
+   * 미룬 것이 쌓였을 때만 한 줄이 뜬다. 할 말이 없으면 빈 배열이고, 그때는
+   * 아무것도 안 그린다 — 조용한 것이 이 기능의 절반이다. 순수 함수라
+   * 질의도 모델 호출도 없다.
+   */
+  const said = nudges(ledger, ledger.members, new Date().toISOString().slice(0, 10));
   const members = ledger.members;
   const T = translator(lang);
   const currency = ledger.currency ?? 'KRW';
@@ -82,6 +91,30 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
       />
 
       <main>
+
+        {/* 미룬 것이 쌓였으면 여기서 한 번 말한다. 끄는 단추는 없다 —
+            하면 사라지는 것이라, 끄는 단추는 할 일을 지우는 단추가 된다. */}
+        {said.length > 0 && (
+          <div className="nudge">
+            {said.map((n) => (
+              <p key={n.kind}>
+                {n.kind === 'settle' ? (
+                  <>
+                    {T('nudgeSettle', { weeks: n.weeks, rows: n.rows, perHead: won(n.perHead) })}
+                    {' '}
+                    <Link href={`/l/${ledgerId}/settle`}>{T('tabSettle')}</Link>
+                  </>
+                ) : (
+                  <>
+                    {T('nudgeDues', { people: n.people, short: won(n.short) })}
+                    {' '}
+                    <Link href={`/l/${ledgerId}/income`}>{T('incomeTab')}</Link>
+                  </>
+                )}
+              </p>
+            ))}
+          </div>
+        )}
 
         <section>
           {/*
@@ -149,6 +182,7 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
             ledgerId={ledgerId}
             toMe={toMe.map((t) => ({
               transferId: t.transfer_id,
+              memberId: t.from_member_id,
               who: nameOf(members, t.from_member_id),
               amount: t.amount,
               sent: Boolean(t.sent_at),
@@ -221,6 +255,17 @@ export default async function LedgerHome({ params }: { params: Promise<{ ledgerI
           </div>
           )}
         </section>
+
+        {/*
+          결산 보고서 (§15.3)
+
+          탭 줄에 넣지 않는다. 한 학기에 한두 번 쓰는 것이라 늘 서 있을
+          자리는 아니고, 탭이 하나 늘면 매일 쓰는 다섯이 그만큼 좁아진다.
+          장부 맨 아래, 다 훑고 나서 닿는 자리가 맞다.
+        */}
+        <p className="report-out">
+          <Link href={`/l/${ledgerId}/report`} className="plain">{T('reportTab')}</Link>
+        </p>
       </main>
     </>
   );

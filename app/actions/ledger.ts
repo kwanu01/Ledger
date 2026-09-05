@@ -23,6 +23,7 @@ import {
   insertIncome,
   removeIncome,
   setLedgerKind,
+  setLedgerBudget,
   setTermClosed,
 } from '../../lib/db/repo.ts';
 import { checkItemLines, currentRoster } from '../../lib/domain/settlement.ts';
@@ -429,6 +430,41 @@ export async function renameExpenseGroup(input: {
     if (input.from.trim() === input.to.trim()) return { ok: true };
 
     await renameGroup({ ledgerId: input.ledgerId, from: input.from, to: input.to });
+    revalidatePath(`/l/${input.ledgerId}`, 'layout');
+    return { ok: true };
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/**
+ * 예산을 적어 둔다 (§14)
+ *
+ * **비워 두는 것이 기본이다.** 공금 장부에서 예산은 이미 장부 안에 있다 —
+ * 들어온 돈이 곧 쓸 수 있는 돈이다(lib/domain/ahead.ts). 이 액션은 그 값이
+ * 사실과 다를 때를 위한 자리다: 받기로 했는데 아직 안 들어온 지원금 같은 것.
+ *
+ * 0 이나 빈 값을 보내면 지운다 — 다시 장부가 알아낸다. '지우기'를 따로
+ * 만들지 않는 이유는, 비우는 것과 지우는 것이 사람에게 같은 일이어서다.
+ */
+export async function setBudget(input: {
+  ledgerId: string;
+  budget?: number;
+}): Promise<Result> {
+  try {
+    await requireLedgerAccess(input.ledgerId);
+    const ledger = await loadLedger(input.ledgerId);
+    if (!usesFund(ledger)) {
+      return { ok: false, message: '각자 결제하는 장부에는 예산이 없습니다.' };
+    }
+    if (input.budget !== undefined && (!Number.isInteger(input.budget) || input.budget < 0)) {
+      return { ok: false, message: '예산은 0보다 큰 정수여야 합니다.' };
+    }
+
+    await setLedgerBudget({
+      ledgerId: input.ledgerId,
+      budget: input.budget && input.budget > 0 ? input.budget : undefined,
+    });
     revalidatePath(`/l/${input.ledgerId}`, 'layout');
     return { ok: true };
   } catch (e) {

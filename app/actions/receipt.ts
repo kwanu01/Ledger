@@ -6,6 +6,10 @@ import { readReceipt, type Extracted } from '../../lib/ai/receipt.ts';
 import { readReceiptLines, type ExtractedItems } from '../../lib/ai/items.ts';
 import { jot } from '../../lib/ai/jot.ts';
 import { jotIncome } from '../../lib/ai/income.ts';
+import { sayFor, type SayWhy } from '../../lib/ai/say.ts';
+import { duesBoard } from '../../lib/domain/closing.ts';
+import { openTransfers } from '../../lib/db/repo.ts';
+import { formatMoney, type Locale } from '../../lib/domain/money.ts';
 import { collectsDues, usesFund } from '../../lib/domain/closing.ts';
 import { loadLedger } from '../../lib/db/repo.ts';
 import type { Allocation } from '../../lib/domain/types.ts';
@@ -276,5 +280,90 @@ export async function jotIncomeLine(input: { ledgerId: string; text: string }): 
   } catch (e) {
     if (e instanceof AccessError) return { ok: false, message: e.message };
     return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.' };
+  }
+}
+
+
+/* ── 말 대신 써 주기 (§15.2) ──────────────────────────────────────────── */
+
+export type SayOut = { ok: true; text: string } | { ok: false; message: string };
+
+/** 모델에게 넘길 언어 이름. 코드가 아니라 사람이 읽는 말이어야 한다. */
+const SAY_IN: Record<string, string> = {
+  ko: '한국어', en: 'English', ja: '日本語', zh: '中文', es: 'español', vi: 'tiếng Việt',
+};
+
+/**
+ * 받을 돈 얘기를 꺼내는 문장을 대신 쓴다.
+ *
+ * ── 금액은 클라이언트에서 받지 않는다
+ *
+ * 화면이 보낸 금액을 그대로 문장에 넣으면, 그 문장은 **장부가 아니라 브라우저가
+ * 한 말**이 된다. 여기서 장부를 다시 읽고 직접 센다. 화면이 주는 것은
+ * "누구에게, 무엇 때문에"뿐이다.
+ *
+ * 그리고 그 계산은 도메인 함수가 한다 — duesBoard 와 확정된 정산의 snapshot.
+ * 이 파일에서 새로 세는 숫자는 하나도 없다.
+ */
+export async function askToPay(input: {
+  ledgerId: string;
+  toMemberId: string;
+  why: SayWhy;
+  warm: boolean;
+  lang: string;
+}): Promise<SayOut> {
+  try {
+    const pass = await requireLedgerAccess(input.ledgerId);
+
+    const used = await aiUsageThisMonth(input.ledgerId);
+    if (used >= MONTHLY_AI_LIMIT) {
+      return { ok: false, message: `이번 달 분석 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건).` };
+    }
+
+    const ledger = await loadLedger(input.ledgerId);
+    const to = ledger.members.find((m) => m.id === input.toMemberId);
+    if (!to) return { ok: false, message: '그 사람을 찾을 수 없습니다.' };
+    const me = ledger.members.find((m) => m.id === pass.memberId);
+
+    const lang = (input.lang in SAY_IN ? input.lang : 'ko') as Locale;
+    const cash = (n: number) => formatMoney(n, ledger.currency ?? 'KRW', lang);
+
+    /* 얼마인지는 여기서 센다. 화면이 준 숫자는 쓰지 않는다. */
+    let amount = 0;
+    let what = '';
+    if (input.why === 'dues') {
+      if (!collectsDues(ledger)) return { ok: false, message: '회비를 걷지 않는 장부입니다.' };
+      amount = duesBoard(ledger, ledger.members).find((r) => r.memberId === to.id)?.short ?? 0;
+      what = ledger.name;
+      if (amount <= 0) return { ok: false, message: '이 사람은 회비를 다 냈습니다.' };
+    } else {
+      /* 아직 확인되지 않은 송금 중, 이 사람이 나에게 보낼 것만 센다.
+         여러 회차에 걸쳐 있으면 합친다 — 받는 쪽에서 보면 한 건이다. */
+      const open = await openTransfers(input.ledgerId);
+      const mine = open.filter(
+        (t) => t.from_member_id === to.id && t.to_member_id === pass.memberId,
+      );
+      amount = mine.reduce((a, t) => a + t.amount, 0);
+      const seqs = [...new Set(mine.map((t) => t.seq))];
+      what = seqs.map((n) => `${n}차 정산`).join(', ') || ledger.name;
+      if (amount <= 0) return { ok: false, message: '이 사람에게 받을 돈이 없습니다.' };
+    }
+
+    const r = await sayFor({
+      team: ledger.teamName,
+      from: me?.name ?? '',
+      to: to.name,
+      amount: cash(amount),
+      why: input.why,
+      what,
+      warm: input.warm,
+      lang: SAY_IN[lang] ?? '한국어',
+    });
+    await bill(input.ledgerId, r);
+    if (!r.ok) return { ok: false, message: r.message };
+    return { ok: true, text: r.value.text };
+  } catch (e) {
+    if (e instanceof AccessError) return { ok: false, message: e.message };
+    return { ok: false, message: '문장을 만들지 못했습니다.' };
   }
 }

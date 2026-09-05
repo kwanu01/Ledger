@@ -132,6 +132,23 @@ export async function setLedgerKind(args: {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * 예산 (§14, 0022)
+ *
+ * NULL 로 되돌릴 수 있어야 한다. 비운다는 것은 "예산이 0"이 아니라
+ * **"장부가 알아내라"**는 뜻이고, 그 둘은 화면에서 아주 다른 말이 된다.
+ */
+export async function setLedgerBudget(args: {
+  ledgerId: string;
+  budget?: number;
+}): Promise<void> {
+  const { error } = await db
+    .from('ledgers')
+    .update({ budget: args.budget ?? null })
+    .eq('id', args.ledgerId);
+  if (error) throw new Error(error.message);
+}
+
 /** 회기를 닫거나 다시 연다. 닫힌 회기의 수입은 DB 가 막는다(0020). */
 export async function setTermClosed(ledgerId: string, closed: boolean): Promise<void> {
   const { error } = await db

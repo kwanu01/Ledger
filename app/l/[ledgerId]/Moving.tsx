@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { markTransferReceived, markTransferSent } from '../../actions/ledger.ts';
 import { useHelper } from '../../helper/HelperContext.tsx';
+import SayIt from '../../SayIt.tsx';
 import { translator } from '../../../lib/i18n.ts';
 import { formatMoney, type CurrencyCode, type Locale } from '../../../lib/domain/money.ts';
 
@@ -21,6 +22,8 @@ import { formatMoney, type CurrencyCode, type Locale } from '../../../lib/domain
 export type Row = {
   transferId: string;
   who: string;
+  /** 상대의 팀원 id. 말 대신 써 주기가 누구에게 보낼 말인지 알아야 한다. */
+  memberId?: string;
   amount: number;
   sent: boolean;
   /** 보냈다고 표시한 시각. 얼마나 기다렸는지를 적는 데 쓴다. */
@@ -139,7 +142,7 @@ export default function Moving({
             ))}
 
             {/* 내가 받을 것 */}
-            {toMe.map((t) => (
+            {toMe.flatMap((t) => [
               <tr key={t.transferId}>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {t.who} → {T('me')}
@@ -164,8 +167,26 @@ export default function Moving({
                     {T('gotIt')}
                   </button>
                 </td>
-              </tr>
-            ))}
+              </tr>,
+              /*
+                말 대신 써 주기 (§15.2)
+
+                **아직 보냈다는 표시조차 없는 줄에만** 붙인다. 보냈다고
+                해 놓고 내가 확인만 안 한 줄에 독촉 단추가 서 있으면,
+                할 일이 이쪽에 있는데 저쪽을 찌르는 꼴이 된다.
+
+                줄 아래에 폭을 다 쓰는 칸으로 편다. 글자 칸이 들어가는
+                자리라 좁은 칸에 밀어 넣을 수 없다.
+              */
+              !t.sent && t.memberId ? (
+                <tr key={`${t.transferId}-say`} className="sayrow">
+                  <td colSpan={4}>
+                    <SayIt ledgerId={ledgerId} toMemberId={t.memberId}
+                      toName={t.who} why="transfer" lang={lang} />
+                  </td>
+                </tr>
+              ) : null,
+            ])}
             {/*
               나와 상관없는 송금 (소유자에게만)
 
