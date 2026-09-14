@@ -1,4 +1,5 @@
 import 'server-only';
+import { ICON_KEYS, ICON_NAME, asIconKey, type IconKey } from '../domain/icons.ts';
 import type { CurrencyCode } from '../domain/money.ts';
 import { callTool, type ToolSchema } from './call.ts';
 import { MODEL, type Usage } from './usage.ts';
@@ -30,6 +31,8 @@ export type Extracted = {
   date?: string;
   vendor?: string;
   category?: string;
+  /** 목록에서 이 지출을 한눈에 찾게 해 주는 그림 (§29). */
+  icon?: IconKey;
 };
 
 export type ExtractResult =
@@ -59,7 +62,22 @@ const SCHEMA: ToolSchema = {
       vendor: { type: 'string', description: '판매처 상호. 안 보이면 비운다.' },
       category: {
         type: 'string',
-        description: '재료비·제작비·출력비·운반비·식비·기타 중 하나로 짐작해서.',
+        description: '식비·이동·물품·활동·기타 중 가장 가까운 분류. 특정 직업이나 모임을 전제로 하지 않습니다.',
+      },
+      /*
+       * 그림 고르기는 세는 일이 아니라 **읽는 일**이라 모델에게 맡긴다.
+       * 영수증에 '아메리카노'가 적혀 있으면 카페라는 것은 글자를 읽으면
+       * 아는 일이고, 여기에 돈 계산은 한 푼도 섞이지 않는다.
+       *
+       * enum 으로 못을 박는다. 목록 밖의 값이 오면 asIconKey 가 버리고
+       * 분류에서 짐작한 기본값으로 돌아간다.
+       */
+      icon: {
+        type: 'string',
+        enum: [...ICON_KEYS],
+        description:
+          '무엇을 샀는지에 가장 가까운 그림 하나. 확실하지 않으면 비운다. ' +
+          ICON_KEYS.map((k) => `${k}=${ICON_NAME[k]}`).join(', '),
       },
     },
     required: ['title', 'amount', 'currency'],
@@ -161,6 +179,7 @@ export async function readReceipt(args: {
     date,
     vendor: str(raw.vendor),
     category: str(raw.category),
+    icon: asIconKey(raw.icon),
   };
 
   // 어느 칸이 AI가 채운 것인지 표시해 두면, 사용자가 무엇을 확인해야 하는지 알 수 있다.

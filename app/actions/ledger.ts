@@ -31,6 +31,8 @@ import { failed } from '../../lib/fail.ts';
 import type { Allocation, FundSource, IncomeKind } from '../../lib/domain/types.ts';
 import { collectsDues, usesFund } from '../../lib/domain/closing.ts';
 import { MAX_BATCH } from '../../lib/limits.ts';
+import { expenseRequestId } from '../../lib/mobile/idempotency.ts';
+import { findExpenseReplay } from '../../lib/mobile/replay.ts';
 
 /**
  * 부담 방식이 성립하는가 (§10)
@@ -71,6 +73,8 @@ export type Result<T = undefined> =
 
 export type ExpenseInput = {
   ledgerId: string;
+  /** A stable app request id. The server scopes it to the verified user and ledger. */
+  clientId?: string;
   date: string;
   title: string;
   amount: number;
@@ -100,6 +104,12 @@ export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: s
       return { ok: false, message: '금액은 0이 아닌 정수여야 합니다.' };
     }
 
+    const requestId = input.clientId ? expenseRequestId(pass.userId ?? '', input.ledgerId, input.clientId) : undefined;
+    if (requestId) {
+      const existing = await findExpenseReplay(requestId, input);
+      if (existing) return { ok: true, value: { id: existing } };
+    }
+
     const ledger = await loadLedger(input.ledgerId);
     // '전체 팀'은 지금 팀원이 아니라 기록하는 이 순간의 팀원을 뜻한다.
     const roster = currentRoster(ledger);
@@ -107,7 +117,8 @@ export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: s
     const wrong = vetAllocation(input.allocation, input.amount, roster);
     if (wrong) return { ok: false, message: wrong };
 
-    const id = await insertExpense({
+    const insert = () => insertExpense({
+      id: requestId,
       ledgerId: input.ledgerId,
       date: input.date,
       title: input.title.trim(),
@@ -124,6 +135,14 @@ export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: s
       readAmount: input.readAmount,
       createdBy: pass.memberId,
     });
+    let id: string;
+    try { id = await insert(); }
+    catch (error) {
+      // A simultaneous retry may win the unique id insert. Reuse only the same payload.
+      const existing = requestId ? await findExpenseReplay(requestId, input) : null;
+      if (!existing) throw error;
+      id = existing;
+    }
 
     // 닫혔던 장부에 다시 적으면 다시 열린다. 닫는 것은 지우는 것이 아니다.
     await reopenLedger(input.ledgerId);

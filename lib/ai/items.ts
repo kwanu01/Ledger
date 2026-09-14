@@ -50,8 +50,10 @@ export type ExtractedItems = {
   read: string;
   lines: ReadLine[];
   currency: CurrencyCode;
-  /** 영수증에 찍힌 최종 결제 금액 */
+  /** 영수증 총액. 읽지 못했으면 폼에 보여 줄 품목 합계이며 totalRead가 false다. */
   total: number;
+  /** 영수증의 총액을 실제로 읽었는가. 추정 합계는 검산 근거로 쓰지 않는다. */
+  totalRead: boolean;
   /** 읽어 온 줄들의 합 */
   sum: number;
   /** sum 과 total 이 같은가. 다르면 화면이 그 자리에서 말한다. */
@@ -234,7 +236,8 @@ export async function readReceiptLines(args: {
    * 맞는다는 표시는 뜻이 없다 — 그래서 balanced 는 총액을 실제로 읽었을 때만
    * 뜻이 있다. 화면은 어느 쪽이든 사람에게 총액을 다시 보여 준다.
    */
-  const total = Number.isFinite(readTotal) && readTotal !== 0 ? readTotal : sum;
+  const totalRead = typeof raw.total === 'number' && Number.isSafeInteger(raw.total) && readTotal > 0;
+  const total = totalRead ? readTotal : sum;
 
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
   const date = typeof raw.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.date) ? raw.date : undefined;
@@ -247,8 +250,9 @@ export async function readReceiptLines(args: {
       lines,
       currency,
       total,
+      totalRead,
       sum,
-      balanced: sum === total,
+      balanced: totalRead && sum === total,
       vendor: str(raw.vendor),
       date,
       title: str(raw.title),

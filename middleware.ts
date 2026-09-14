@@ -9,6 +9,11 @@ import { createServerClient } from '@supabase/ssr';
  */
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
+  // Mobile endpoints authenticate Bearer tokens themselves and never refresh browser cookies.
+  if (request.nextUrl.pathname.startsWith('/api/mobile/')) {
+    response.headers.set('Cache-Control', 'private, no-store');
+    return response;
+  }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -17,10 +22,11 @@ export async function middleware(request: NextRequest) {
   const supabase = createServerClient(url, anonKey, {
     cookies: {
       getAll: () => request.cookies.getAll(),
-      setAll: (list) => {
+      setAll: (list, cacheHeaders) => {
         for (const { name, value } of list) request.cookies.set(name, value);
         response = NextResponse.next({ request });
         for (const { name, value, options } of list) response.cookies.set(name, value, options);
+        for (const [name, value] of Object.entries(cacheHeaders ?? {})) response.headers.set(name, value);
       },
     },
   });

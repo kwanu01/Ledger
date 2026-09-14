@@ -6,7 +6,8 @@ import { burn } from '../domain/ahead.ts';
 import { watch } from '../domain/watch.ts';
 import { nudges } from '../domain/nudge.ts';
 import { formatNumber } from '../domain/money.ts';
-import { ENDPOINT, MODEL, meter, type Usage } from './usage.ts';
+import { MODEL, meter, type Usage } from './usage.ts';
+import { requestMessage } from './request.ts';
 
 /**
  * 장부에 대해 묻기 (§21.10)
@@ -32,6 +33,7 @@ const MAX_ROWS = 200;
  */
 const MAX_TURNS = 6;
 const MAX_TURN_CHARS = 1000;
+const TIMEOUT_MS = Number(process.env.LEDGER_AI_ASK_TIMEOUT_MS ?? 12000);
 
 export type Turn = { role: 'user' | 'assistant'; text: string };
 
@@ -51,6 +53,7 @@ export function digest(ledger: Ledger, meId: string | null, today?: string): str
 
   const out: string[] = [];
   out.push(`장부: ${ledger.name} (팀 ${ledger.teamName}), 통화 ${cur}`);
+  out.push('송금·입금의 실제 완료 여부는 이 자료에 없습니다. 아래 송금은 정산에서 계산한 계획이며, 정산 확정은 송금 완료를 뜻하지 않습니다.');
   out.push(
     `팀원: ${ledger.members.map((m) => `${m.name}${m.id === meId ? '(=지금 묻는 사람)' : ''}`).join(', ')}`,
   );
@@ -160,7 +163,7 @@ export function digest(ledger: Ledger, meId: string | null, today?: string): str
       .join(' / ');
     out.push(
       `${e.date} | ${e.title} | ${who(e.payerId)} | ${money(e.amount)} | ${bears} | ` +
-        `${settled.has(e.id) ? '정산 완료' : '미정산'}${extra ? ` | ${extra}` : ''}`,
+        `${settled.has(e.id) ? '정산 확정' : '미정산'}${extra ? ` | ${extra}` : ''}`,
     );
   }
 
@@ -269,7 +272,10 @@ const SYSTEM = `당신은 팀 장부 옆에 서 있는 종이 영수증입니다
    새로 찾아내려 하지 마세요 — 찾는 일은 장부가 이미 했습니다.
 7. 어디를 보면 되는지 알려 줄 때 쓰는 이름입니다: '장부'(모든 줄과 확인할 것),
    '정산 내역'(누가 누구에게), '들어온 돈'(결산·회비·예산, 공금 장부에만),
-   '품목', '팀', '지출 기입', 그리고 장부 맨 아래의 '결산 보고서'.`;
+   '품목', '팀', '지출 기입', 그리고 장부 맨 아래의 '결산 보고서'.
+8. 실제 송금·입금 확인 상태는 제공되지 않습니다. '정산 확정'이나 송금 계획을
+   실제 돈이 오간 사실로 말하지 마세요. 완료 여부를 물으면 정산 내역의
+   보냄·받음 표시를 확인하도록 안내하고, 은행 거래 여부는 알 수 없다고 답합니다.`;
 
 
 /**
@@ -353,9 +359,6 @@ export async function askAnything(args: {
   question: string;
   history: Turn[];
 }): Promise<AskResult> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return { ok: false, message: '아직 설정되지 않았습니다.' };
-
   const messages = [
     ...args.history.slice(-MAX_TURNS).map((t) => ({
       role: t.role === 'assistant' ? ('assistant' as const) : ('user' as const),
@@ -364,42 +367,7 @@ export async function askAnything(args: {
     { role: 'user' as const, content: args.question },
   ];
 
-  let res: Response;
-  try {
-    res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({ model: MODEL, max_tokens: 500, system: OPEN_SYSTEM, messages }),
-    });
-  } catch {
-    return { ok: false, message: '지금은 닿지 못했습니다.' };
-  }
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    if (res.status === 401) return { ok: false, message: 'API 키가 맞지 않습니다.' };
-    if (res.status === 429) return { ok: false, message: '잠시 뒤에 다시 물어봐 주세요.' };
-    if (detail.includes('credit balance')) return { ok: false, message: '크레딧이 부족합니다.' };
-    return { ok: false, message: '대답하지 못했습니다.' };
-  }
-
-  const body = (await res.json()) as {
-    content?: { type: string; text?: string }[];
-    usage?: { input_tokens?: number; output_tokens?: number };
-  };
-  const usage = meter(body.usage);
-  const text = (body.content ?? [])
-    .filter((c) => c.type === 'text')
-    .map((c) => c.text ?? '')
-    .join('')
-    .trim();
-
-  if (!text) return { ok: false, message: '대답하지 못했습니다.', usage };
-  return { ok: true, answer: text, usage };
+  return answer(messages, OPEN_SYSTEM, 500);
 }
 
 export async function askAboutLedger(args: {
@@ -408,9 +376,6 @@ export async function askAboutLedger(args: {
   question: string;
   history: Turn[];
 }): Promise<AskResult> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return { ok: false, message: '아직 설정되지 않았습니다.' };
-
   const messages = [
     ...args.history.slice(-MAX_TURNS).map((t) => ({
       role: t.role === 'assistant' ? ('assistant' as const) : ('user' as const),
@@ -422,33 +387,17 @@ export async function askAboutLedger(args: {
     },
   ];
 
-  let res: Response;
-  try {
-    res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({ model: MODEL, max_tokens: 700, system: SYSTEM, messages }),
-    });
-  } catch {
-    return { ok: false, message: '지금은 닿지 못했습니다.' };
-  }
+  return answer(messages, SYSTEM, 700);
+}
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    if (res.status === 401) return { ok: false, message: 'API 키가 맞지 않습니다.' };
-    if (res.status === 429) return { ok: false, message: '잠시 뒤에 다시 물어봐 주세요.' };
-    if (detail.includes('credit balance')) return { ok: false, message: '크레딧이 부족합니다.' };
-    return { ok: false, message: '대답하지 못했습니다.' };
-  }
-
-  const body = (await res.json()) as {
-    content?: { type: string; text?: string }[];
-    usage?: { input_tokens?: number; output_tokens?: number };
-  };
+async function answer(
+  messages: { role: 'user' | 'assistant'; content: string }[],
+  system: string,
+  maxTokens: number,
+): Promise<AskResult> {
+  const response = await requestMessage({ model: MODEL, max_tokens: maxTokens, system, messages }, TIMEOUT_MS);
+  if (!response.ok) return response;
+  const body = response.body;
   const usage = meter(body.usage);
   const text = (body.content ?? [])
     .filter((c) => c.type === 'text')

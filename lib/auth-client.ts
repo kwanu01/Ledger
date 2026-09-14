@@ -1,7 +1,10 @@
 import 'server-only';
 import { cache } from 'react';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { createClient, type User } from '@supabase/supabase-js';
+import { resolveRequestUser } from './mobile/auth-policy.ts';
+import { MobileError } from './mobile/http.ts';
 
 /**
  * 로그인한 사용자의 세션을 다루는 클라이언트.
@@ -60,32 +63,42 @@ export type AuthUser = {
 export const currentUser = cache(_currentUser);
 
 async function _currentUser(): Promise<AuthUser | null> {
-  const supabase = await authClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
+  const authorization = (await headers()).get('authorization');
+  return resolveRequestUser(authorization, async (token) => {
+    if (!url || !anonKey) throw new Error('인증 연결을 준비하고 있습니다.');
+    // Request-local: a mobile token must never replace a browser session or service-role key.
+    const client = createClient(url, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const { data, error } = await client.auth.getUser(token);
+    if (error && (!error.status || error.status >= 500))
+      throw new MobileError(503, 'AUTH_UNAVAILABLE', '로그인을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    return error || !data.user ? null : toAuthUser(data.user);
+  }, async () => {
+    const supabase = await authClient();
+    const { data, error } = await supabase.auth.getUser();
+    return error || !data.user ? null : toAuthUser(data.user);
+  });
+}
 
-  const meta = data.user.user_metadata ?? {};
+function toAuthUser(user: User): AuthUser {
+  const meta = user.user_metadata ?? {};
 
   // 로그인 수단. Supabase는 app_metadata.provider 에 이번에 쓴 것을 적어 준다.
   // 이메일 링크로 들어오면 'email'이다.
-  const raw = String((data.user.app_metadata as { provider?: string } | undefined)?.provider ?? 'email');
+  const raw = String((user.app_metadata as { provider?: string } | undefined)?.provider ?? 'email');
   const provider: Provider =
     raw === 'google' ? 'google' : raw === 'kakao' ? 'kakao' : raw === 'email' ? 'email' : 'other';
 
   return {
-    id: data.user.id,
-    email: data.user.email ?? undefined,
+    id: user.id,
+    email: user.email ?? undefined,
     provider,
-    createdAt: data.user.created_at ?? undefined,
-    lastSignInAt: data.user.last_sign_in_at ?? undefined,
+    createdAt: user.created_at ?? undefined,
+    lastSignInAt: user.last_sign_in_at ?? undefined,
     // 가입할 때 적은 이름이 먼저다. 카카오는 nickname을 준다.
     // 둘 다 없으면 이메일 앞부분을 쓴다.
-    displayName:
-      meta.display_name ??
-      meta.name ??
-      meta.nickname ??
-      meta.full_name ??
-      data.user.email?.split('@')[0] ??
-      '이름 없음',
+    displayName: [meta.display_name, meta.name, meta.nickname, meta.full_name, user.email?.split('@')[0]]
+      .find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim().slice(0, 100) ?? '이름 없음',
   };
 }

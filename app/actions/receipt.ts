@@ -1,7 +1,8 @@
 'use server';
 
 import { requireLedgerAccess, AccessError } from '../../lib/access.ts';
-import { aiUsageThisMonth, recordAiUsage, MONTHLY_AI_LIMIT } from '../../lib/db/repo.ts';
+import { reserveAiUsage, recordAiUsage, AiUsageError, MONTHLY_AI_LIMIT } from '../../lib/db/repo.ts';
+import { MODEL, ITEM_MODEL } from '../../lib/ai/usage.ts';
 import { readReceipt, type Extracted } from '../../lib/ai/receipt.ts';
 import { readReceiptLines, type ExtractedItems } from '../../lib/ai/items.ts';
 import { jot } from '../../lib/ai/jot.ts';
@@ -34,7 +35,8 @@ export type ReadResult =
  */
 async function admit(
   formData: FormData,
-): Promise<{ ok: true; ledgerId: string; base64: string; mediaType: string } | { ok: false; message: string }> {
+  model: string,
+): Promise<{ ok: true; ledgerId: string; reservationId: string; base64: string; mediaType: string } | { ok: false; message: string }> {
   const ledgerId = String(formData.get('ledgerId') ?? '');
   await requireLedgerAccess(ledgerId);
 
@@ -49,25 +51,27 @@ async function admit(
     return { ok: false, message: '사진 파일만 올릴 수 있습니다.' };
   }
 
-  const used = await aiUsageThisMonth(ledgerId);
-  if (used >= MONTHLY_AI_LIMIT) {
+  const base64 = Buffer.from(await file.arrayBuffer()).toString('base64');
+  const reservationId = await reserveAiUsage(ledgerId, model);
+  if (!reservationId) {
     return {
       ok: false,
       message: `이번 달 분석 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건). 직접 적어 주세요.`,
     };
   }
 
-  const base64 = Buffer.from(await file.arrayBuffer()).toString('base64');
-  return { ok: true, ledgerId, base64, mediaType: file.type };
+  return { ok: true, ledgerId, reservationId, base64, mediaType: file.type };
 }
 
 /** 성공이든 실패든 부른 만큼은 기록한다. 상한이 뜻을 가지려면 그래야 한다. */
 async function bill(
   ledgerId: string,
+  reservationId: string,
   r: { ok: boolean; usage?: { model: string; inputTokens: number; outputTokens: number; costMicroUsd: number } },
 ) {
   if (!r.usage) return;
   await recordAiUsage({
+    reservationId,
     ledgerId,
     model: r.usage.model,
     inputTokens: r.usage.inputTokens,
@@ -79,16 +83,16 @@ async function bill(
 
 export async function analyzeReceipt(formData: FormData): Promise<ReadResult> {
   try {
-    const gate = await admit(formData);
+    const gate = await admit(formData, MODEL);
     if (!gate.ok) return gate;
 
     const r = await readReceipt({ base64: gate.base64, mediaType: gate.mediaType });
-    await bill(gate.ledgerId, r);
+    await bill(gate.ledgerId, gate.reservationId, r);
 
     if (!r.ok) return { ok: false, message: r.message };
     return { ok: true, value: r.value, fields: r.fields };
   } catch (e) {
-    if (e instanceof AccessError) return { ok: false, message: e.message };
+    if (e instanceof AccessError || e instanceof AiUsageError) return { ok: false, message: e.message };
     return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.' };
   }
 }
@@ -107,16 +111,16 @@ export type LinesResult =
  */
 export async function analyzeReceiptLines(formData: FormData): Promise<LinesResult> {
   try {
-    const gate = await admit(formData);
+    const gate = await admit(formData, ITEM_MODEL);
     if (!gate.ok) return gate;
 
     const r = await readReceiptLines({ base64: gate.base64, mediaType: gate.mediaType });
-    await bill(gate.ledgerId, r);
+    await bill(gate.ledgerId, gate.reservationId, r);
 
     if (!r.ok) return { ok: false, message: r.message };
     return { ok: true, value: r.value };
   } catch (e) {
-    if (e instanceof AccessError) return { ok: false, message: e.message };
+    if (e instanceof AccessError || e instanceof AiUsageError) return { ok: false, message: e.message };
     return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.' };
   }
 }
@@ -153,26 +157,20 @@ export async function jotExpense(input: { ledgerId: string; text: string }): Pro
     const text = input.text.trim();
     if (!text) return { ok: false, message: '무엇을 샀는지 한 줄 적어 주세요.' };
 
-    const used = await aiUsageThisMonth(input.ledgerId);
-    if (used >= MONTHLY_AI_LIMIT) {
-      return {
-        ok: false,
-        message: `이번 달 분석 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건). 직접 적어 주세요.`,
-      };
-    }
-
     const ledger = await loadLedger(input.ledgerId);
     const roster = ledger.members.filter((m) => m.active !== false);
     const me = roster.find((m) => m.id === pass.memberId);
+    const reservationId = await reserveAiUsage(input.ledgerId, MODEL);
+    if (!reservationId) return { ok: false, message: `이번 달 분석 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건). 직접 적어 주세요.` };
 
     const r = await jot({
       text,
       today: new Date().toISOString().slice(0, 10),
       names: roster.map((m) => m.name),
-      me: me?.name ?? roster[0]?.name ?? '',
+      me: me?.name ?? pass.memberName ?? '',
       currency: ledger.currency ?? 'KRW',
     });
-    await bill(input.ledgerId, r);
+    await bill(input.ledgerId, reservationId, r);
     if (!r.ok) return { ok: false, message: r.message };
 
     const v = r.value;
@@ -214,7 +212,7 @@ export async function jotExpense(input: { ledgerId: string; text: string }): Pro
       },
     };
   } catch (e) {
-    if (e instanceof AccessError) return { ok: false, message: e.message };
+    if (e instanceof AccessError || e instanceof AiUsageError) return { ok: false, message: e.message };
     return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.' };
   }
 }
@@ -242,27 +240,25 @@ export type IncomeOut = { ok: true; value: IncomeFilled } | { ok: false; message
  */
 export async function jotIncomeLine(input: { ledgerId: string; text: string }): Promise<IncomeOut> {
   try {
-    await requireLedgerAccess(input.ledgerId);
+    const pass = await requireLedgerAccess(input.ledgerId);
     const text = input.text.trim();
     if (!text) return { ok: false, message: '무엇으로 들어왔는지 한 줄 적어 주세요.' };
-
-    const used = await aiUsageThisMonth(input.ledgerId);
-    if (used >= MONTHLY_AI_LIMIT) {
-      return { ok: false, message: `이번 달 분석 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건). 직접 적어 주세요.` };
-    }
 
     const ledger = await loadLedger(input.ledgerId);
     if (!usesFund(ledger)) return { ok: false, message: '이 장부에는 들어온 돈을 적지 않습니다.' };
 
     const roster = ledger.members.filter((m) => m.active !== false);
+    const me = roster.find((m) => m.id === pass.memberId);
+    const reservationId = await reserveAiUsage(input.ledgerId, MODEL);
+    if (!reservationId) return { ok: false, message: `이번 달 분석 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건). 직접 적어 주세요.` };
     const r = await jotIncome({
       text,
       today: new Date().toISOString().slice(0, 10),
       names: roster.map((m) => m.name),
-      me: roster[0]?.name ?? '',
+      me: me?.name ?? pass.memberName ?? '',
       dues: collectsDues(ledger),
     });
-    await bill(input.ledgerId, r);
+    await bill(input.ledgerId, reservationId, r);
     if (!r.ok) return { ok: false, message: r.message };
 
     const v = r.value;
@@ -278,7 +274,7 @@ export async function jotIncomeLine(input: { ledgerId: string; text: string }): 
       },
     };
   } catch (e) {
-    if (e instanceof AccessError) return { ok: false, message: e.message };
+    if (e instanceof AccessError || e instanceof AiUsageError) return { ok: false, message: e.message };
     return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.' };
   }
 }
@@ -315,11 +311,6 @@ export async function askToPay(input: {
   try {
     const pass = await requireLedgerAccess(input.ledgerId);
 
-    const used = await aiUsageThisMonth(input.ledgerId);
-    if (used >= MONTHLY_AI_LIMIT) {
-      return { ok: false, message: `이번 달 분석 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건).` };
-    }
-
     const ledger = await loadLedger(input.ledgerId);
     const to = ledger.members.find((m) => m.id === input.toMemberId);
     if (!to) return { ok: false, message: '그 사람을 찾을 수 없습니다.' };
@@ -349,6 +340,8 @@ export async function askToPay(input: {
       if (amount <= 0) return { ok: false, message: '이 사람에게 받을 돈이 없습니다.' };
     }
 
+    const reservationId = await reserveAiUsage(input.ledgerId, MODEL);
+    if (!reservationId) return { ok: false, message: `이번 달 분석 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건).` };
     const r = await sayFor({
       team: ledger.teamName,
       from: me?.name ?? '',
@@ -359,11 +352,11 @@ export async function askToPay(input: {
       warm: input.warm,
       lang: SAY_IN[lang] ?? '한국어',
     });
-    await bill(input.ledgerId, r);
+    await bill(input.ledgerId, reservationId, r);
     if (!r.ok) return { ok: false, message: r.message };
     return { ok: true, text: r.value.text };
   } catch (e) {
-    if (e instanceof AccessError) return { ok: false, message: e.message };
+    if (e instanceof AccessError || e instanceof AiUsageError) return { ok: false, message: e.message };
     return { ok: false, message: '문장을 만들지 못했습니다.' };
   }
 }

@@ -57,24 +57,25 @@ export const loadLedger = cache(_loadLedger);
 async function _loadLedger(ledgerId: string): Promise<Ledger> {
   const { data: ledger, error } = await db
     .from('ledgers')
-    /* 칸을 하나하나 적지 않고 통째로 받는다. 0020 이 아직 안 돌아간
-       데이터베이스에서 없는 칸을 이름으로 부르면 질의가 통째로 실패하고,
-       그러면 장부가 아예 안 열린다. 없는 칸은 안 오면 그만이고,
-       toLedger 가 기본값을 채운다. */
+    // Optional ledger metadata is normalized by toLedger; child tables must load completely.
     .select('*, teams(name)')
     .eq('id', ledgerId)
     .single<LedgerRow & { teams: { name: string } }>();
   if (error || !ledger) throw new Error('장부를 찾을 수 없습니다.');
 
-  const [{ data: members }, { data: expenses }, { data: settlements }, { data: incomes }] =
-    await Promise.all([
-      db.from('members').select('*').eq('team_id', ledger.team_id).order('sort_order'),
-      db.from('expenses').select('*').eq('ledger_id', ledgerId).order('spent_on').order('id'),
-      db.from('settlements').select('*').eq('ledger_id', ledgerId).order('seq'),
-      /* 들어온 돈 (§12). 0020 을 아직 안 돌린 데이터베이스에서는 이 질의가
-         실패하는데, 그때도 장부는 열려야 한다 — 지출만 있는 장부로 선다. */
-      db.from('incomes').select('*').eq('ledger_id', ledgerId).order('received_on').order('id'),
-    ]);
+  const results = await Promise.all([
+    db.from('members').select('*', { count: 'exact' }).eq('team_id', ledger.team_id).order('sort_order'),
+    db.from('expenses').select('*', { count: 'exact' }).eq('ledger_id', ledgerId).order('spent_on').order('id'),
+    db.from('settlements').select('*', { count: 'exact' }).eq('ledger_id', ledgerId).order('seq'),
+    db.from('incomes').select('*', { count: 'exact' }).eq('ledger_id', ledgerId).order('received_on').order('id'),
+  ]);
+  // Supabase's row cap must never turn a large ledger into a smaller balance.
+  // Large ledgers fail explicitly until this read path supports full pagination.
+  if (results.some((result) => result.error || !Array.isArray(result.data)
+    || !Number.isSafeInteger(result.count) || result.data.length !== result.count)) {
+    throw new Error('장부를 모두 읽지 못했습니다. 다시 시도해 주세요.');
+  }
+  const [{ data: members }, { data: expenses }, { data: settlements }, { data: incomes }] = results;
 
   return toLedger(
     ledger,
@@ -676,11 +677,46 @@ export async function takeOpenAiSlot(): Promise<boolean> {
 
 export async function aiUsageThisMonth(ledgerId: string): Promise<number> {
   const { data, error } = await db.rpc('ai_usage_this_month', { p_ledger_id: ledgerId });
-  if (error) return 0;
-  return (data as number) ?? 0;
+  if (error || typeof data !== 'number' || !Number.isSafeInteger(data) || data < 0) {
+    throw new AiUsageError('AI 사용량을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+  return data;
+}
+
+export class AiUsageError extends Error {}
+
+/** Read-only capability probe; never consumes an AI reservation. */
+export async function aiReservationReady(): Promise<boolean> {
+  if (!Number.isSafeInteger(MONTHLY_AI_LIMIT) || MONTHLY_AI_LIMIT <= 0 || MONTHLY_AI_LIMIT > 2_147_483_647) return false;
+  try {
+    const { data, error } = await db.rpc('ai_usage_reservation_version');
+    return !error && data === 1;
+  } catch {
+    return false;
+  }
+}
+
+/** Reserve before contacting the model. Missing migration/database errors close the gate. */
+export async function reserveAiUsage(ledgerId: string, model: string): Promise<string | null> {
+  if (!Number.isSafeInteger(MONTHLY_AI_LIMIT) || MONTHLY_AI_LIMIT <= 0 || MONTHLY_AI_LIMIT > 2_147_483_647) {
+    throw new AiUsageError('AI 사용 한도 설정을 확인해 주세요.');
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new AiUsageError('AI가 아직 설정되지 않았습니다. 직접 적어 주세요.');
+  }
+  const { data, error } = await db.rpc('reserve_ai_usage', {
+    p_ledger_id: ledgerId,
+    p_model: model,
+    p_limit: MONTHLY_AI_LIMIT,
+  });
+  if (error || (data !== null && (typeof data !== 'string' || !/^[0-9a-f-]{36}$/i.test(data)))) {
+    throw new AiUsageError('AI 사용량을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+  return data as string | null;
 }
 
 export async function recordAiUsage(args: {
+  reservationId: string;
   ledgerId: string;
   expenseId?: string;
   model: string;
@@ -689,13 +725,15 @@ export async function recordAiUsage(args: {
   costMicroUsd: number;
   succeeded: boolean;
 }): Promise<void> {
-  await db.from('ai_extractions').insert({
-    ledger_id: args.ledgerId,
+  const { data, error } = await db.from('ai_extractions').update({
     expense_id: args.expenseId ?? null,
     model: args.model,
     input_tokens: args.inputTokens,
     output_tokens: args.outputTokens,
     cost_micro_usd: args.costMicroUsd,
     succeeded: args.succeeded,
-  });
+  }).eq('id', args.reservationId).eq('ledger_id', args.ledgerId).select('id').single();
+  if (error || !data) {
+    throw new AiUsageError('AI 응답의 사용량을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  }
 }

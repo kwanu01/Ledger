@@ -1,5 +1,6 @@
 import 'server-only';
-import { ENDPOINT, meter, type Usage } from './usage.ts';
+import { meter, type Usage } from './usage.ts';
+import { requestMessage } from './request.ts';
 
 /**
  * 모델을 한 번 부른다 (§7)
@@ -37,72 +38,24 @@ export async function callTool(args: {
   base64?: string;
   mediaType?: string;
 }): Promise<CallResult> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
-    return { ok: false, message: '아직 설정되지 않았습니다. 직접 적어 주세요.' };
-  }
-
-  const stop = new AbortController();
-  const bell = setTimeout(() => stop.abort(), args.timeoutMs);
-
-  let res: Response;
-  try {
-    res = await fetch(ENDPOINT, {
-      method: 'POST',
-      signal: stop.signal,
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: args.model,
-        max_tokens: args.maxTokens,
-        tools: [args.tool],
-        tool_choice: { type: 'tool', name: args.tool.name },
-        ...(args.system ? { system: args.system } : {}),
-        messages: [
-          {
-            role: 'user',
-            content: args.base64
-              ? [
-                  {
-                    type: 'image',
-                    source: { type: 'base64', media_type: args.mediaType, data: args.base64 },
-                  },
-                  { type: 'text', text: args.prompt },
-                ]
-              : args.prompt,
-          },
-        ],
-      }),
-    });
-  } catch (e) {
-    const timedOut = e instanceof Error && e.name === 'AbortError';
-    return {
-      ok: false,
-      message: timedOut
-        ? '읽는 데 너무 오래 걸립니다. 직접 적어 주세요.'
-        : '분석 서버에 닿지 못했습니다. 직접 적어 주세요.',
-    };
-  } finally {
-    clearTimeout(bell);
-  }
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    if (res.status === 401) return { ok: false, message: 'API 키가 맞지 않습니다.' };
-    if (res.status === 429) return { ok: false, message: '잠시 뒤에 다시 시도해 주세요.' };
-    if (detail.includes('credit balance')) {
-      return { ok: false, message: '크레딧이 부족합니다. 직접 적어 주세요.' };
-    }
-    return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.' };
-  }
-
-  const body = (await res.json()) as {
-    content?: { type: string; name?: string; input?: Record<string, unknown> }[];
-    usage?: { input_tokens?: number; output_tokens?: number };
-  };
+  const response = await requestMessage({
+    model: args.model,
+    max_tokens: args.maxTokens,
+    tools: [args.tool],
+    tool_choice: { type: 'tool', name: args.tool.name },
+    ...(args.system ? { system: args.system } : {}),
+    messages: [{
+      role: 'user',
+      content: args.base64
+        ? [
+            { type: 'image', source: { type: 'base64', media_type: args.mediaType, data: args.base64 } },
+            { type: 'text', text: args.prompt },
+          ]
+        : args.prompt,
+    }],
+  }, args.timeoutMs);
+  if (!response.ok) return response;
+  const body = response.body;
 
   const usage = meter(body.usage, args.model);
   const block = body.content?.find((c) => c.type === 'tool_use' && c.name === args.tool.name);

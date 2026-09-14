@@ -260,7 +260,7 @@ export function toIncomeInsert(i: NewIncome): Omit<IncomeRow, 'id' | 'created_at
   };
 }
 
-export type NewExpense = Omit<Expense, 'id' | 'createdAt'>;
+export type NewExpense = Omit<Expense, 'id' | 'createdAt'> & { id?: string };
 
 /*
  * checked_at 은 여기서 안 쓴다. 적히는 순간 '괜찮다'고 답해 둔 줄은 없다 —
@@ -268,9 +268,10 @@ export type NewExpense = Omit<Expense, 'id' | 'createdAt'>;
  */
 export function toExpenseInsert(
   e: NewExpense,
-): Omit<ExpenseRow, 'id' | 'created_at' | 'checked_at'> {
+): Omit<ExpenseRow, 'id' | 'created_at' | 'checked_at'> & { id?: string } {
   const a = e.allocation;
   return {
+    ...(e.id ? { id: e.id } : {}),
     ledger_id: e.ledgerId,
     spent_on: e.date,
     title: e.title,

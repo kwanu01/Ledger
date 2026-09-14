@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { db } from './db/client.ts';
 import { currentUser, type AuthUser } from './auth-client.ts';
+import { anonymousMemberIsAvailable, resolveLedgerIdentity } from './mobile/auth-policy.ts';
 
 /**
  * 접근 제어.
@@ -170,11 +171,11 @@ export async function isTeamOwner(pass: { teamId: string; userId?: string }): Pr
 async function stillAMember(pass: Pass): Promise<Pass | null> {
   const { data } = await db
     .from('members')
-    .select('display_name, active')
+    .select('display_name, active, user_id')
     .eq('id', pass.memberId)
     .eq('team_id', pass.teamId)
     .maybeSingle();
-  if (!data || !data.active) return null;
+  if (!data || !anonymousMemberIsAvailable(data)) return null;
   return { ...pass, memberName: data.display_name };
 }
 
@@ -191,9 +192,8 @@ export async function myTeamIds(user: AuthUser): Promise<string[]> {
 export async function requireLedgerAccess(ledgerId: string): Promise<Pass> {
   // 장부 조회와 신분 확인은 서로를 기다릴 이유가 없다. 같이 보낸다.
   // 통행증은 서명만 맞춰 보면 되므로 네트워크를 쓰지 않는다.
-  const [{ data, error }, cookiePass, user] = await Promise.all([
+  const [{ data, error }, user] = await Promise.all([
     db.from('ledgers').select('id, team_id').eq('id', ledgerId).maybeSingle(),
-    currentPass(),
     currentUser(),
   ]);
   if (error || !data) throw new AccessError('장부를 찾을 수 없습니다.');
@@ -205,18 +205,15 @@ export async function requireLedgerAccess(ledgerId: string): Promise<Pass> {
   // 통행증이 같은 계정 것이면 그대로 믿고 왕복을 줄이던 지름길이 있었으나 없앴다.
   // 그 사이 명단에서 내려갔거나 이름이 바뀌었어도 넉 달 전 값이 그대로 통했다.
   // 계정으로 들어온 사람은 언제나 지금 명단을 보고 판정한다.
-  if (user) {
-    const pass = await memberOfTeam(user, data.team_id);
-    if (pass) return pass;
-  }
-
-  // 아직 계정에 묶이지 않은 사람. 예전 초대 링크로 이름만 적고 들어온 경우다.
-  // 로그인하면 claimMembership이 이 줄을 계정에 붙이고, 그다음부터는 위로 온다.
-  // 통행증만으로 들어오는 유일한 길이라, 명단에 아직 있는지 매번 확인한다.
-  if (cookiePass && cookiePass.teamId === data.team_id && !cookiePass.userId) {
-    const alive = await stillAMember(cookiePass);
-    if (alive) return alive;
-  }
+  const identity = await resolveLedgerIdentity(!!user,
+    () => memberOfTeam(user!, data.team_id),
+    async () => {
+      const cookiePass = await currentPass();
+      if (!cookiePass || cookiePass.teamId !== data.team_id || cookiePass.userId) return null;
+      // The DB row, not an old signed cookie, decides whether this is still anonymous.
+      return stillAMember(cookiePass);
+    });
+  if (identity) return identity;
 
   throw new AccessError('이 장부에 접근할 권한이 없습니다. 초대 링크로 다시 들어와 주세요.');
 }

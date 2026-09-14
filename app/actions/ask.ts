@@ -3,12 +3,14 @@
 import { requireLedgerAccess, AccessError } from '../../lib/access.ts';
 import {
   loadLedger,
-  aiUsageThisMonth,
+  reserveAiUsage,
+  AiUsageError,
   recordAiUsage,
   takeOpenAiSlot,
   MONTHLY_AI_LIMIT,
 } from '../../lib/db/repo.ts';
 import { askAboutLedger, askAnything, type AskResult, type Turn } from '../../lib/ai/ask.ts';
+import { MODEL } from '../../lib/ai/usage.ts';
 
 /**
  * 수증이에게 이 장부에 대해 묻는다 (§21.10)
@@ -26,7 +28,7 @@ const MAX_TURN_CHARS = 1000;
 
 function trim(history: unknown): Turn[] {
   if (!Array.isArray(history)) return [];
-  return history.slice(-MAX_TURNS).map((t) => {
+  return history.slice(-MAX_TURNS).filter((t) => t !== null && typeof t === 'object').map((t) => {
     const turn = t as { role?: unknown; text?: unknown };
     return {
       role: turn.role === 'assistant' ? ('assistant' as const) : ('user' as const),
@@ -47,26 +49,27 @@ export async function askHelper(args: {
 
     const pass = await requireLedgerAccess(args.ledgerId);
 
-    const used = await aiUsageThisMonth(args.ledgerId);
-    if (used >= MONTHLY_AI_LIMIT) {
+    const ledger = await loadLedger(args.ledgerId);
+    const history = trim(args.history);
+    const reservationId = await reserveAiUsage(args.ledgerId, MODEL);
+    if (!reservationId) {
       return {
         ok: false,
         message: `이번 달에 물어볼 수 있는 횟수를 다 썼습니다(${MONTHLY_AI_LIMIT}건). 다음 달에 다시 물어봐 주세요.`,
       };
     }
 
-    const ledger = await loadLedger(args.ledgerId);
-
     const r = await askAboutLedger({
       ledger,
       meId: pass.memberId,
       question: q,
-      history: trim(args.history),
+      history,
     });
 
     // 성공이든 실패든 부른 만큼은 기록한다. 상한이 뜻을 가지려면 그래야 한다.
     if (r.usage) {
       await recordAiUsage({
+        reservationId,
         ledgerId: args.ledgerId,
         model: r.usage.model,
         inputTokens: r.usage.inputTokens,
@@ -78,7 +81,7 @@ export async function askHelper(args: {
 
     return r;
   } catch (e) {
-    if (e instanceof AccessError) return { ok: false, message: e.message };
+    if (e instanceof AccessError || e instanceof AiUsageError) return { ok: false, message: e.message };
     return { ok: false, message: '대답하지 못했습니다.' };
   }
 }

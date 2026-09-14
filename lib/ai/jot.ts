@@ -1,6 +1,7 @@
 import 'server-only';
 import type { CurrencyCode } from '../domain/money.ts';
-import { ENDPOINT, MODEL, meter, type Usage } from './usage.ts';
+import { MODEL, type Usage } from './usage.ts';
+import { callTool } from './call.ts';
 
 /**
  * 한 줄로 적기 (§11.4)
@@ -155,56 +156,16 @@ export async function jot(args: {
   me: string;
   currency: CurrencyCode;
 }): Promise<JotResult> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return { ok: false, message: '아직 설정되지 않았습니다. 직접 적어 주세요.' };
-
-  const tool = schema(args.names);
-  const stop = new AbortController();
-  const bell = setTimeout(() => stop.abort(), TIMEOUT_MS);
-
-  let res: Response;
-  try {
-    res = await fetch(ENDPOINT, {
-      method: 'POST',
-      signal: stop.signal,
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 700,
-        tools: [tool],
-        tool_choice: { type: 'tool', name: 'jot' },
-        system: prompt(args),
-        messages: [{ role: 'user', content: args.text.slice(0, MAX_CHARS) }],
-      }),
-    });
-  } catch (e) {
-    const timedOut = e instanceof Error && e.name === 'AbortError';
-    return {
-      ok: false,
-      message: timedOut
-        ? '읽는 데 너무 오래 걸립니다. 직접 적어 주세요.'
-        : '분석 서버에 닿지 못했습니다. 직접 적어 주세요.',
-    };
-  } finally {
-    clearTimeout(bell);
-  }
-
-  if (!res.ok) {
-    if (res.status === 429) return { ok: false, message: '잠시 뒤에 다시 시도해 주세요.' };
-    return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.' };
-  }
-
-  const body = (await res.json()) as {
-    content?: { type: string; name?: string; input?: Record<string, unknown> }[];
-    usage?: { input_tokens?: number; output_tokens?: number };
-  };
-  const usage = meter(body.usage, MODEL);
-  const raw = body.content?.find((c) => c.type === 'tool_use' && c.name === 'jot')?.input;
-  if (!raw) return { ok: false, message: '읽지 못했습니다. 직접 적어 주세요.', usage };
+  const result = await callTool({
+    model: MODEL,
+    timeoutMs: TIMEOUT_MS,
+    maxTokens: 700,
+    tool: schema(args.names),
+    system: prompt(args),
+    prompt: args.text.slice(0, MAX_CHARS),
+  });
+  if (!result.ok) return result;
+  const { usage, input: raw } = result;
 
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
   const amount = Math.round(Number(raw.amount));
