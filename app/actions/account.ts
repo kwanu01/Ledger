@@ -9,9 +9,9 @@ import { failed } from '../../lib/fail.ts';
  * 내 계정 (§21.15)
  *
  * 여기서 하는 일은 전부 **나에 대한 것**이다. 그래서 권한 판정이 한 줄이다 —
- * 로그인했는가. 다른 사람의 계정을 건드리는 길은 이 파일에 없다: userId 를
- * 밖에서 받지 않고 requireUser() 가 돌려준 것만 쓴다. 인자로 받으면 그 순간
- * 남의 계정을 지우는 길이 열린다.
+ * 로그인했는가. 삭제 대상은 requireUser()가 검증한 계정으로만 정한다.
+ * 화면의 expectedUserId는 권한이 아니라, 다른 탭에서 계정이 바뀌었을 때
+ * 이전 화면이 새 계정을 지우지 못하도록 비교하는 확인값이다.
  */
 
 type Result<T = undefined> =
@@ -28,12 +28,17 @@ export async function myAccountFacts(): Promise<Result<AccountFacts>> {
 }
 
 export type WithdrawOutcome =
-  | { done: true; removedBooks: number }
+  | { done: true; removedBooks: number; appleCleanup?: 'not_required' | 'revoked' | 'manual_required' }
   | { done: false; blocked: OwnedBook[] };
 
-export async function withdraw(): Promise<Result<WithdrawOutcome>> {
+export async function withdraw(expectedUserId: string): Promise<Result<WithdrawOutcome>> {
   try {
     const user = await requireUser();
+    if (typeof expectedUserId !== 'string'
+        || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(expectedUserId)
+        || expectedUserId !== user.id) {
+      return { ok: false, message: '로그인한 계정이 바뀌었거나 확인할 수 없습니다. 계정 화면을 새로 열어 주세요.' };
+    }
     const r = await wipeAccount(user.id);
 
     if (!r.ok) {
@@ -46,7 +51,7 @@ export async function withdraw(): Promise<Result<WithdrawOutcome>> {
     await clearPass();
 
     revalidatePath('/', 'layout');
-    return { ok: true, value: { done: true, removedBooks: r.removedBooks } };
+    return { ok: true, value: { done: true, removedBooks: r.removedBooks, ...('appleCleanup' in r ? { appleCleanup: r.appleCleanup } : {}) } };
   } catch (e) {
     return failed(e);
   }

@@ -1,5 +1,7 @@
 import 'server-only';
 import { db } from './client.ts';
+import { revokeAppleForAccountDeletion } from '../mobile/apple.ts';
+import { assertAccountImageCleanupReady, cleanupAccountImages } from './images.ts';
 
 /**
  * 계정 (§21.15)
@@ -15,13 +17,13 @@ import { db } from './client.ts';
  *
  *   사라지는 것 — 계정 그 자체. 이메일, 로그인 수단, 계정 번호.
  *                 그리고 이 사람이 만든 초대 링크(더 쓸 데가 없다).
- *   남는 것     — 장부의 지출과 정산. 팀원 명단에 적힌 **이름**.
+ *   남는 것     — 공동 장부의 지출·정산과 금액 계산에 필요한 팀원 식별자.
+ *                 이름은 '탈퇴한 팀원', 은행·계좌번호는 NULL로 바꾼다.
  *
- * 이름이 남는 이유는 장부가 검산 가능해야 하기 때문이다. '누가 냈는가'가
- * 빠지면 그 줄은 계산에 쓸 수 없다. 다만 그 이름은 이제 아무 계정과도
- * 이어져 있지 않다 — members.user_id 가 NULL 이 된다(0001_schema.sql 의
- * on delete set null). 이름은 그 장부 안의 기록일 뿐, 사람을 가리키는
- * 열쇠가 아니게 된다.
+ * members.account_deleted_at은 영구 접근 회수 상태다. user_id가 NULL이 되어도
+ * 게스트로 바뀌지 않으며, 이름 변경·재활성화·재연결은 DB가 거절한다.
+ * 공동 기록의 자유 입력 메모·첨부에는 개인정보가 포함될 수 있어 별도 보관
+ * 정책의 대상이다. 구조화된 신상정보 삭제가 모든 자유 입력 내용을 지웠다는 뜻은 아니다.
  *
  * ── 소유한 장부가 있으면 먼저 정리한다 ─────────────────────────────
  *
@@ -58,21 +60,38 @@ export type AccountFacts = {
   entries: number;
 };
 
+const READ_FAILED = '계정 정보를 확인하지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+
+/** A partial response must never be mistaken for the account's complete ownership graph. */
+function completeRows<T>(result: { data: T[] | null; count: number | null; error: unknown }): T[] {
+  if (result.error || !Array.isArray(result.data) || !Number.isSafeInteger(result.count)
+      || result.data.length !== result.count) throw new Error(READ_FAILED);
+  return result.data;
+}
+
+function exactCount(result: { count: number | null; error: unknown }): number {
+  if (result.error || typeof result.count !== 'number' || !Number.isSafeInteger(result.count)
+      || result.count < 0) throw new Error(READ_FAILED);
+  return result.count;
+}
+
 /** 이 계정에 무엇이 매달려 있는가. 판단하지 않고 세기만 한다. */
 export async function accountFacts(userId: string): Promise<AccountFacts> {
-  const [{ data: memberRows }, { data: ownedTeams }] = await Promise.all([
-    db.from('members').select('id, team_id').eq('user_id', userId),
-    db.from('teams').select('id, name').eq('owner_id', userId),
+  const [membership, ownership] = await Promise.all([
+    db.from('members').select('id, team_id, account_deleted_at', { count: 'exact' }).eq('user_id', userId),
+    db.from('teams').select('id, name', { count: 'exact' }).eq('owner_id', userId),
   ]);
+  const memberRows = completeRows(membership);
+  const ownedTeams = completeRows(ownership);
 
-  const myMemberIds = (memberRows ?? []).map((m) => m.id as string);
-  const teams = new Set((memberRows ?? []).map((m) => m.team_id as string)).size;
+  const myMemberIds = memberRows.map((m) => m.id as string);
+  const teams = new Set(memberRows.map((m) => m.team_id as string)).size;
 
   const owned: OwnedBook[] = await Promise.all(
-    (ownedTeams ?? []).map(async (t) => {
+    ownedTeams.map(async (t) => {
       /* 나를 뺀 나머지가 몇인지 센다. '아직 명단에 있는 사람'만 센다 —
          나간 사람은 이 장부를 이어받을 수 없다. */
-      const [{ count }, { data: book }] = await Promise.all([
+      const [otherMembers, firstBook] = await Promise.all([
         db
           .from('members')
           .select('id', { count: 'exact', head: true })
@@ -82,22 +101,24 @@ export async function accountFacts(userId: string): Promise<AccountFacts> {
           .neq('user_id', userId),
         db.from('ledgers').select('id').eq('team_id', t.id as string).limit(1).maybeSingle(),
       ]);
+      const others = exactCount(otherMembers);
+      if (firstBook.error) throw new Error(READ_FAILED);
       return {
         teamId: t.id as string,
         teamName: (t.name as string) ?? '',
-        ledgerId: (book?.id as string) ?? null,
-        others: count ?? 0,
+        ledgerId: (firstBook.data?.id as string) ?? null,
+        others,
       };
     }),
   );
 
   let entries = 0;
   if (myMemberIds.length > 0) {
-    const { count } = await db
+    const entryCount = await db
       .from('expenses')
       .select('id', { count: 'exact', head: true })
       .in('payer_member_id', myMemberIds);
-    entries = count ?? 0;
+    entries = exactCount(entryCount);
   }
 
   return { owned, teams, entries };
@@ -106,22 +127,14 @@ export async function accountFacts(userId: string): Promise<AccountFacts> {
 /**
  * 계정을 지운다.
  *
- * 순서가 중요하다. 뒤에서부터 막히면 앞의 것만 지워진 반쪽 상태가 남는다.
- *
- *   1. 넘겨받을 사람이 있는 장부가 남아 있으면 **아무것도 하지 않고 돌려보낸다.**
- *   2. 나 혼자인 장부를 지운다. teams 를 지우면 members·ledgers·expenses 가
- *      함께 따라간다(on delete cascade).
- *   3. 내가 만든 초대 링크를 지운다. on delete restrict 라 남아 있으면
- *      프로필을 못 지운다.
- *   4. 프로필을 지운다. 이때 members.user_id 가 NULL 이 되고, 이름은 남는다.
- *   5. 로그인 계정(auth.users)을 지운다. 이게 진짜 '문을 닫는' 일이다.
- *
- * 5번이 실패해도 4번까지는 되돌리지 않는다. 프로필이 없는 로그인 계정은
- * 다시 들어와도 아무 장부에 닿지 못하는 빈 계정이라, 위험한 상태가 아니다.
- * 반대로 되돌렸다가 절반만 살아나는 쪽이 훨씬 나쁘다.
+ * 소유권·사진 정리 준비 확인 → Apple 권한 해제 → DB 트랜잭션 → Storage 정리 → Auth 삭제.
+ * RPC는 잠금 후 소유권을 다시 확인하고 DB 변경을 전부 성공시키거나 되돌린다.
+ * 외부 Auth 실패 시 삭제 진행 marker가 프로필 재생성을 차단하며 재시도할 수 있다.
+ * Auth 삭제 성공 시 marker는 FK cascade로 제거된다. Apple·Auth 외부 요청까지
+ * 하나의 트랜잭션은 아니므로, 외부 실패를 성공으로 숨기지 않는다.
  */
 export type WipeResult =
-  | { ok: true; removedBooks: number }
+  | { ok: true; removedBooks: number; appleCleanup: 'not_required' | 'revoked' | 'manual_required' }
   | { ok: false; blocked: OwnedBook[] };
 
 export async function wipeAccount(userId: string): Promise<WipeResult> {
@@ -130,21 +143,17 @@ export async function wipeAccount(userId: string): Promise<WipeResult> {
   const blocked = owned.filter((b) => b.others > 0);
   if (blocked.length > 0) return { ok: false, blocked };
 
-  const alone = owned.filter((b) => b.others === 0);
-  for (const b of alone) {
-    await db.from('teams').delete().eq('id', b.teamId);
+  await assertAccountImageCleanupReady();
+  const apple = await revokeAppleForAccountDeletion(userId);
+  const { data: removedBooks, error } = await db.rpc('wipe_account_data', { p_user_id: userId });
+  if (error) throw new Error('계정 데이터를 삭제하지 못했습니다. 장부 소유권을 확인한 뒤 다시 시도해 주세요.');
+  if (typeof removedBooks !== 'number' || !Number.isSafeInteger(removedBooks) || removedBooks < 0) {
+    throw new Error('계정 삭제 결과를 확인하지 못했습니다. 다시 시도해 주세요.');
   }
 
-  await db.from('invites').delete().eq('created_by', userId);
-  await db.from('profiles').delete().eq('id', userId);
+  await cleanupAccountImages(userId);
+  const { error: authError } = await db.auth.admin.deleteUser(userId);
+  if (authError) throw new Error('로그인 계정을 삭제하지 못했습니다. 계정 삭제를 완료하지 못했습니다.');
 
-  // 여기서 실패해도 위는 이미 끝났다. 던지지 않고 조용히 넘어간다 —
-  // 사람 쪽에서 보면 계정은 이미 아무 데도 닿지 못하는 상태다.
-  try {
-    await db.auth.admin.deleteUser(userId);
-  } catch {
-    /* 로그인 계정만 남는다. 프로필이 없어 아무 장부에도 닿지 못한다. */
-  }
-
-  return { ok: true, removedBooks: alone.length };
+  return { ok: true, removedBooks, appleCleanup: apple.status };
 }

@@ -22,10 +22,11 @@ import Withdraw from './Withdraw.tsx';
  * 숫자를 먼저 적고 그다음에 나가는 문을 둔다 — 무엇을 두고 나가는지 본 다음에
  * 결정하는 순서다.
  */
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams: Promise<{ intent?: string }> }) {
+  const deleting = (await searchParams).intent === 'delete';
   const lang = await getLang();
   const user = await currentUser();
-  if (!user) redirect('/login');
+  if (!user) redirect(`/login?next=${encodeURIComponent(deleting ? '/account#delete-account' : '/account')}`);
 
   const T = translator(lang);
   const facts = await accountFacts(user.id);
@@ -128,7 +129,7 @@ export default async function AccountPage() {
         </section>
       )}
 
-      <section>
+      <section id="delete-account">
         <div className="caption">{T('withdrawTitle')}</div>
 
         {/*
@@ -148,7 +149,7 @@ export default async function AccountPage() {
           </div>
         </div>
 
-        <Withdraw lang={lang} blockedAtFirst={blocked} />
+        <Withdraw key={user.id} accountId={user.id} lang={lang} blockedAtFirst={blocked} />
       </section>
     </main>
   );

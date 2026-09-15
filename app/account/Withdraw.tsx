@@ -22,16 +22,21 @@ import type { OwnedBook } from '../../lib/db/account.ts';
  * 그래서 빨간 오류로 띄우지 않고, 어느 장부인지 이름을 적고 그 장부의 팀
  * 화면으로 가는 길을 함께 둔다.
  */
-export default function Withdraw({ lang, blockedAtFirst }: { lang: Locale; blockedAtFirst: OwnedBook[] }) {
+export default function Withdraw({ accountId, lang, blockedAtFirst }: { accountId: string; lang: Locale; blockedAtFirst: OwnedBook[] }) {
   const T = translator(lang);
   const router = useRouter();
   const { say } = useHelper();
   const [pending, start] = useTransition();
   const [armed, setArmed] = useState(false);
+  const [manualCleanup, setManualCleanup] = useState(false);
   const [blocked, setBlocked] = useState<OwnedBook[]>(blockedAtFirst);
   const btn = useRef<HTMLButtonElement>(null);
   const bell = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (bell.current) clearTimeout(bell.current); }, []);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; if (bell.current) clearTimeout(bell.current); };
+  }, []);
 
   function press() {
     if (!armed) {
@@ -46,7 +51,8 @@ export default function Withdraw({ lang, blockedAtFirst }: { lang: Locale; block
     setArmed(false);
 
     start(async () => {
-      const r = await withdraw();
+      const r = await withdraw(accountId);
+      if (!mounted.current) return;
       if (!r.ok) return say(r.message);
 
       if (!r.value.done) {
@@ -55,9 +61,20 @@ export default function Withdraw({ lang, blockedAtFirst }: { lang: Locale; block
       }
 
       say(T('withdrawDone'), 'info');
+      if (r.value.appleCleanup === 'manual_required') { setManualCleanup(true); return; }
       router.replace('/');
     });
   }
+
+  if (manualCleanup) return (
+    <div className="empty-how" role="status">
+      <p>{T('withdrawDone')} {T('appleDisconnectManual')}</p>
+      <div className="row" style={{ marginTop: 18 }}>
+        <a className="plain" href="https://account.apple.com/" target="_blank" rel="noopener noreferrer">Apple Account ↗</a>
+        <Link href="/" className="plain">{T('backHome')}</Link>
+      </div>
+    </div>
+  );
 
   return (
     <>

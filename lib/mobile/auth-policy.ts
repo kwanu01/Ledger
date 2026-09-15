@@ -37,6 +37,7 @@ export async function resolveLedgerIdentity<T>(
   return signedIn ? accountMember() : anonymousMember();
 }
 
-export function anonymousMemberIsAvailable(member: { active: boolean; user_id: string | null } | null): boolean {
-  return !!member?.active && member.user_id === null;
+export function anonymousMemberIsAvailable(member: { active: boolean; user_id: string | null; account_deleted_at?: string | null } | null): boolean {
+  // Missing schema/fields are not equivalent to an explicitly unrevoked row.
+  return !!member?.active && member.user_id === null && member.account_deleted_at === null;
 }

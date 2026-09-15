@@ -8,6 +8,7 @@ import {
   MAX_BYTES,
   currentImage,
   dropImage,
+  finishImageUpload,
   putImage,
   setExpenseImage,
   type ImageKind,
@@ -37,14 +38,14 @@ export async function attachImage(formData: FormData): Promise<ImageResult> {
     const ledgerId = String(formData.get('ledgerId') ?? '');
     const expenseId = String(formData.get('expenseId') ?? '');
     const kind = String(formData.get('kind') ?? 'receipt') as ImageKind;
-    await requireLedgerAccess(ledgerId);
+    const pass = await requireLedgerAccess(ledgerId);
 
     const file = formData.get('image');
     if (!(file instanceof File) || file.size === 0) {
       return { ok: false, message: '사진을 골라 주세요.' };
     }
     if (file.size > MAX_BYTES) {
-      return { ok: false, message: '사진이 너무 큽니다. 5MB 아래로 줄여 주세요.' };
+      return { ok: false, message: '사진이 너무 큽니다. 4MB 아래로 줄여 주세요.' };
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
       return { ok: false, message: 'JPG · PNG · WEBP만 올릴 수 있습니다.' };
@@ -57,9 +58,11 @@ export async function attachImage(formData: FormData): Promise<ImageResult> {
       return { ok: false, message: '이 장부의 지출이 아닙니다.' };
     }
 
-    const path = await putImage({
+    const { path, operationId } = await putImage({
       ledgerId,
       expenseId,
+      memberId: pass.memberId,
+      userId: pass.userId ?? null,
       kind,
       bytes: await file.arrayBuffer(),
       contentType: file.type,
@@ -68,14 +71,16 @@ export async function attachImage(formData: FormData): Promise<ImageResult> {
     // 저장소에 올린 다음 장부의 칸을 채운다. 칸을 채우다 막히면 방금 올린
     // 파일은 아무도 가리키지 않는 채로 남는다. 그래서 실패하면 되돌린다.
     try {
-      await setExpenseImage({ expenseId, kind, path });
+      await setExpenseImage({ ledgerId, expenseId, kind, path, expectedPath: now.path, memberId: pass.memberId, userId: pass.userId ?? null });
     } catch (e) {
       await dropImage(path);
+      await finishImageUpload(operationId, path);
       throw e;
     }
 
     // 바꿔 끼웠으면 옛 파일은 쓸 데가 없다.
     await dropImage(now.path);
+    await finishImageUpload(operationId, path);
 
     revalidatePath(`/l/${ledgerId}`, 'layout');
     return { ok: true, path };
@@ -90,15 +95,17 @@ export async function removeImage(args: {
   kind: ImageKind;
 }): Promise<ImageResult> {
   try {
-    await requireLedgerAccess(args.ledgerId);
+    const pass = await requireLedgerAccess(args.ledgerId);
 
     const now = await currentImage(args.expenseId, args.kind);
     if (!now || now.ledgerId !== args.ledgerId) {
       return { ok: false, message: '이 장부의 지출이 아닙니다.' };
     }
 
-    await setExpenseImage({ expenseId: args.expenseId, kind: args.kind, path: null });
+    // Keep the reference on an unconfirmed deletion. Unlinking first would turn
+    // a failed Storage removal into an untracked orphan in a shared ledger.
     await dropImage(now.path);
+    await setExpenseImage({ ...args, path: null, expectedPath: now.path, memberId: pass.memberId, userId: pass.userId ?? null });
 
     revalidatePath(`/l/${args.ledgerId}`, 'layout');
     return { ok: true, path: null };

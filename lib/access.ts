@@ -125,13 +125,14 @@ export class AccessError extends Error {}
  * 장부를 만든 사람은 members에 자기 행이 있으므로 그것으로 이어진다.
  */
 async function memberOfTeam(user: AuthUser, teamId: string): Promise<Pass | null> {
-  const { data } = await db
+  const { data, error } = await db
     .from('members')
-    .select('id, display_name, active')
+    .select('id, display_name, active, account_deleted_at')
     .eq('team_id', teamId)
     .eq('user_id', user.id)
     .maybeSingle();
-  if (!data) return null;
+  if (error) throw new AccessError('팀원 정보를 확인하지 못했습니다.');
+  if (!data || data.account_deleted_at !== null) return null;
   if (!data.active && !(await ownsTeam(user.id, teamId))) return null;
   return { teamId, memberId: data.id, memberName: data.display_name, userId: user.id };
 }
@@ -169,19 +170,21 @@ export async function isTeamOwner(pass: { teamId: string; userId?: string }): Pr
  * 그동안 바뀌었을 수 있으므로 지금 이름으로 바꿔서 돌려준다.
  */
 async function stillAMember(pass: Pass): Promise<Pass | null> {
-  const { data } = await db
+  const { data, error } = await db
     .from('members')
-    .select('display_name, active, user_id')
+    .select('display_name, active, user_id, account_deleted_at')
     .eq('id', pass.memberId)
     .eq('team_id', pass.teamId)
     .maybeSingle();
+  if (error) throw new AccessError('팀원 정보를 확인하지 못했습니다.');
   if (!data || !anonymousMemberIsAvailable(data)) return null;
   return { ...pass, memberName: data.display_name };
 }
 
 /** 로그인한 사용자가 접근할 수 있는 팀 id 목록 */
 export async function myTeamIds(user: AuthUser): Promise<string[]> {
-  const { data } = await db.from('members').select('team_id').eq('user_id', user.id);
+  const { data, error } = await db.from('members').select('team_id').eq('user_id', user.id).is('account_deleted_at', null);
+  if (error) throw new AccessError('팀원 정보를 확인하지 못했습니다.');
   return [...new Set((data ?? []).map((r) => r.team_id as string))];
 }
 

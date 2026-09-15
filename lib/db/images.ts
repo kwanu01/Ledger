@@ -1,5 +1,7 @@
 import 'server-only';
 import { db } from './client.ts';
+import { randomUUID } from 'node:crypto';
+import { MobileError } from '../mobile/http.ts';
 
 /**
  * 사진 저장소 (§7)
@@ -64,10 +66,13 @@ export function belongsTo(path: string, ledgerId: string): boolean {
 export async function putImage(args: {
   ledgerId: string;
   expenseId: string;
+  memberId: string;
+  userId: string | null;
   kind: ImageKind;
   bytes: ArrayBuffer;
   contentType: string;
-}): Promise<string> {
+}): Promise<{ path: string; operationId: string }> {
+  if (!['receipt', 'item'].includes(args.kind) || args.bytes.byteLength > MAX_BYTES) throw new Error('사진 정보를 확인해 주세요.');
   // 적어 보낸 종류가 아니라 파일이 실제로 무엇인지로 정한다.
   const real = sniff(args.bytes);
   if (!real || real !== args.contentType) {
@@ -76,23 +81,35 @@ export async function putImage(args: {
   const ext = EXT[real];
   if (!ext) throw new Error('사진 파일만 올릴 수 있습니다.');
 
-  const stamp = Date.now().toString(36);
-  const rand = Math.random().toString(36).slice(2, 8);
-  const path = `${args.ledgerId}/${args.expenseId}/${args.kind}-${stamp}${rand}.${ext}`;
+  const path = `${args.ledgerId}/${args.expenseId}/${args.kind}-${randomUUID()}.${ext}`;
+  const { data: operation, error: operationError } = await db.rpc('begin_image_upload', {
+    p_ledger_id: args.ledgerId, p_expense_id: args.expenseId, p_path: path,
+    p_member_id: args.memberId, p_user_id: args.userId,
+  });
+  if (operationError || typeof operation !== 'string') throw new Error('사진 업로드를 시작하지 못했습니다. 장부 상태를 확인해 주세요.');
 
   const { error } = await db.storage.from(BUCKET).upload(path, args.bytes, {
     contentType: args.contentType,
-    // 같은 이름이 두 번 나올 일은 없지만, 났다면 덮어쓰는 쪽이 낫다.
-    upsert: true,
+    upsert: false,
   });
-  if (error) throw new Error(error.message);
-  return path;
+  // Keep the durable operation on any unconfirmed response: the remote write
+  // may still complete. Account deletion must wait for reconciliation.
+  if (error) throw new Error('사진 업로드 결과를 확인하지 못했습니다. 계속 실패하면 문의해 주세요.');
+  return { path, operationId: operation };
+}
+
+export async function finishImageUpload(operationId: string, path: string): Promise<void> {
+  const { data: finished, error: finishError } = await db.rpc('finish_image_upload', { p_operation_id: operationId, p_path: path });
+  if (finishError || finished !== true) throw new Error('사진 업로드 상태를 확인하지 못했습니다. 계속 실패하면 문의해 주세요.');
 }
 
 /** 바꿔 끼우거나 지울 때, 쓰지 않게 된 파일을 남겨 두지 않는다. */
 export async function dropImage(path: string | null | undefined): Promise<void> {
   if (!path) return;
-  await db.storage.from(BUCKET).remove([path]);
+  const { data, error } = await db.storage.from(BUCKET).remove([path]);
+  if (error || !Array.isArray(data)) throw new Error('사진을 삭제하지 못했습니다. 다시 시도해 주세요.');
+  const parent = path.slice(0, path.lastIndexOf('/'));
+  if (!parent || (await ledgerImagePaths(parent)).includes(path)) throw new Error('사진 삭제 결과를 확인하지 못했습니다. 다시 시도해 주세요.');
 }
 
 /** 서버에서만 부른다. 화면으로 내보낼 바이트와 그 종류. */
@@ -105,33 +122,95 @@ export async function readImage(
 }
 
 /** 장부를 지울 때 그 아래 사진도 함께 지운다. */
-export async function dropLedgerImages(ledgerId: string): Promise<void> {
-  // 저장소에는 폴더가 없다. 앞이 같은 것을 모아 지운다.
-  const { data } = await db.storage.from(BUCKET).list(ledgerId, { limit: 1000 });
-  if (!data?.length) return;
-
-  const paths: string[] = [];
-  for (const entry of data) {
-    const { data: inner } = await db.storage
-      .from(BUCKET)
-      .list(`${ledgerId}/${entry.name}`, { limit: 1000 });
-    for (const f of inner ?? []) paths.push(`${ledgerId}/${entry.name}/${f.name}`);
+async function ledgerImagePaths(ledgerId: string): Promise<string[]> {
+  const paths: string[] = [], folders = [ledgerId], visited = new Set<string>();
+  while (folders.length) {
+    const folder = folders.pop()!;
+    if (visited.has(folder) || visited.size > 100000 || folder.split('/').length > 8) throw new Error('사진 목록이 너무 큽니다. 문의해 주세요.');
+    visited.add(folder);
+    const names = new Set<string>();
+    for (let offset = 0; ; offset += 100) {
+      const { data, error } = await db.storage.from(BUCKET).list(folder, { limit: 100, offset, sortBy: { column: 'name', order: 'asc' } });
+      if (error || !Array.isArray(data) || data.length > 100) throw new Error('사진 목록을 확인하지 못했습니다. 다시 시도해 주세요.');
+      for (const file of data) {
+        if (!file || typeof file.name !== 'string' || !/^[A-Za-z0-9._-]+$/.test(file.name) || ['.', '..'].includes(file.name) || names.has(file.name)) throw new Error('사진 경로를 확인하지 못했습니다. 문의해 주세요.');
+        names.add(file.name);
+        const path = `${folder}/${file.name}`;
+        if (file.id === null) folders.push(path);
+        else if (typeof file.id === 'string' && file.id) paths.push(path);
+        else throw new Error('사진 목록을 확인하지 못했습니다.');
+        if (paths.length + folders.length > 100000) throw new Error('사진 목록이 너무 큽니다. 문의해 주세요.');
+      }
+      if (data.length < 100) break;
+    }
   }
-  if (paths.length) await db.storage.from(BUCKET).remove(paths);
+  return paths;
+}
+export async function dropLedgerImages(ledgerId: string): Promise<void> {
+  // Read every page before removing files so offsets cannot skip rows we delete.
+  const paths = await ledgerImagePaths(ledgerId);
+  for (let offset = 0; offset < paths.length; offset += 100) {
+    const { data, error } = await db.storage.from(BUCKET).remove(paths.slice(offset, offset + 100));
+    if (error || !Array.isArray(data)) throw new Error('사진을 삭제하지 못했습니다. 다시 시도해 주세요.');
+  }
+  if ((await ledgerImagePaths(ledgerId)).length) throw new Error('남아 있는 사진을 확인했습니다. 삭제를 다시 시도해 주세요.');
+}
+
+export async function assertAccountImageCleanupReady(): Promise<void> {
+  const { data, error } = await db.rpc('account_image_cleanup_ready');
+  if (error || data !== true) throw new MobileError(503, 'IMAGE_CLEANUP_UNAVAILABLE', '사진 삭제 기능을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+}
+
+export async function cleanupAccountImages(userId: string): Promise<void> {
+  // This also covers a departing member's upload into a retained shared ledger.
+  const ownedUploads = await db.from('image_upload_operations').select('id', { count: 'exact', head: true }).eq('user_id', userId);
+  assertNoPendingUploads(ownedUploads);
+  let total: number | null = null;
+  for (let offset = 0; ; offset += 100) {
+    const { data, count, error } = await db.from('account_image_cleanup')
+      .select('ledger_id, completed_at', { count: 'exact' }).eq('user_id', userId)
+      .order('ledger_id').range(offset, offset + 99);
+    if (error || !Array.isArray(data) || typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0
+        || (total !== null && count !== total) || data.length !== Math.min(100, Math.max(0, count - offset))) {
+      throw new MobileError(503, 'IMAGE_CLEANUP_UNAVAILABLE', '삭제할 사진 목록을 확인하지 못했습니다. 다시 시도해 주세요.');
+    }
+    total = count;
+    for (const row of data) {
+      if (row.completed_at) continue;
+      const pending = await db.from('image_upload_operations').select('id', { count: 'exact', head: true }).eq('ledger_id', row.ledger_id);
+      assertNoPendingUploads(pending);
+      try { await dropLedgerImages(row.ledger_id); }
+      catch { throw new MobileError(503, 'IMAGE_CLEANUP_FAILED', '사진 삭제를 완료하지 못했습니다. 계정 삭제를 다시 시도해 주세요.'); }
+      const updated = await db.from('account_image_cleanup').update({ completed_at: new Date().toISOString() })
+        .eq('ledger_id', row.ledger_id).eq('user_id', userId).select('ledger_id').maybeSingle();
+      if (updated.error || !updated.data) throw new MobileError(503, 'IMAGE_CLEANUP_UNAVAILABLE', '사진 삭제 결과를 기록하지 못했습니다. 다시 시도해 주세요.');
+    }
+    if (offset + data.length >= total) break;
+  }
+}
+
+function assertNoPendingUploads(pending: { count: number | null; error: unknown }): void {
+  if (pending.error || typeof pending.count !== 'number' || !Number.isSafeInteger(pending.count) || pending.count < 0) throw new MobileError(503, 'IMAGE_CLEANUP_UNAVAILABLE', '사진 업로드 상태를 확인하지 못했습니다. 다시 시도해 주세요.');
+  if (pending.count > 0) throw new MobileError(409, 'IMAGE_UPLOAD_PENDING', '사진 업로드 결과를 확인하고 있습니다. 잠시 후 삭제를 다시 시도하고, 계속되면 문의해 주세요.');
 }
 
 /** 지출 한 줄의 사진 경로를 갈아 끼운다. */
 export async function setExpenseImage(args: {
+  ledgerId: string;
   expenseId: string;
+  memberId: string;
+  userId: string | null;
   kind: ImageKind;
   path: string | null;
+  expectedPath: string | null;
 }): Promise<void> {
-  const column = args.kind === 'receipt' ? 'receipt_path' : 'representative_image_path';
-  const { error } = await db
-    .from('expenses')
-    .update({ [column]: args.path })
-    .eq('id', args.expenseId);
-  if (error) throw new Error(error.message);
+  if (!['receipt', 'item'].includes(args.kind)) throw new Error('사진 종류를 확인해 주세요.');
+  const { data, error } = await db.rpc('set_expense_image', {
+    p_ledger_id: args.ledgerId, p_expense_id: args.expenseId,
+    p_member_id: args.memberId, p_user_id: args.userId,
+    p_kind: args.kind, p_path: args.path, p_expected_path: args.expectedPath,
+  });
+  if (error || data !== true) throw new Error('지출이 삭제되었거나 권한이 변경되었습니다. 사진을 연결하지 못했습니다.');
 }
 
 /** 지금 붙어 있는 사진 경로. 바꿔 끼우기 전에 옛 파일을 지우려면 필요하다. */

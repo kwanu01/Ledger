@@ -43,7 +43,9 @@ test('signed-in nonmembers and claimed anonymous rows cannot fall back to old pa
   assert.equal(result, null); assert.equal(anonymous, 0);
   assert.equal(anonymousMemberIsAvailable({ active: true, user_id: receiverId }), false);
   assert.equal(anonymousMemberIsAvailable({ active: false, user_id: null }), false);
-  assert.equal(anonymousMemberIsAvailable({ active: true, user_id: null }), true);
+  assert.equal(anonymousMemberIsAvailable({ active: true, user_id: null, account_deleted_at: null }), true);
+  assert.equal(anonymousMemberIsAvailable({ active: true, user_id: null }), false);
+  assert.equal(anonymousMemberIsAvailable({ active: true, user_id: null, account_deleted_at: '2026-09-15T00:00:00Z' }), false);
 });
 
 test('mobile routes reject cookie-only or failed auth before reading or dispatching a body', async () => {

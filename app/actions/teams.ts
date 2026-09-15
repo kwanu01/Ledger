@@ -17,6 +17,7 @@ import { dropLedgerImages } from '../../lib/db/images.ts';
 import { setTeamOwner } from '../../lib/db/repo.ts';
 import { CURRENCIES, type CurrencyCode } from '../../lib/domain/money.ts';
 import { failed } from '../../lib/fail.ts';
+import { anonymousMemberIsAvailable } from '../../lib/mobile/auth-policy.ts';
 
 /**
  * 계정과 장부를 잇는 자리.
@@ -46,7 +47,10 @@ export type Result<T = undefined> =
  */
 export async function ensureProfile(): Promise<{ id: string; displayName: string }> {
   const user = await requireUser();
-  const { data } = await db.from('profiles').select('id, display_name').eq('id', user.id).maybeSingle();
+  const { error: deletionError } = await db.rpc('assert_account_not_deleting', { p_user_id: user.id });
+  if (deletionError) throw new Error('계정 삭제가 진행 중이거나 계정 상태를 확인하지 못했습니다.');
+  const { data, error: readError } = await db.from('profiles').select('id, display_name').eq('id', user.id).maybeSingle();
+  if (readError) throw new Error('계정 정보를 확인하지 못했습니다.');
   if (data) return { id: data.id, displayName: data.display_name };
 
   // 두 화면이 동시에 부를 수 있다. 이미 있으면 조용히 지나간다.
@@ -338,13 +342,13 @@ export async function handOverOwnership(args: {
 }): Promise<Result> {
   try {
     const pass = await requireLedgerAccess(args.ledgerId);
-    if (!(await isOwner(pass))) {
+    if (!pass.userId || !(await isOwner(pass))) {
       return { ok: false, message: '소유권은 지금 소유자만 넘길 수 있습니다.' };
     }
     if (args.memberId === pass.memberId) {
       return { ok: false, message: '이미 소유자입니다.' };
     }
-    await setTeamOwner(pass.teamId, args.memberId);
+    await setTeamOwner(pass.teamId, args.memberId, pass.userId);
     revalidatePath(`/l/${args.ledgerId}`, 'layout');
     return { ok: true };
   } catch (e) {
@@ -415,21 +419,31 @@ export async function setMemberActive(args: {
       return { ok: false, message: '명단은 본인이나 장부를 만든 사람이 정리합니다.' };
     }
 
+    const { data: target, error: targetError } = await db.from('members')
+      .select('id, account_deleted_at').eq('id', args.memberId).eq('team_id', pass.teamId).maybeSingle();
+    if (targetError) throw new Error('팀원 정보를 확인하지 못했습니다.');
+    if (!target || target.account_deleted_at !== null) {
+      return { ok: false, message: '탈퇴한 팀원은 명단에 다시 연결할 수 없습니다.' };
+    }
     if (!args.active) {
-      const { count } = await db
+      const { count, error: countError } = await db
         .from('members')
         .select('id', { count: 'exact', head: true })
         .eq('team_id', pass.teamId)
         .eq('active', true);
-      if ((count ?? 0) <= 1) return { ok: false, message: '팀에 한 사람은 남아 있어야 합니다.' };
+      if (countError || count === null) throw new Error('팀원 정보를 확인하지 못했습니다.');
+      if (count <= 1) return { ok: false, message: '팀에 한 사람은 남아 있어야 합니다.' };
     }
 
-    const { error } = await db
+    const { data: updated, error } = await db
       .from('members')
       .update({ active: args.active })
       .eq('id', args.memberId)
-      .eq('team_id', pass.teamId);
+      .eq('team_id', pass.teamId)
+      .is('account_deleted_at', null)
+      .select('id').maybeSingle();
     if (error) throw new Error(error.message);
+    if (!updated) throw new Error('팀원 상태가 바뀌었습니다. 다시 확인해 주세요.');
 
     revalidatePath(`/l/${args.ledgerId}`, 'layout');
     return { ok: true };
@@ -501,41 +515,53 @@ export async function joinTeam(args: {
     await ensureProfile();
 
     // 이미 이 팀의 멤버라면 새로 만들지 않는다. 링크를 두 번 눌러도 사람이 둘이 되면 안 된다.
-    const { data: mine } = await db
+    const { data: mine, error: mineError } = await db
       .from('members')
-      .select('id')
+      .select('id, account_deleted_at')
       .eq('team_id', teamId)
       .eq('user_id', user.id)
       .maybeSingle();
+    if (mineError) throw new Error('팀원 정보를 확인하지 못했습니다.');
+    if (mine && mine.account_deleted_at !== null) throw new Error('탈퇴한 팀원은 다시 연결할 수 없습니다.');
     let memberId: string | null = (mine?.id as string) ?? null;
 
     // 계정 없이 이름만 적고 들어와 있던 사람이 이제 로그인해서 다시 눌렀다면,
     // 새로 만들지 않고 그 줄을 이 계정에 붙인다.
     if (!memberId) {
       const existing = await currentPass();
-      if (existing?.teamId === teamId) {
-        const { data: row } = await db
+      if (existing?.teamId === teamId && !existing.userId) {
+        const { data: row, error: rowError } = await db
           .from('members')
-          .select('id, user_id')
+          .select('id, user_id, active, account_deleted_at')
           .eq('id', existing.memberId)
+          .eq('team_id', teamId)
           .maybeSingle();
-        if (row && !row.user_id) {
-          memberId = row.id as string;
-          await db.from('members').update({ user_id: user.id }).eq('id', memberId);
+        if (rowError) throw new Error('팀원 정보를 확인하지 못했습니다.');
+        if (row && anonymousMemberIsAvailable(row)) {
+          const { data: claimed, error: claimError } = await db.from('members')
+            .update({ user_id: user.id }).eq('id', row.id).eq('team_id', teamId)
+            .is('user_id', null).is('account_deleted_at', null).eq('active', true)
+            .select('id').maybeSingle();
+          if (claimError || !claimed) throw new Error('팀원 상태가 바뀌었습니다. 다시 들어와 주세요.');
+          memberId = claimed.id as string;
         }
       }
     }
 
     if (memberId) {
-      await db.from('members').update({ display_name: name, active: true }).eq('id', memberId);
+      const { data: updated, error } = await db.from('members')
+        .update({ display_name: name, active: true }).eq('id', memberId).eq('team_id', teamId)
+        .eq('user_id', user.id).is('account_deleted_at', null).select('id').maybeSingle();
+      if (error || !updated) throw new Error('팀원 상태를 변경하지 못했습니다.');
     } else {
-      const { data: last } = await db
+      const { data: last, error: lastError } = await db
         .from('members')
         .select('sort_order')
         .eq('team_id', teamId)
         .order('sort_order', { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (lastError) throw new Error('팀원 정보를 확인하지 못했습니다.');
 
       const { data, error } = await db
         .from('members')
@@ -555,7 +581,7 @@ export async function joinTeam(args: {
     // 다른 계정으로 로그인하면 계정이 이겨서 이 통행증은 무시된다(lib/access.ts).
     await issuePass({ teamId, memberId, memberName: name, userId: user.id });
 
-    const { data: ledger } = await db
+    const { data: ledger, error: ledgerError } = await db
       .from('ledgers')
       .select('id')
       .eq('team_id', teamId)
@@ -563,6 +589,7 @@ export async function joinTeam(args: {
       .order('created_at')
       .limit(1)
       .maybeSingle();
+    if (ledgerError) throw new Error('장부 정보를 확인하지 못했습니다.');
 
     revalidatePath('/teams');
     return { ok: true, value: { ledgerId: (ledger?.id as string) ?? null } };
@@ -577,28 +604,34 @@ export async function joinTeam(args: {
  */
 export async function claimMembership(): Promise<void> {
   const [user, pass] = await Promise.all([currentUser(), currentPass()]);
-  if (!user || !pass) return;
+  if (!user || !pass || pass.userId) return;
 
-  const { data } = await db
+  const { data, error } = await db
     .from('members')
-    .select('id, user_id')
+    .select('id, user_id, active, account_deleted_at')
     .eq('id', pass.memberId)
+    .eq('team_id', pass.teamId)
     .maybeSingle();
-  if (!data || data.user_id) return;
+  if (error) throw new Error('팀원 정보를 확인하지 못했습니다.');
+  if (!anonymousMemberIsAvailable(data)) return;
 
   // 여기서도 계정에 줄을 붙인다. 프로필이 먼저다.
   await ensureProfile();
 
   // 한 사람이 한 팀에 두 줄로 있으면 안 된다. 이미 계정으로 묶인 줄이 있으면 두지 않는다.
-  const { data: mine } = await db
+  const { data: mine, error: mineError } = await db
     .from('members')
     .select('id')
     .eq('team_id', pass.teamId)
     .eq('user_id', user.id)
     .maybeSingle();
+  if (mineError) throw new Error('팀원 정보를 확인하지 못했습니다.');
   if (mine) return;
 
-  await db.from('members').update({ user_id: user.id }).eq('id', pass.memberId);
+  const { data: claimed, error: claimError } = await db.from('members')
+    .update({ user_id: user.id }).eq('id', pass.memberId).eq('team_id', pass.teamId)
+    .is('user_id', null).is('account_deleted_at', null).eq('active', true).select('id').maybeSingle();
+  if (claimError || !claimed) throw new Error('팀원 상태가 바뀌었습니다. 다시 들어와 주세요.');
 }
 
 /**
@@ -738,10 +771,12 @@ export async function deleteTeam(args: { ledgerId: string }): Promise<Result> {
     // 지우는 순서가 중요하다. 송금 → 정산 → 지출 → 팀. 그 이유와 순서는
     // 데이터베이스 함수 안에 적혀 있다(0008). 한 트랜잭션으로 돌아야 반쯤
     // 지워진 장부가 남지 않으므로, 여기서 네 번 나눠 부르지 않는다.
-    const { error } = await db.rpc('delete_team', { p_team_id: pass.teamId });
-    if (error) {
+    const { data: deleted, error } = await db.rpc('delete_team_as_owner', {
+      p_team_id: pass.teamId, p_expected_owner_id: pass.userId,
+    });
+    if (error || deleted !== true) {
       // 데이터베이스가 영어로 돌려주는 말을 그대로 화면에 올리지 않는다.
-      console.error('delete_team', error);
+      console.error('delete_team_as_owner', error);
       return { ok: false, message: '장부를 지우지 못했습니다. 잠시 뒤에 다시 시도해 주세요.' };
     }
 

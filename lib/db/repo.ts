@@ -582,21 +582,25 @@ export async function confirmTransferAsOwner(args: {
  * 사람에게 넘기면, 넘기는 순간 그 장부에는 다시 들어올 수 있는 소유자가
  * 없어진다. DB 에도 같은 조건이 걸려 있다.
  */
-export async function setTeamOwner(teamId: string, toMemberId: string): Promise<void> {
-  const { data: m } = await db
+export async function setTeamOwner(teamId: string, toMemberId: string, expectedOwnerId: string): Promise<void> {
+  const { data: m, error: readError } = await db
     .from('members')
-    .select('user_id, active, team_id')
+    .select('user_id, active, team_id, account_deleted_at')
     .eq('id', toMemberId)
     .maybeSingle();
 
+  if (readError) throw new Error('팀원 정보를 확인하지 못했습니다. 다시 시도해 주세요.');
   if (!m || m.team_id !== teamId) throw new Error('이 팀의 팀원이 아닙니다.');
-  if (!m.active) throw new Error('나간 사람에게는 넘길 수 없습니다.');
+  if (!m.active || m.account_deleted_at !== null) throw new Error('나간 사람에게는 넘길 수 없습니다.');
   if (!m.user_id) {
     throw new Error('계정으로 들어온 팀원에게만 넘길 수 있습니다. 그 사람이 먼저 로그인해야 합니다.');
   }
 
-  const { error } = await db.from('teams').update({ owner_id: m.user_id }).eq('id', teamId);
+  // The earlier permission check cannot authorize a delayed request after ownership changed.
+  const { data, error } = await db.from('teams').update({ owner_id: m.user_id })
+    .eq('id', teamId).eq('owner_id', expectedOwnerId).select('id').maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error('장부 소유자가 바뀌었습니다. 팀 화면을 새로 열어 주세요.');
 }
 
 export type OpenTransfer = {
