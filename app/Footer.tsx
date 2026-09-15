@@ -35,6 +35,10 @@ export default function Footer({ lang }: { lang: Locale }) {
       <Link href="/updates">{T('updates')}</Link>
       <span className="foot-sep" aria-hidden="true" />
       <Link href="/chagok">chagok</Link>
+      {lang === 'ko' && <>
+        <span className="foot-sep" aria-hidden="true" />
+        <Link href="/guides/shared-expenses">정산 도움말</Link>
+      </>}
       {MAIL && (
         <>
           <span className="foot-sep" aria-hidden="true" />

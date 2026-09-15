@@ -3,6 +3,7 @@
 :global(body):has(.page) :global(.theme),:global(body):has(.page) :global(.helper),:global(body):has(.page) :global(.helper-back){display:none}
 :global(body):has(.page) :global(.wrap > footer){font-family:var(--sans)}
 .page a{background-image:none!important}
+.page button{min-width:44px}
 .proof .shareBreakdown{border-bottom:1px solid var(--rule-2);padding-bottom:10px;margin-bottom:15px}
 .page h1,.page h2,.page p{margin:0}.page button,.page input{font-family:inherit}.page button,.page a{touch-action:manipulation}.page a{color:inherit}.page button:focus-visible,.page a:focus-visible,.page input:focus-visible{outline:2px solid currentColor;outline-offset:4px}.page button:disabled{opacity:.4;cursor:default}
 .top{display:flex;justify-content:space-between;align-items:center;font-size:13px}.top a{display:inline-flex;min-height:44px;align-items:center;text-decoration:none}.top>span{border:1px solid var(--rule-2);border-radius:4px;padding:3px 9px;color:var(--ink-2)}
