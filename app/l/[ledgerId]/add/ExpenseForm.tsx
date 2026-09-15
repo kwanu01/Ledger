@@ -262,7 +262,7 @@ export default function ExpenseForm({
       rows: keep.map((x) => ({
         date: x.date,
         title: x.title.trim(),
-        amount: parseMoney(x.amount, currency),
+        amount: parseMoney(x.amount, currency, lang),
         payerId: x.payerId,
         allocation: { type: 'all' as const },
         vendor: x.vendor,
@@ -419,10 +419,10 @@ export default function ExpenseForm({
   }, [foreign, curr, currency, date, ledgerId]);
 
   // 장부에 적히는 금액은 언제나 장부의 통화다. 해외 결제면 청구액 칸이 그 자리를 대신한다.
-  const booked = foreign ? parseMoney(charged, currency) : parseMoney(amount, currency);
+  const booked = foreign ? parseMoney(charged, currency, lang) : parseMoney(amount, currency, lang);
 
   /* 환율로 재 본 값. 적어 넣은 청구액과 나란히 두면 자릿수 실수가 눈에 띈다. */
-  const paidAbroad = parseMoney(amount, curr);
+  const paidAbroad = parseMoney(amount, curr, lang);
   const guess =
     fx && paidAbroad > 0
       ? Math.round((paidAbroad / 10 ** (CURRENCIES[curr]?.decimals ?? 0)) * fx.rate *
@@ -609,7 +609,7 @@ export default function ExpenseForm({
        * 세 겹으로 두는 이유는, 어긋난 줄이 통과하면 정산 화면의 숫자가
        * 조용히 틀리기 때문이다. 틀린 채로 송금까지 끝나면 되돌릴 길이 없다.
        */
-      lines = toItemLines(drafts, currency).filter((l) => l.name !== '' || l.amount !== 0);
+      lines = toItemLines(drafts, currency, lang).filter((l) => l.name !== '' || l.amount !== 0);
       if (lines.length === 0) return say(T('needLines'));
       if (lines.some((l) => l.memberIds.length === 0)) return say(T('needLineWho'));
       const sum = lines.reduce((a, l) => a + l.amount, 0);

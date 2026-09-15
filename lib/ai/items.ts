@@ -82,7 +82,7 @@ const SCHEMA: ToolSchema = {
       },
       lines: {
         type: 'array',
-        description: '위에서 옮겨 적은 것을 그대로 줄로 세운 것. 순서도 같아야 합니다.',
+        description: '실제 상품, 별도로 청구된 요금, 한 번만 반영할 실제 할인을 읽은 순서대로 작성합니다. read의 합계·안내·이미 포함된 금액은 복사하지 않습니다.',
         items: {
           type: 'object',
           properties: {
@@ -96,10 +96,13 @@ const SCHEMA: ToolSchema = {
             },
             kind: {
               type: 'string',
-              enum: ['item', 'shared', 'discount'],
+              enum: ['item', 'shared', 'discount', 'summary', 'information', 'included', 'uncertain'],
               description:
                 'item = 누군가 시킨 것. shared = 배달비·배달팁·수수료·포장비처럼 ' +
-                '누구의 것도 아닌 것. discount = 할인·쿠폰·포인트 사용(음수).',
+                '별도로 청구된 금액. discount = 현재 주문에 실제 적용되며 다른 항목 금액에는 아직 반영되지 않은 할인(음수). ' +
+                'summary = 주문·결제 합계. information = 안내·예상 혜택·0원 옵션. ' +
+                'included = 다른 항목 가격에 이미 포함된 옵션·할인 또는 같은 할인 합계의 반복. ' +
+                'uncertain = 별도 청구/차감인지 확인할 수 없는 금액. 이 네 종류는 정산 항목에서 제외됩니다.',
             },
           },
           required: ['name', 'qty', 'amount', 'kind'],
@@ -128,8 +131,9 @@ const PROMPT = `이 이미지는 배달 주문 내역, 장바구니, 또는 영�
 
 먼저 read 칸에 품목이 적힌 부분을 **보이는 그대로 옮겨 적으세요.**
 위에서 아래로, 한 줄씩, 수량과 금액이 붙어 있으면 붙은 채로.
-정리하거나 고치지 말고 그냥 옮겨 적기만 하세요. 그다음에 그것을 보고
-lines 를 세웁니다. 옮겨 적은 것과 lines 의 개수와 순서는 같아야 합니다.
+read에는 확인 근거를 남기고, lines에는 실제로 나눌 항목만 세웁니다.
+**read와 lines의 개수는 같을 필요가 없습니다.** read에 보이는 합계나
+안내 문구를 lines에 모두 복사하지 마세요. 남기는 항목의 상대적인 순서만 유지합니다.
 
 **글자는 한 글자도 바꾸지 마세요.**
 상품명은 낯설거나 틀린 말처럼 보여도 화면에 적힌 그대로 씁니다. 뜻이 통하게
@@ -143,19 +147,42 @@ lines 를 세웁니다. 옮겨 적은 것과 lines 의 개수와 순서는 같�
 - '마라탕 2개 9,000원' 처럼 단가만 찍혀 있으면 9,000 × 2 = 18,000 을 적습니다.
   수량과 금액이 나란히 있을 때, 그 금액이 단가인지 줄 합계인지 반드시
   확인하세요. 대개 오른쪽 끝의 큰 숫자가 줄 합계입니다.
-- 옵션 추가금이 별도 줄로 찍혀 있으면 그 옵션이 딸린 품목의 금액에 더하지
-  말고, 그대로 별도 줄로 두되 이름 앞에 어느 품목의 옵션인지 그대로 적습니다.
+- 옵션 추가금이 기본 상품 금액에 아직 포함되지 않은 실제 추가금일 때만 별도
+  줄로 둡니다. 상품 가격에 이미 포함된 옵션 금액은 다시 더하지 마세요.
+- 0원 옵션, 무료 서비스, 무료 배달 안내는 줄로 만들지 않습니다. 선택한 맛·크기
+  같은 0원 옵션의 이름은 필요하면 원래 상품 이름에 남길 수 있습니다.
 
 kind — 줄을 세 갈래로 나눕니다:
 - item     누군가 시킨 것. 음식, 물건, 옵션.
 - shared   배달비, 배달팁, 배달요금, 수수료, 포장비, 봉투값처럼 **아무도
            시키지 않았지만 다 같이 내야 하는 것**. 이 줄들은 뒤에서 팀원
            모두에게 나눠집니다. 놓치면 시킨 사람 한 명이 배달비를 다 냅니다.
+           상품 가격 외에 실제로 추가 청구된 부가세·VAT도 shared입니다.
+           세금이라는 이름만 보고 빼지 마세요. 상품 가격에 이미 포함된
+           세금의 안내만 included 또는 information으로 제외합니다.
 - discount 할인, 쿠폰, 포인트 사용, 적립금 사용. **반드시 음수**로 적습니다.
            (-3000 처럼) 영수증에 '-3,000' 이나 '3,000원 할인'으로 찍힙니다.
+           단, 현재 주문에서 실제 차감되고 앞의 상품·요금에는 아직 반영되지
+           않은 금액만 해당합니다. '할인세트', 구매한 '적립금 상품권'은
+           상품 이름일 뿐이므로 item으로 두고 구매금액을 양수로 유지합니다.
+
+할인을 중복해서 빼지 마세요:
+- 상품 12,000 + 상품 10,000 - 즉시할인 1,000 = 결제 21,000이면
+  두 상품과 -1,000 할인 한 줄을 남깁니다. 할인 표시가 양수여도 실제 차감이면 음수입니다.
+- 이미 할인된 상품 가격 11,000 + 상품 10,000 = 결제 21,000이고 아래에
+  '1,000원 할인받았어요'가 다시 적혔으면 그 안내는 included입니다. 또 빼지 않습니다.
+- 개별 쿠폰/할인과 그 합계가 같이 나오면 개별 할인만 한 번 반영합니다.
+  같은 할인 금액이 결제 요약이나 혜택 영역에 반복되었다고 추가 할인으로 만들지 않습니다.
+- 개별 할인 없이 '총 할인금액 1,000'만 실제로 차감된 경우에는 그 한 줄을
+  discount로 남깁니다. '합계'라는 이름만으로 유일한 실제 할인을 버리지 않습니다.
+- 적립 예정, 할인 가능, 최대 혜택, 다음 주문 쿠폰, 멤버십 가입 시 혜택은
+  information입니다. 현재 주문의 실제 차감액이 아닙니다.
+- 별도 할인인지 이미 가격에 반영된 것인지 확인할 수 없으면 uncertain으로
+  분류하거나 제외합니다. 최종 결제금액과 맞추려고 할인·차액을 만들어 내지 마세요.
 
 줄로 세우면 안 되는 것 — 이것들은 lines 에 넣지 마세요:
-- 소계, 상품금액 합계, 총 결제금액, 부가세 같은 **합계 줄**
+- 소계, 상품금액 합계, 주문금액, 총 결제금액 같은 **합계 줄**
+- 이미 상품금액에 포함된 부가세·공급가액·면세금액 안내
 - 결제수단(카드명, 간편결제), 승인번호, 주소, 요청사항, 주문번호
 - 매장 이름, 전화번호, 사업자번호
 
@@ -169,6 +196,25 @@ currency: 통화 기호를 확인하세요. ₩ ￦ 원이면 KRW, $이면 USD, 
 
 사진이 돌아가 있거나 기울어져 있으면 글자 방향을 스스로 맞춰 읽으세요.
 돌아가 있다는 이유로 비우지 마세요.`;
+
+function compactLabel(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, '').replace(/[：:]/g, '');
+}
+
+function isDiscountTotal(name: string): boolean {
+  return /^(?:총할인(?:금액|액)?|할인(?:금액)?합계|할인총액|totaldiscount)(?:[₩￦$€£¥]?[\d,.]+(?:원|엔)?)?$/.test(compactLabel(name));
+}
+
+function isNonChargeLabel(name: string): boolean {
+  const label = compactLabel(name);
+  // Exact accounting labels, not substring matches against merchandise names.
+  const summary = /^(?:소계|중간합계|합계|총액|상품(?:금액|합계|금액합계)|총상품금액|주문(?:금액|합계|금액합계)|총주문금액|결제(?:금액|합계|예정금액)|총결제(?:금액|액)?|최종결제(?:금액|액)?|받을금액|받은금액|거스름돈|공급가액|과세금액|면세금액|subtotal|grandtotal|total)(?:\([^)]*\))?(?:[₩￦$€£¥]?[\d,.]+(?:원|엔)?)?$/;
+  const includedTax = /^(?:부가세|vat|tax)(?:포함(?:안내)?|안내|included|\((?:포함|안내|included)\))(?:[₩￦$€£¥]?[\d,.]+(?:원|엔)?)?$/;
+  const notice = /^(?:할인안내|혜택안내|결제안내|적립안내|예상혜택|총혜택|최대혜택|할인적용가|할인후가격|최종혜택가)(?:[₩￦$€£¥]?[\d,.]+(?:원|엔)?)?$/;
+  const futureBenefit = /(?:적립예정|적립예상|예상적립|할인예정|할인가능|최대할인|다음주문.*(?:쿠폰|할인)|쿠폰받기|가입시.*(?:할인|혜택))/;
+  const includedBenefit = /(?:이미(?:적용|반영|포함)된?할인|할인받았(?:어요|습니다)|절약했(?:어요|습니다))/;
+  return summary.test(label) || includedTax.test(label) || notice.test(label) || futureBenefit.test(label) || includedBenefit.test(label);
+}
 
 /** 이미지 한 장을 줄 단위로 읽는다. 실패해도 던지지 않고 결과로 돌려준다. */
 export async function readReceiptLines(args: {
@@ -195,8 +241,10 @@ export async function readReceiptLines(args: {
     : 'KRW';
 
   const kinds = ['item', 'shared', 'discount'] as const;
+  const excludedKinds = new Set(['summary', 'information', 'included', 'uncertain']);
   const lines: ReadLine[] = (Array.isArray(raw.lines) ? raw.lines : [])
-    .slice(0, MAX_LINES)
+    .slice(0, MAX_LINES * 3)
+    .filter((v) => !excludedKinds.has(String((v as Record<string, unknown> | null)?.kind)))
     .map((v) => {
       const o = (v ?? {}) as Record<string, unknown>;
       const amount = Math.round(Number(o.amount));
@@ -207,14 +255,27 @@ export async function readReceiptLines(args: {
       return {
         name: typeof o.name === 'string' ? o.name.trim() : '',
         qty: Number.isFinite(qty) && qty > 0 ? qty : 1,
-        amount: Number.isFinite(amount) ? amount : 0,
+        amount: Number.isSafeInteger(amount) ? amount : 0,
         kind,
       };
     })
-    // 이름도 금액도 없는 줄은 읽은 것이 아니다.
-    .filter((l) => l.name !== '' || l.amount !== 0);
+    // Clear non-charge labels are defensive checks for misclassified model output.
+    // Never infer a discount from a product name containing '할인' or '적립금'.
+    .filter((l) => l.amount !== 0 && !isNonChargeLabel(l.name));
 
-  if (lines.length === 0) {
+  // A displayed discount total repeats its detail rows. If it is the only actual
+  // discount, retain it. Do not invent a residual discount when its total differs.
+  const hasDetailedDiscount = lines.some(l => l.kind === 'discount' && !isDiscountTotal(l.name));
+  const seenDiscountTotals = new Set<number>();
+  const selected = lines.filter(l => {
+    if (l.kind !== 'discount' || !isDiscountTotal(l.name)) return true;
+    const amount = Math.abs(l.amount);
+    if (hasDetailedDiscount || seenDiscountTotals.has(amount)) return false;
+    seenDiscountTotals.add(amount);
+    return true;
+  }).slice(0, MAX_LINES);
+
+  if (selected.length === 0) {
     return { ok: false, message: '항목을 하나도 읽지 못했습니다. 직접 적어 주세요.', usage: r.usage };
   }
 
@@ -225,11 +286,12 @@ export async function readReceiptLines(args: {
    * 지출로 더해져 합이 6,000원 어긋난다. 할인이라고 스스로 말한 줄이
    * 양수인 경우는 읽기 실수지 다른 뜻일 수가 없으므로, 이것만은 고친다.
    */
-  for (const l of lines) {
+  for (const l of selected) {
     if (l.kind === 'discount' && l.amount > 0) l.amount = -l.amount;
   }
 
-  const sum = lines.reduce((a, l) => a + l.amount, 0);
+  const sum = selected.reduce((a, l) => a + l.amount, 0);
+  if (!Number.isSafeInteger(sum)) return { ok: false, message: '항목 금액을 확인하지 못했습니다. 직접 적어 주세요.', usage: r.usage };
   const readTotal = Math.round(Number(raw.total));
   /*
    * 총액을 못 읽었으면 줄의 합을 총액으로 삼는다. 그 경우 둘은 당연히 맞고,
@@ -247,7 +309,7 @@ export async function readReceiptLines(args: {
     usage: r.usage,
     value: {
       read: str(raw.read) ?? '',
-      lines,
+      lines: selected,
       currency,
       total,
       totalRead,

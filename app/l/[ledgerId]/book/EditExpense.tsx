@@ -4,7 +4,7 @@ import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { editExpenseLine } from '../../../actions/ledger.ts';
 import { translator } from '../../../../lib/i18n.ts';
-import { formatNumber, parseMoney } from '../../../../lib/domain/money.ts';
+import { formatNumber, parseMoney, parseSignedMoney } from '../../../../lib/domain/money.ts';
 import { useHelper } from '../../../helper/HelperContext.tsx';
 import type { CurrencyCode, Locale } from '../../../../lib/domain/money.ts';
 import type { Allocation, Expense, Member } from '../../../../lib/domain/types.ts';
@@ -82,12 +82,15 @@ export default function EditExpense({
     setParticipants((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   }
 
+  const money = expense.adjustment
+    ? parseSignedMoney(amount, currency, lang)
+    : parseMoney(amount, currency, lang);
+
   function save() {
-    const money = parseMoney(amount, currency);
 
     let lines: ReturnType<typeof toItemLines> = [];
     if (kind === 'items') {
-      lines = toItemLines(drafts, currency).filter((l) => l.name !== '' || l.amount !== 0);
+      lines = toItemLines(drafts, currency, lang).filter((l) => l.name !== '' || l.amount !== 0);
       if (lines.length === 0) return say(T('needLines'));
       if (lines.some((l) => l.memberIds.length === 0)) return say(T('needLineWho'));
       const sum = lines.reduce((acc, l) => acc + l.amount, 0);
@@ -266,7 +269,7 @@ export default function EditExpense({
             roster={expense.teamMemberIds}
             currency={currency}
             lang={lang}
-            total={parseMoney(amount, currency)}
+            total={money}
             onTotal={(n) => setAmount(formatNumber(n, currency, lang))}
           />
         )}
