@@ -338,13 +338,13 @@ export async function handOverOwnership(args: {
 }): Promise<Result> {
   try {
     const pass = await requireLedgerAccess(args.ledgerId);
-    if (!(await isOwner(pass))) {
+    if (!pass.userId || !(await isOwner(pass))) {
       return { ok: false, message: '소유권은 지금 소유자만 넘길 수 있습니다.' };
     }
     if (args.memberId === pass.memberId) {
       return { ok: false, message: '이미 소유자입니다.' };
     }
-    await setTeamOwner(pass.teamId, args.memberId);
+    await setTeamOwner(pass.teamId, args.memberId, pass.userId);
     revalidatePath(`/l/${args.ledgerId}`, 'layout');
     return { ok: true };
   } catch (e) {

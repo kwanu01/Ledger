@@ -22,7 +22,7 @@ import type { OwnedBook } from '../../lib/db/account.ts';
  * 그래서 빨간 오류로 띄우지 않고, 어느 장부인지 이름을 적고 그 장부의 팀
  * 화면으로 가는 길을 함께 둔다.
  */
-export default function Withdraw({ lang, blockedAtFirst }: { lang: Locale; blockedAtFirst: OwnedBook[] }) {
+export default function Withdraw({ accountId, lang, blockedAtFirst }: { accountId: string; lang: Locale; blockedAtFirst: OwnedBook[] }) {
   const T = translator(lang);
   const router = useRouter();
   const { say } = useHelper();
@@ -31,9 +31,15 @@ export default function Withdraw({ lang, blockedAtFirst }: { lang: Locale; block
   const [blocked, setBlocked] = useState<OwnedBook[]>(blockedAtFirst);
   const btn = useRef<HTMLButtonElement>(null);
   const bell = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (bell.current) clearTimeout(bell.current); }, []);
+  const mounted = useRef(true);
+  const inFlight = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; if (bell.current) clearTimeout(bell.current); };
+  }, []);
 
   function press() {
+    if (!mounted.current || inFlight.current || blocked.length > 0) return;
     if (!armed) {
       setArmed(true);
       say(T('withdrawWarn'), 'warn', btn.current);
@@ -45,17 +51,25 @@ export default function Withdraw({ lang, blockedAtFirst }: { lang: Locale; block
     if (bell.current) clearTimeout(bell.current);
     setArmed(false);
 
+    inFlight.current = true;
     start(async () => {
-      const r = await withdraw();
-      if (!r.ok) return say(r.message);
+      try {
+        const r = await withdraw(accountId);
+        if (!mounted.current) return;
+        if (!r.ok) return say(r.message);
 
-      if (!r.value.done) {
-        setBlocked(r.value.blocked);
-        return say(T('withdrawBlocked'));
+        if (!r.value.done) {
+          setBlocked(r.value.blocked);
+          return say(T('withdrawBlocked'));
+        }
+
+        say(T('withdrawDone'), 'info');
+        router.replace('/');
+      } catch {
+        if (mounted.current) say('삭제 결과를 확인하지 못했습니다. 계정 상태를 확인한 뒤 다시 시도해 주세요.');
+      } finally {
+        inFlight.current = false;
       }
-
-      say(T('withdrawDone'), 'info');
-      router.replace('/');
     });
   }
 

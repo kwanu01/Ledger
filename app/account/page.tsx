@@ -148,7 +148,7 @@ export default async function AccountPage() {
           </div>
         </div>
 
-        <Withdraw lang={lang} blockedAtFirst={blocked} />
+        <Withdraw key={user.id} accountId={user.id} lang={lang} blockedAtFirst={blocked} />
       </section>
     </main>
   );
