@@ -117,13 +117,26 @@ export function formatEntryAmount(
 }
 
 /** 사람이 입력한 문자열 → 최소 단위 정수. 반올림하지 않고 잘라 낸다. */
-export function parseMoney(input: string, code: CurrencyCode = 'KRW'): number {
+export function parseMoney(input: string, code: CurrencyCode = 'KRW', locale: Locale = 'ko'): number {
   const { decimals } = CURRENCIES[code];
-  const cleaned = String(input).replace(/[^0-9.]/g, '');
+  const parts = new Intl.NumberFormat(localeTag(locale)).formatToParts(12345.6);
+  const group = parts.find((part) => part.type === 'group')?.value.normalize('NFKC');
+  const decimal = parts.find((part) => part.type === 'decimal')?.value ?? '.';
+  const text = String(input).normalize('NFKC');
+  const ungrouped = group ? text.split(group).join('') : text;
+  const cleaned = ungrouped.replace(decimal, '.').replace(/[^0-9.]/g, '');
   if (!cleaned) return 0;
   const [whole, frac = ''] = cleaned.split('.');
   const padded = (frac + '0'.repeat(decimals)).slice(0, decimals);
   return Number(whole || '0') * 10 ** decimals + Number(padded || '0');
+}
+
+/** 할인처럼 빼는 항목의 입력. 결제 총액을 읽는 parseMoney와 구분한다. */
+export function parseSignedMoney(input: string, code: CurrencyCode = 'KRW', locale: Locale = 'ko'): number {
+  const text = String(input).normalize('NFKC').trim();
+  const negative = /^[-−]/.test(text) || /^\(.*\)$/.test(text);
+  const amount = parseMoney(text, code, locale);
+  return negative && amount !== 0 ? -amount : amount;
 }
 
 /** 한 단위 = 최소 단위 몇 개인가. 입력 폼의 step 등에 쓴다. */

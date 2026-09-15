@@ -377,7 +377,7 @@ const ko: Record<Key, string> = {
   groupMergeWarn: '이미 있는 이름을 적으면 두 묶음이 합쳐지고, 비우면 묶음에서 풀립니다.',
   foldAll: '모두 접기', unfoldAll: '모두 펴기', nOfM: '{n}건',
   newLine: '새 항목',
-  deliveryHint: '배달비처럼 아무도 시키지 않은 것은 모두를 고르면 똑같이 나뉩니다.',
+  deliveryHint: '배달비와 할인도 적용할 사람을 고르세요.',
 
   refund: '환불', correction: '보정',
   needTitle: '항목 이름을 적어 주세요.', needAmount: '금액을 적어 주세요.',
@@ -671,7 +671,7 @@ const en: Record<Key, string> = {
   groupMergeWarn: 'Using an existing name merges the two groups. Leaving it empty ungroups them.',
   foldAll: 'Fold all', unfoldAll: 'Unfold all', nOfM: '{n}',
   newLine: 'New item',
-  deliveryHint: 'For anything nobody ordered — a delivery fee — pick everyone and it splits evenly.',
+  deliveryHint: 'Choose who shares each delivery fee or discount.',
 
   refund: 'refund', correction: 'correction',
   needTitle: 'Give the item a name.', needAmount: 'Enter the amount.',
@@ -963,7 +963,7 @@ const ja: Record<Key, string> = {
   groupMergeWarn: '既存の名前にすると二つが統合されます。空にすると解除されます。',
   foldAll: 'すべて畳む', unfoldAll: 'すべて開く', nOfM: '{n}件',
   newLine: '新しい品目',
-  deliveryHint: '配達料など誰も頼んでいないものは、全員を選べば均等に分かれます。',
+  deliveryHint: '配達料や割引も、適用する人を選んでください。',
 
   refund: '返金', correction: '訂正',
   needTitle: '項目名を入力してください。', needAmount: '金額を入力してください。',
@@ -1255,7 +1255,7 @@ const zh: Record<Key, string> = {
   groupMergeWarn: '用已有的名称会把两个分组合并。留空则解除分组。',
   foldAll: '全部折叠', unfoldAll: '全部展开', nOfM: '{n} 笔',
   newLine: '新项目',
-  deliveryHint: '配送费这类没人点的项目，选全员就会平分。',
+  deliveryHint: '配送费和优惠也可以选择适用的成员。',
 
   refund: '退款', correction: '更正',
   needTitle: '请填写项目名称。', needAmount: '请填写金额。',
@@ -1552,7 +1552,7 @@ const es: Record<Key, string> = {
   groupMergeWarn: 'Usar un nombre existente fusiona los dos grupos. Dejarlo vacío los desagrupa.',
   foldAll: 'Plegar todo', unfoldAll: 'Desplegar todo', nOfM: '{n}',
   newLine: 'Artículo nuevo',
-  deliveryHint: 'Lo que nadie pidió — el envío — ponlo en todos y se reparte solo.',
+  deliveryHint: 'Elige a quién aplicar los gastos de envío y los descuentos.',
 
   refund: 'devolución', correction: 'corrección',
   needTitle: 'Ponle un nombre al concepto.', needAmount: 'Introduce el importe.',
@@ -1846,7 +1846,7 @@ const vi: Record<Key, string> = {
   groupMergeWarn: 'Dùng tên đã có sẽ gộp hai nhóm. Để trống thì bỏ nhóm.',
   foldAll: 'Gấp hết', unfoldAll: 'Mở hết', nOfM: '{n} mục',
   newLine: 'Món mới',
-  deliveryHint: 'Thứ không ai gọi — phí giao hàng — chọn cả nhóm thì tự chia đều.',
+  deliveryHint: 'Chọn người cùng chia phí giao hàng hoặc được áp dụng giảm giá.',
 
   refund: 'hoàn tiền', correction: 'điều chỉnh',
   needTitle: 'Hãy đặt tên cho khoản này.', needAmount: 'Hãy nhập số tiền.',

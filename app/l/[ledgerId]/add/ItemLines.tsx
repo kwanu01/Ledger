@@ -3,7 +3,7 @@
 import { useId, useState } from 'react';
 import { sharesOfLines } from '../../../../lib/domain/settlement.ts';
 import { translator } from '../../../../lib/i18n.ts';
-import { formatMoney, formatNumber, parseMoney, type CurrencyCode, type Locale } from '../../../../lib/domain/money.ts';
+import { formatMoney, formatNumber, parseSignedMoney, type CurrencyCode, type Locale } from '../../../../lib/domain/money.ts';
 import type { ItemLine, Member } from '../../../../lib/domain/types.ts';
 
 /**
@@ -60,10 +60,10 @@ export function newDraft(over: Partial<Draft> = {}): Draft {
 }
 
 /** 화면의 줄들을 도메인의 줄들로. 저장 직전과 미리보기에 같은 것을 쓴다. */
-export function toItemLines(drafts: Draft[], currency: CurrencyCode): ItemLine[] {
+export function toItemLines(drafts: Draft[], currency: CurrencyCode, lang: Locale = 'ko'): ItemLine[] {
   return drafts.map((d) => ({
     name: d.name.trim(),
-    amount: parseMoney(d.amount, currency),
+    amount: parseSignedMoney(d.amount, currency, lang),
     memberIds: d.memberIds,
   }));
 }
@@ -104,7 +104,7 @@ export default function ItemLines({
   const [at, setAt] = useState(0);
   const here = Math.min(at, Math.max(0, drafts.length - 1));
 
-  const lines = toItemLines(drafts, currency);
+  const lines = toItemLines(drafts, currency, lang);
   const sum = lines.reduce((a, l) => a + l.amount, 0);
   const gap = sum - total;
   const shares = sharesOfLines(lines, roster);
