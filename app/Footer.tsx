@@ -33,6 +33,8 @@ export default function Footer({ lang }: { lang: Locale }) {
           알아보는 자리'로 한 덩어리다. */}
       <span className="foot-sep" aria-hidden="true" />
       <Link href="/updates">{T('updates')}</Link>
+      <span className="foot-sep" aria-hidden="true" />
+      <Link href="/chagok">chagok</Link>
       {MAIL && (
         <>
           <span className="foot-sep" aria-hidden="true" />

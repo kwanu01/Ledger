@@ -4,9 +4,8 @@ import './globals.css';
 import './fonts.css';
 import { getLang } from '../lib/lang.ts';
 import { getTheme } from '../lib/theme.ts';
-import ThemeToggle from './ThemeToggle.tsx';
+import SiteControls from './SiteControls.tsx';
 import { HelperProvider } from './helper/HelperContext.tsx';
-import Helper from './helper/Helper.tsx';
 import Footer from './Footer.tsx';
 
 /**
@@ -115,12 +114,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <HelperProvider>
-          <ThemeToggle value={theme} />
-          <div className="wrap">
-            {children}
-            <Footer lang={lang} />
-          </div>
-          <Helper lang={lang} />
+          <SiteControls lang={lang} theme={theme}>
+            <div className="wrap">
+              {children}
+              <Footer lang={lang} />
+            </div>
+          </SiteControls>
         </HelperProvider>
       </body>
     </html>
