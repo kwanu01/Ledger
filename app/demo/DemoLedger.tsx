@@ -25,7 +25,7 @@ export default function DemoLedger() {
     setCopied(false); setShareOpen(false); setProof(null);
   };
   return <main className={styles.page} lang="ko">
-    <nav className={styles.top}><Link href="/chagok" aria-label="차곡 소개로 돌아가기">← 차곡</Link><span>예시 장부</span></nav>
+    <nav className={styles.top}><Link href="/chagok" aria-label="teamLedger 소개로 돌아가기">← teamLedger</Link><span>예시 장부</span></nav>
     <header className={styles.header}>
       <p className={styles.eyebrow}>셋이 함께 쓴 돈</p>
       <h1>금액을 바꿔 보세요.</h1>

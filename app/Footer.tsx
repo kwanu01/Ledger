@@ -24,7 +24,7 @@ export default function Footer({ lang }: { lang: Locale }) {
 
   return (
     <footer>
-      <span>Ledger {MADE_ON.replace(/ · .*/, '')}</span>
+      <span>teamLedger {MADE_ON.replace(/ · .*/, '')}</span>
       {/* 무엇을 어디로 보내는지 적어 둔 곳. 광고를 붙이려면 있어야 하고,
           광고가 없어도 남의 돈 이야기를 맡아 두는 이상 있어야 한다. */}
       <span className="foot-sep" aria-hidden="true" />
@@ -34,7 +34,7 @@ export default function Footer({ lang }: { lang: Locale }) {
       <span className="foot-sep" aria-hidden="true" />
       <Link href="/updates">{T('updates')}</Link>
       <span className="foot-sep" aria-hidden="true" />
-      <Link href="/chagok">chagok</Link>
+      <Link href="/chagok">teamLedger</Link>
       {lang === 'ko' && <>
         <span className="foot-sep" aria-hidden="true" />
         <Link href="/guides/shared-expenses">정산 도움말</Link>

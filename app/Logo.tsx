@@ -25,7 +25,7 @@ export default function Logo({ plain = false }: { plain?: boolean }) {
   // 처음 상태로 되돌리려면 진짜로 다시 들어가야 해서 <a>를 쓴다.
   const inner = (
     <>
-      <span className="logo-word">Ledger</span>
+      <span className="logo-word">teamLedger</span>
       <span className="logo-stamp" aria-hidden="true">
         <Stamp />
       </span>
@@ -33,11 +33,11 @@ export default function Logo({ plain = false }: { plain?: boolean }) {
   );
 
   return plain ? (
-    <a href="/" className="logo" aria-label="Ledger 첫 화면으로">
+    <a href="/" className="logo" aria-label="teamLedger 첫 화면으로">
       {inner}
     </a>
   ) : (
-    <Link href="/" className="logo" aria-label="Ledger 첫 화면으로">
+    <Link href="/" className="logo" aria-label="teamLedger 첫 화면으로">
       {inner}
     </Link>
   );
