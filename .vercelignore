@@ -14,3 +14,12 @@ design/
 # 활자를 조각내는 스크립트. 만들어 낸 결과(public/fonts, app/fonts.css)만
 # 배포에 필요하고, 만드는 도구는 개발자 쪽 물건이다.
 scripts/
+
+# Local checks, tooling state and credentials are never deployment inputs.
+checks/
+supabase/.temp/
+.env*
+*.p8
+*.p12
+*.pem
+*.mobileprovision
