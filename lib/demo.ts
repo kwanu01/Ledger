@@ -31,7 +31,7 @@ export function demoShareText(entries: DemoEntry[]): string | null {
   const won = (amount: number) => `${amount.toLocaleString('ko-KR')}원`;
   const name = (id: string) => demoMembers.find(member => member.id === id)!.name;
   const transfers = result.transfers.map(transfer => `${name(transfer.fromMemberId)} → ${name(transfer.toMemberId)}  ${won(transfer.amount)}`);
-  return ['차곡 · 예시 장부 정산', '', ...(transfers.length ? transfers : ['주고받을 금액이 없습니다.']),
+  return ['teamLedger · 예시 장부 정산', '', ...(transfers.length ? transfers : ['주고받을 금액이 없습니다.']),
     '', `총 지출 ${won(result.totalAmount)}`, '가상의 이름과 기록으로 계산한 체험 결과입니다.',
     'https://teamledger.net/demo?ref=share'].join('\n');
 }

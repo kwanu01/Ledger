@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { sharedExpenseExample } from './example.ts';
 import styles from './guide.module.css';
 
-const title = '회비와 개인 결제, 어떻게 정산하나요? | 차곡';
+const title = '회비와 개인 결제, 어떻게 정산하나요? | teamLedger';
 const description = '공금으로 낸 식사비와 개인 돈으로 먼저 낸 준비물 비용. 세 사람의 예시로 공금 잔액과 주고받을 금액을 구분해 보세요.';
 export const metadata: Metadata = {
   title, description,
@@ -23,7 +23,7 @@ export default function SharedExpensesGuide() {
   const sharedCost = result.sharedAmount;
   return <main className={styles.page} lang="ko">
     <nav className={styles.nav} aria-label="도움말 탐색">
-      <Link href="/chagok">← 차곡 소개</Link><span>정산 도움말</span>
+      <Link href="/chagok">← teamLedger 소개</Link><span>정산 도움말</span>
     </nav>
     <article>
       <header className={styles.header}>
@@ -67,7 +67,7 @@ export default function SharedExpensesGuide() {
             <strong>{won(transfer.amount)}</strong>
           </li>)}
         </ul>
-        <p className={styles.note}>위 금액은 계산 예시입니다. 차곡이 은행 이체를 실행하지는 않습니다.</p>
+        <p className={styles.note}>위 금액은 계산 예시입니다. teamLedger가 은행 이체를 실행하지는 않습니다.</p>
       </section>
 
       <section className={styles.section} aria-labelledby="guide-record-title">

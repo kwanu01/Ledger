@@ -20,7 +20,7 @@ import Logo from '../Logo.tsx';
  * 한국어로만 둔다. 만든 사람이 책임지는 말이라 옮기다 뜻이 어긋나면 곤란하다.
  */
 
-export const metadata = { title: '개인정보 처리방침 — Ledger' };
+export const metadata = { title: '개인정보 처리방침 — teamLedger' };
 
 const MAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
 const ADS = Boolean(process.env.NEXT_PUBLIC_ADSENSE_CLIENT);
@@ -39,7 +39,7 @@ export default function Privacy() {
         <p className="faint">시행일 2026년 9월 1일</p>
 
         <p>
-          Ledger(이하 &lsquo;서비스&rsquo;)는 팀이 함께 쓴 돈을 기록하고 정산하는 웹
+          teamLedger(이하 &lsquo;서비스&rsquo;)는 팀이 함께 쓴 돈을 기록하고 정산하는 웹
           서비스입니다. 개인이 만들어 운영하며, 아래에 어떤 정보를 어떤 목적으로 다루는지
           적어 두었습니다.
         </p>

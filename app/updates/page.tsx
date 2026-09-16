@@ -29,7 +29,7 @@ import { translator } from '../../lib/i18n.ts';
  * 사람에게는 한국어로 적혀 있다고 미리 말해 두는 편이 낫다.
  */
 
-export const metadata = { title: '업데이트 내역 — Ledger' };
+export const metadata = { title: '업데이트 내역 — teamLedger' };
 
 export default async function Updates() {
   const lang = await getLang();

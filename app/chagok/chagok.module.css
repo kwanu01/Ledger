@@ -44,7 +44,7 @@
 .skip:focus { top: 12px; }
 .nav { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-block: 24px 18px; margin: 0; border-bottom: 1px solid #d7d7d7; }
 .wordmark { display: inline-flex; align-items: center; min-height: 48px; font-size: 58px; font-weight: 400; line-height: .9; padding: 0 6px 2px 0; }
-.navLink { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; font-size: 13px; }
+.navLink { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
 .navLink svg { transition: transform 220ms ease; }
 .navLink:hover svg { transform: translateX(3px); }
 .main { padding: 0; margin: 0; }
@@ -154,6 +154,7 @@
 }
 @media (max-width: 359px) {
   :global(body):has(.page) { padding-inline: 18px; }
+  .wordmark { font-size: 44px; }
   .actions { gap: 8px; }
   .primary, .secondary { padding-inline: 13px; font-size: 13px; gap: 10px; }
   .intro h1 { font-size: 34px; }

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-static';
-export const alt = 'chagok — 함께 쓰는 장부, 차곡';
+export const alt = 'teamLedger — 함께 쓰는 장부';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -17,7 +17,7 @@ export default async function OpenGraphImage() {
   return new ImageResponse(
     <div style={{ display: 'flex', width: '100%', height: '100%', background: '#fff', color: '#212121', fontFamily: 'LedgerSans', padding: '60px 76px', justifyContent: 'space-between', alignItems: 'center' }}>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontFamily: 'ChagokScript', fontSize: 182, lineHeight: 1 }}>chagok</div>
+        <div style={{ fontFamily: 'ChagokScript', fontSize: 182, lineHeight: 1 }}>teamLedger</div>
         <div style={{ fontSize: 25, color: '#666', marginTop: 18 }}>One shared ledger.</div>
         <div style={{ fontSize: 20, color: '#777', marginTop: 120 }}>teamledger.net/chagok</div>
       </div>

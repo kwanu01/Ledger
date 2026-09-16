@@ -49,7 +49,7 @@ const courier = localFont({
  */
 
 export const metadata: Metadata = {
-  title: 'Ledger',
+  title: 'teamLedger',
   description: '팀 프로젝트의 지출을 기록하고, 검산 가능하게 정산하고, 하나의 공동 장부로 남긴다.',
   /*
    * 아이콘 (§20)
