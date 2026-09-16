@@ -2,6 +2,8 @@
 
 **로컬 구현·격리 검증 완료. 운영 migration·배포·실제 계정 삭제는 하지 않았다.**
 
+2026-09-16 추가: 다섯 번째 migration과 [공동 장부 개인 콘텐츠 소유 추적](CONTENT-OWNERSHIP.md) 후보가 추가됐다. 확인된 본인 콘텐츠만 정리하며 과거/혼합/불명 귀속은 임의 삭제하지 않는다. 아래 기존 금융/접근 회수 설명과 별도로 새 적용 순서·검증 범위를 확인한다.
+
 ## 변경 계약
 
 `wipeAccount(verifiedUserId)`는 기존 `{ok:false, blocked}` 또는 `{ok:true, removedBooks}`에 성공 시 `appleCleanup: 'not_required' | 'revoked' | 'manual_required'`를 더한다. userId는 웹/모바일의 서버 검증 신원에서 받아야 한다. Apple 수동 해제가 남으면 ‘전부 해제 완료’로 표현하지 않는다.

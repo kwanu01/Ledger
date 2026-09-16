@@ -22,8 +22,9 @@ import { assertAccountImageCleanupReady, cleanupAccountImages } from './images.t
  *
  * members.account_deleted_at은 영구 접근 회수 상태다. user_id가 NULL이 되어도
  * 게스트로 바뀌지 않으며, 이름 변경·재활성화·재연결은 DB가 거절한다.
- * 공동 기록의 자유 입력 메모·첨부에는 개인정보가 포함될 수 있어 별도 보관
- * 정책의 대상이다. 구조화된 신상정보 삭제가 모든 자유 입력 내용을 지웠다는 뜻은 아니다.
+ * 검증된 단독 작성자/업로더 증거가 있는 자유 입력·첨부는 삭제 marker의
+ * 트리거와 파일 queue가 정리한다. 과거·공동편집·귀속 불명 콘텐츠는 임의
+ * 삭제하지 않는다. checks/CONTENT-OWNERSHIP.md의 범위와 한계를 따른다.
  *
  * ── 소유한 장부가 있으면 먼저 정리한다 ─────────────────────────────
  *

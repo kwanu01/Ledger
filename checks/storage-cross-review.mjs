@@ -42,6 +42,7 @@ function fixture({ paths = ['ledger-a/expense-1/receipt-a.jpg'], pending = 0, qu
         update(value) { query.update = value; return builder; }, maybeSingle() { return builder; },
         then(resolve, reject) { return Promise.resolve().then(() => {
           if (table === 'image_upload_operations') return { data: null, count: pending, error: null };
+          if (table === 'account_content_cleanup') return { data: [], count: 0, error: null };
           assert.equal(table, 'account_image_cleanup');
           assert.ok(query.filters.some(([key, value]) => key === 'user_id' && value === 'user-a'));
           if (query.update) {

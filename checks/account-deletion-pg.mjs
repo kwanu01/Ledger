@@ -101,7 +101,7 @@ try {
   // Match server public-table privileges, deliberately grant no auth-schema read.
   await control.query(`do $$ declare t record; begin
     for t in select tablename from pg_tables where schemaname='public' and tablename not in
-      ('account_deletions','apple_account_states','apple_authorization_grants','account_image_cleanup','image_upload_operations') loop
+      ('account_deletions','apple_account_states','apple_authorization_grants','account_image_cleanup','image_upload_operations','content_ownership','snapshot_content_ownership','account_content_cleanup') loop
       execute format('grant select,insert,update,delete on public.%I to service_role',t.tablename);
     end loop; end $$;
     grant usage,select on all sequences in schema public to service_role;`);
@@ -111,7 +111,7 @@ try {
     for(const role of ['anon','authenticated']) {
       const c=await connect(role,role);
       await assert.rejects(()=>wipe(c,randomUUID()),e=>e.code==='42501');
-      for(const table of ['account_deletions','apple_account_states','apple_authorization_grants','account_image_cleanup','image_upload_operations'])
+      for(const table of ['account_deletions','apple_account_states','apple_authorization_grants','account_image_cleanup','image_upload_operations','content_ownership','snapshot_content_ownership','account_content_cleanup'])
         await assert.rejects(()=>c.query(`select * from public.${table}`),e=>e.code==='42501');
       for(const sql of ["select public.reserve_apple_authorization($1,'net.teamledger.app',repeat('a',64))",
         "select public.complete_apple_authorization($1,$1,'fixture','v1.fixture')",'select public.freeze_apple_authorizations($1)'])
@@ -291,14 +291,15 @@ try {
     assert.equal((await link(service,f,p)).changed,true);
     await wipe(service,f.user);
     // Ledger survives, but neither signed-in nor stale guest use of that member can write.
-    assert.equal((await one(control,'select receipt_path from public.expenses where id=$1',[f.expense])).receipt_path,p);
+    assert.equal((await one(control,'select receipt_path from public.expenses where id=$1',[f.expense])).receipt_path,null);
+    assert.equal((await one(control,'select object_path from public.account_content_cleanup where user_id=$1',[f.user])).object_path,p);
     for(const user of [f.user,null]) {
       await assert.rejects(()=>upload(service,f.book,f.expense,p+'x',f.member,user),e=>e.code==='23514');
       await assert.rejects(()=>link(service,f,null,user),e=>e.code==='23514');
     }
     assert.equal((await one(control,'select count(*)::int n from public.image_upload_operations where user_id=$1',[f.user])).n,1);
     // A different active member may continue to manage retained shared records.
-    assert.equal((await link(service,f,null,f.other,f.peer,f.expense,p)).changed,true);
+    assert.equal((await link(service,f,null,f.other,f.peer,f.expense,null)).changed,true);
   });
   await check('an image link waiting on shared-member deletion cannot succeed after tombstoning',async()=>{
     const f=await seed(control,false),deleting=await connect('shared-image-delete','service_role'),linking=await connect('shared-image-link','service_role');
@@ -344,6 +345,91 @@ try {
     await control.query('alter table public.ledgers disable trigger ledgers_queue_deleted_account_images');
     try { assert.equal((await one(service,'select public.account_image_cleanup_ready() ready')).ready,false); }
     finally { await control.query('alter table public.ledgers enable trigger ledgers_queue_deleted_account_images'); }
+  });
+  const actor=(f,fields,other=false)=>JSON.stringify({member_id:other?f.peer:f.member,user_id:other?f.other:f.user,fields});
+  await check('only proven own prose is redacted; financial values and unknown or mixed authorship remain',async()=>{
+    const f=await seed(control,false);
+    await service.query('update public.expenses set note=$1,content_actor=$2 where id=$3',['Own private note',actor(f,['note']),f.expense]);
+    await service.query('update public.expenses set note=$1,content_actor=$2 where id=$3',['Own revised note',actor(f,['note']),f.expense]);
+    await service.query('update public.expenses set vendor=$1,content_actor=$2 where id=$3',['Other private vendor',actor(f,['vendor'],true),f.expense]);
+    await service.query('update public.expenses set product_link=$1 where id=$2',['https://unknown.example',f.expense]);
+    await service.query('update public.expenses set category=$1,content_actor=$2 where id=$3',['A words',actor(f,['category']),f.expense]);
+    await service.query('update public.expenses set category=$1,content_actor=$2 where id=$3',['A words plus B words',actor(f,['category'],true),f.expense]);
+    const before=await one(control,'select amount,payer_member_id,team_member_ids from public.expenses where id=$1',[f.expense]);
+    await wipe(service,f.user);
+    const after=await one(control,'select amount,payer_member_id,team_member_ids,note,vendor,product_link,category,title from public.expenses where id=$1',[f.expense]);
+    assert.equal(after.note,null);assert.equal(after.vendor,'Other private vendor');assert.equal(after.product_link,'https://unknown.example');
+    assert.equal(after.category,'A words plus B words');assert.equal(after.title,'Shared fixture expense');
+    for(const key of Object.keys(before))assert.deepEqual(after[key],before[key]);
+  });
+  await check('new content actor is validated, private proof cannot be forged, and claimed guest proof follows the member',async()=>{
+    const f=await seed(control,false);
+    await assert.rejects(()=>service.query('update public.expenses set note=$1,content_actor=$2 where id=$3',['Bad',JSON.stringify({member_id:f.member,user_id:f.other,fields:['note']}),f.expense]),e=>e.code==='23514');
+    await assert.rejects(()=>service.query("insert into public.content_ownership values('expenses',$1,'note',$2,'x')",[f.expense,f.member]),e=>e.code==='42501');
+    await service.query('update public.expenses set note=$1,content_actor=$2 where id=$3',['Guest words',JSON.stringify({member_id:f.guest,user_id:null,fields:['note']}),f.expense]);
+    await service.query('update public.members set user_id=$1 where id=$2',[f.user,f.guest]);
+    await wipe(service,f.user);
+    assert.equal((await one(control,'select note from public.expenses where id=$1',[f.expense])).note,null);
+  });
+  await check('proven closed-income prose is redacted without altering amounts or reopening the ledger',async()=>{
+    const f=await seed(control,false);
+    await service.query('update public.incomes set note=$1,content_actor=$2 where id=$3',['Income private note',actor(f,['note']),f.income]);
+    await service.query('update public.ledgers set closed_at=now() where id=$1',[f.book]);
+    await assert.rejects(()=>service.query('update public.incomes set amount=amount+1 where id=$1',[f.income]),e=>e.code==='23001');
+    await wipe(service,f.user);
+    const row=await one(control,'select note,amount from public.incomes where id=$1',[f.income]);
+    assert.equal(row.note,null);assert.equal(Number(row.amount),2000);
+    assert.ok((await one(control,'select closed_at from public.ledgers where id=$1',[f.book])).closed_at);
+  });
+  await check('snapshot proof removes only attributed copies, preserves financial JSON, rejects stale reintroduction',async()=>{
+    const f=await seed(control,false);
+    await service.query('update public.expenses set note=$1,content_actor=$2 where id=$3',['Private snapshot note',actor(f,['note']),f.expense]);
+    const sid=randomUUID(),snapshot={expenseIds:[f.expense],totalAmount:3001,balances:[{memberId:f.member,netBalance:1500}],transfers:[],breakdowns:[{expense:{id:f.expense,title:'Shared fixture expense',amount:3001,note:'Private snapshot note'},shares:[{memberId:f.member,amount:1501}],countsTowardShared:true}]};
+    await service.query('insert into public.settlements(id,ledger_id,seq,label,snapshot) values($1,$2,2,$3,$4)',[sid,f.book,'Proof snapshot',snapshot]);
+    await assert.rejects(()=>service.query("update public.settlements set snapshot=jsonb_set(snapshot,'{totalAmount}','9999') where id=$1",[sid]),e=>e.code==='23001');
+    await wipe(service,f.user);
+    const after=(await one(control,'select snapshot from public.settlements where id=$1',[sid])).snapshot;
+    const expected=structuredClone(snapshot);expected.breakdowns[0].expense.note=null;assert.deepEqual(after,expected);
+    await assert.rejects(()=>service.query('insert into public.settlements(ledger_id,seq,label,snapshot) values($1,3,$2,$3)',[f.book,'Stale',snapshot]),/내용이 변경/);
+  });
+  await check('tracked uploader survives operation completion, while copied paths never gain ownership',async()=>{
+    const f=await seed(control,false),p=`${f.book}/${f.expense}/receipt-owned.jpg`;
+    const operation=await upload(service,f.book,f.expense,p,f.member,f.user);
+    assert.equal((await link(service,f,p)).changed,true);
+    await service.query('select public.finish_image_upload($1,$2)',[operation.id,p]);
+    await wipe(service,f.user);
+    assert.equal((await one(control,'select object_path from public.account_content_cleanup where user_id=$1',[f.user])).object_path,p);
+    assert.equal((await one(control,'select public.account_content_file_unreferenced($1) ok',[p])).ok,true);
+    const g=await seed(control,false),q=`${g.book}/${g.expense}/receipt-unknown.jpg`;
+    assert.equal((await link(service,g,q)).changed,true);
+    await wipe(service,g.user);
+    assert.equal((await one(control,'select receipt_path from public.expenses where id=$1',[g.expense])).receipt_path,q);
+    assert.equal((await one(control,'select count(*)::int n from public.account_content_cleanup where user_id=$1',[g.user])).n,0);
+  });
+  await check('redaction and personal file queue roll back when a later deletion stage fails',async()=>{
+    const f=await seed(control,false),p=`${f.book}/${f.expense}/receipt-rollback.jpg`;
+    await service.query('update public.expenses set note=$1,content_actor=$2 where id=$3',['Rollback private note',actor(f,['note']),f.expense]);
+    await upload(service,f.book,f.expense,p,f.member,f.user);await link(service,f,p);
+    await control.query(`create function public.fixture_content_failure() returns trigger language plpgsql as $$ begin raise exception 'fixture'; end $$;
+      create trigger fixture_content_failure before delete on public.profiles for each row execute function public.fixture_content_failure()`);
+    try { await assert.rejects(()=>wipe(service,f.user),/fixture/); }
+    finally { await control.query('drop trigger fixture_content_failure on public.profiles; drop function public.fixture_content_failure()'); }
+    const row=await one(control,'select note,receipt_path from public.expenses where id=$1',[f.expense]);
+    assert.equal(row.note,'Rollback private note');assert.equal(row.receipt_path,p);
+    assert.equal((await one(control,'select count(*)::int n from public.account_content_cleanup where user_id=$1',[f.user])).n,0);
+    assert.equal((await one(control,'select count(*)::int n from public.content_ownership where member_id=$1',[f.member])).n,2);
+  });
+  await check('content edit holding the row yields to account deletion without a deadlock',async()=>{
+    const f=await seed(control,false),editing=await connect('content-edit','service_role'),deleting=await connect('content-delete','service_role');
+    await service.query('update public.expenses set note=$1,content_actor=$2 where id=$3',['Original own note',actor(f,['note']),f.expense]);
+    await editing.query('begin');await editing.query('select id from public.expenses where id=$1 for update',[f.expense]);
+    await deleting.query('begin');const removal=wipe(deleting,f.user).then(value=>({value}),error=>({error}));
+    await waitLocked(control,deleting);
+    const lateActor=JSON.stringify({...JSON.parse(actor(f,['note'])),user_id:f.user.toUpperCase()});
+    await assert.rejects(()=>editing.query('update public.expenses set note=$1,content_actor=$2 where id=$3',['Late own note',lateActor,f.expense]),e=>e.code==='55P03');
+    await editing.query('rollback');const result=await removal;if(result.error)throw result.error;await deleting.query('commit');
+    const row=await one(control,'select note,amount from public.expenses where id=$1',[f.expense]);assert.equal(row.note,null);assert.equal(Number(row.amount),3001);
+    await close(editing);await close(deleting);
   });
 } finally {
   await Promise.allSettled([...connections].map(close));

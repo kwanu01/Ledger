@@ -187,6 +187,39 @@ export async function cleanupAccountImages(userId: string): Promise<void> {
     }
     if (offset + data.length >= total) break;
   }
+  await cleanupAttributedContent(userId);
+}
+
+/** Exact, durably queued personal files in retained shared ledgers. */
+export async function cleanupAttributedContent(userId: string): Promise<void> {
+  let total: number | null = null;
+  for (let offset = 0; ; offset += 100) {
+    const { data, count, error } = await db.from('account_content_cleanup')
+      .select('object_path, completed_at', { count: 'exact' }).eq('user_id', userId)
+      .order('object_path').range(offset, offset + 99);
+    if (error || !Array.isArray(data) || !Number.isSafeInteger(count) || count === null || count < 0
+        || (total !== null && count !== total) || data.length !== Math.min(100, Math.max(0, count - offset))) {
+      throw new MobileError(503, 'CONTENT_CLEANUP_UNAVAILABLE', '개인 첨부파일의 삭제 목록을 확인하지 못했습니다. 다시 시도해 주세요.');
+    }
+    total = count;
+    for (const row of data) {
+      if (row.completed_at) continue;
+      const path = row.object_path;
+      if (typeof path !== 'string' || !/^[0-9a-f-]{36}\/[0-9a-f-]{36}\/(receipt|item)-[a-z0-9-]+\.(jpg|png|webp)$/.test(path)) {
+        throw new MobileError(503, 'CONTENT_CLEANUP_UNAVAILABLE', '삭제할 첨부파일의 경로를 확인하지 못했습니다.');
+      }
+      const reference = await db.rpc('account_content_file_unreferenced', { p_path: path });
+      if (reference.error || reference.data !== true) {
+        throw new MobileError(409, 'CONTENT_STILL_REFERENCED', '이 첨부파일을 사용하는 다른 기록이 있어 삭제가 완료되지 않았습니다.');
+      }
+      try { await dropImage(path); }
+      catch { throw new MobileError(503, 'CONTENT_CLEANUP_FAILED', '개인 첨부파일 삭제를 확인하지 못했습니다. 계정 삭제를 다시 시도해 주세요.'); }
+      const saved = await db.from('account_content_cleanup').update({ completed_at: new Date().toISOString() })
+        .eq('object_path', path).eq('user_id', userId).select('object_path').maybeSingle();
+      if (saved.error || !saved.data) throw new MobileError(503, 'CONTENT_CLEANUP_UNAVAILABLE', '첨부파일 삭제 결과를 저장하지 못했습니다. 다시 시도해 주세요.');
+    }
+    if (offset + data.length >= total) break;
+  }
 }
 
 function assertNoPendingUploads(pending: { count: number | null; error: unknown }): void {

@@ -18,6 +18,13 @@ import { computeSettlement, spreadOverLines, unsettledExpenses } from '../domain
 import type { Allocation } from '../domain/types.ts';
 import type { Expense, ItemLine, Ledger } from '../domain/types.ts';
 
+/** Always supplied by the server-verified pass, never by request body fields. */
+type ContentActor = { memberId: string; userId?: string };
+const expenseContentFields = ['title', 'note', 'vendor', 'category', 'group_name', 'product_link', 'adjustment_reason'];
+function contentActor(actor: ContentActor | undefined, fields: string[]) {
+  return actor ? { member_id: actor.memberId, user_id: actor.userId ?? null, fields } : null;
+}
+
 /**
  * 보정 항목이 물려받을 줄들 (§10.4)
  *
@@ -89,10 +96,10 @@ async function _loadLedger(ledgerId: string): Promise<Ledger> {
 
 /* ── 들어온 돈 (§12) ──────────────────────────────────────────────────── */
 
-export async function insertIncome(income: NewIncome): Promise<string> {
+export async function insertIncome(income: NewIncome, actor?: ContentActor): Promise<string> {
   const { data, error } = await db
     .from('incomes')
-    .insert(toIncomeInsert(income))
+    .insert({ ...toIncomeInsert(income), content_actor: contentActor(actor, ['title', 'note']) })
     .select('id')
     .single();
   if (error) throw new Error(error.message);
@@ -161,10 +168,10 @@ export async function setTermClosed(ledgerId: string, closed: boolean): Promise<
 
 /* ── 지출 ─────────────────────────────────────────────────────────────── */
 
-export async function insertExpense(expense: NewExpense): Promise<string> {
+export async function insertExpense(expense: NewExpense, actor?: ContentActor): Promise<string> {
   const { data, error } = await db
     .from('expenses')
-    .insert(toExpenseInsert(expense))
+    .insert({ ...toExpenseInsert(expense), content_actor: contentActor(actor, expenseContentFields) })
     .select('id')
     .single();
   // DB 트리거가 내는 메시지는 사용자에게 그대로 보여줘도 되도록 한국어로 써 두었다.
@@ -216,6 +223,7 @@ export async function removeExpense(expenseId: string, ledgerId: string): Promis
  * 순간에 팀에 누가 있었는지는 나중에 바뀔 수 있는 사실이 아니다.
  */
 export async function editExpense(args: {
+  actor?: ContentActor;
   expenseId: string;
   ledgerId: string;
   date: string;
@@ -234,6 +242,7 @@ export async function editExpense(args: {
     .from('expenses')
     .update({
       spent_on: args.date,
+      content_actor: contentActor(args.actor, expenseContentFields),
       title: args.title,
       amount: args.amount,
       payer_member_id: args.payerId,
@@ -285,6 +294,7 @@ export async function setExpenseChecked(args: {
 }
 
 export async function relabelExpense(args: {
+  actor?: ContentActor;
   expenseId: string;
   ledgerId: string;
   title: string;
@@ -298,6 +308,7 @@ export async function relabelExpense(args: {
     .from('expenses')
     .update({
       title: args.title,
+      content_actor: contentActor(args.actor, expenseContentFields),
       vendor: args.vendor ?? null,
       category: args.category ?? null,
       group_name: args.group?.trim() || null,
@@ -321,6 +332,7 @@ export async function relabelExpense(args: {
  * 오히려 자연스럽다.
  */
 export async function renameGroup(args: {
+  actor?: ContentActor;
   ledgerId: string;
   from: string;
   to: string;
@@ -328,13 +340,14 @@ export async function renameGroup(args: {
   const to = args.to.trim();
   const { error } = await db
     .from('expenses')
-    .update({ group_name: to || null })
+    .update({ group_name: to || null, content_actor: contentActor(args.actor, ['group_name']) })
     .eq('ledger_id', args.ledgerId)
     .eq('group_name', args.from);
   if (error) throw new Error(error.message);
 }
 
 export async function insertAdjustment(args: {
+  actor?: ContentActor;
   ledgerId: string;
   targetId: string;
   kind: 'correction' | 'refund';
@@ -388,6 +401,10 @@ export async function insertAdjustment(args: {
       adjustment_kind: args.kind,
       adjustment_target_id: args.targetId,
       adjustment_reason: args.reason ?? null,
+      created_by_member_id: args.actor?.memberId ?? null,
+      // Mobile adjustments generate the title from the original expense.
+      // Copying another member's words is not proof of authorship.
+      content_actor: contentActor(args.actor, ['adjustment_reason']),
       vendor: target.vendor,
       category: target.category,
       // 보정은 원본과 같은 묶음에 선다. 따로 떨어지면 묶음 소계가 거짓말을 한다.

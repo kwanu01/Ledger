@@ -134,7 +134,7 @@ export async function recordExpense(input: ExpenseInput): Promise<Result<{ id: s
       note: input.note,
       readAmount: input.readAmount,
       createdBy: pass.memberId,
-    });
+    }, pass);
     let id: string;
     try { id = await insert(); }
     catch (error) {
@@ -210,7 +210,7 @@ export async function recordExpenses(input: {
           note: row.note,
           readAmount: row.readAmount,
           createdBy: pass.memberId,
-        });
+        }, pass);
         saved.push({ at, id });
       } catch (e) {
         bad.push({ at, why: e instanceof Error ? e.message : '적지 못했습니다.' });
@@ -278,7 +278,7 @@ export async function recordIncome(input: {
       memberId: input.kind === 'dues' ? input.memberId : undefined,
       note: input.note?.trim() || undefined,
       createdBy: pass.memberId,
-    });
+    }, pass);
 
     revalidatePath(`/l/${input.ledgerId}`, 'layout');
     return { ok: true, value: { id } };
@@ -379,11 +379,12 @@ export async function recordCorrection(args: {
   reason?: string;
 }): Promise<Result<{ id: string }>> {
   try {
-    await requireLedgerAccess(args.ledgerId);
+    const pass = await requireLedgerAccess(args.ledgerId);
     const diff = args.actualAmount - args.originalAmount;
     if (diff === 0) return { ok: false, message: '원본과 금액이 같습니다. 보정할 차액이 없습니다.' };
 
     const id = await insertAdjustment({
+      actor: pass,
       ledgerId: args.ledgerId,
       targetId: args.targetId,
       kind: 'correction',
@@ -411,10 +412,11 @@ export async function recordRefund(args: {
   reason?: string;
 }): Promise<Result<{ id: string }>> {
   try {
-    await requireLedgerAccess(args.ledgerId);
+    const pass = await requireLedgerAccess(args.ledgerId);
     if (args.refundedAmount <= 0) return { ok: false, message: '환불 금액을 입력하세요.' };
 
     const id = await insertAdjustment({
+      actor: pass,
       ledgerId: args.ledgerId,
       targetId: args.targetId,
       kind: 'refund',
@@ -444,11 +446,11 @@ export async function renameExpenseGroup(input: {
   to: string;
 }): Promise<Result> {
   try {
-    await requireLedgerAccess(input.ledgerId);
+    const pass = await requireLedgerAccess(input.ledgerId);
     if (!input.from.trim()) return { ok: false, message: '바꿀 묶음을 고르세요.' };
     if (input.from.trim() === input.to.trim()) return { ok: true };
 
-    await renameGroup({ ledgerId: input.ledgerId, from: input.from, to: input.to });
+    await renameGroup({ ledgerId: input.ledgerId, from: input.from, to: input.to, actor: pass });
     revalidatePath(`/l/${input.ledgerId}`, 'layout');
     return { ok: true };
   } catch (e) {
@@ -619,7 +621,7 @@ export async function editExpenseLine(input: {
   note?: string;
 }): Promise<Result> {
   try {
-    await requireLedgerAccess(input.ledgerId);
+    const pass = await requireLedgerAccess(input.ledgerId);
     if (!input.title.trim()) return { ok: false, message: '항목 이름을 입력하세요.' };
     if (!Number.isInteger(input.amount) || input.amount === 0) {
       return { ok: false, message: '금액은 0이 아닌 정수여야 합니다.' };
@@ -637,6 +639,7 @@ export async function editExpenseLine(input: {
     if (wrong) return { ok: false, message: wrong };
 
     await editExpense({
+      actor: pass,
       expenseId: input.expenseId,
       ledgerId: input.ledgerId,
       date: input.date,
@@ -679,10 +682,11 @@ export async function relabelExpenseLine(input: {
   note?: string;
 }): Promise<Result> {
   try {
-    await requireLedgerAccess(input.ledgerId);
+    const pass = await requireLedgerAccess(input.ledgerId);
     if (!input.title.trim()) return { ok: false, message: '항목 이름을 입력하세요.' };
 
     await relabelExpense({
+      actor: pass,
       expenseId: input.expenseId,
       ledgerId: input.ledgerId,
       title: input.title.trim(),
