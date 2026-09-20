@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { THEME_COOKIE, type Theme } from '../lib/theme-key.ts';
+import type { Locale } from '../lib/domain/money.ts';
 
 /**
  * 해와 달 (§20)
@@ -20,7 +21,16 @@ import { THEME_COOKIE, type Theme } from '../lib/theme-key.ts';
  *   1. 화면에 바로 — 기다림 없이 색이 바뀐다.
  *   2. 쿠키에 — 다음에 들어와도 그대로다. 서버가 처음부터 그 색으로 그린다.
  */
-export default function ThemeToggle({ value }: { value: Theme | null }) {
+const labels: Record<Locale, { light: string; dark: string }> = {
+  ko: { light: '밝은 화면으로', dark: '어두운 화면으로' },
+  en: { light: 'Switch to light mode', dark: 'Switch to dark mode' },
+  ja: { light: 'ライトモードに切り替え', dark: 'ダークモードに切り替え' },
+  zh: { light: '切换到浅色模式', dark: '切换到深色模式' },
+  es: { light: 'Cambiar al modo claro', dark: 'Cambiar al modo oscuro' },
+  vi: { light: 'Chuyển sang giao diện sáng', dark: 'Chuyển sang giao diện tối' },
+};
+
+export default function ThemeToggle({ value, locale }: { value: Theme | null; locale: Locale }) {
   const router = useRouter();
   const [dark, setDark] = useState<boolean | null>(
     value === 'dark' ? true : value === 'light' ? false : null,
@@ -45,14 +55,15 @@ export default function ThemeToggle({ value }: { value: Theme | null }) {
   // 기기 설정을 아직 못 읽은 첫 순간에는 자리만 잡아 둔다. 아무 그림이나
   // 먼저 띄우면 곧바로 반대 그림으로 바뀌어 깜빡인 것처럼 보인다.
   const show = dark === null ? null : dark ? 'sun' : 'moon';
+  const label = dark ? labels[locale].light : labels[locale].dark;
 
   return (
     <button
       type="button"
       className="theme"
       onClick={flip}
-      aria-label={dark ? '밝은 화면으로' : '어두운 화면으로'}
-      title={dark ? '밝은 화면으로' : '어두운 화면으로'}
+      aria-label={label}
+      title={label}
     >
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none"
            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">

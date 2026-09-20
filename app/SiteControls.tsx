@@ -16,7 +16,7 @@ export default function SiteControls({ children, lang, theme }: {
   const path = usePathname();
   const publicPreview = path === '/teamledger';
   return <>
-    {publicPreview ? null : <ThemeToggle value={theme} />}
+    {publicPreview ? null : <ThemeToggle value={theme} locale={lang} />}
     {children}
     {publicPreview ? null : <Helper lang={lang} />}
   </>;

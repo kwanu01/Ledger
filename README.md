@@ -1049,11 +1049,9 @@ warmth. The materiality of an analogue ledger comes from **structure**, not colo
   SVG noise mask so the ink lands unevenly
 - a **print stylesheet** — printing the archive produces a paper ledger
 
-Three typefaces: Nanum Myeongjo for text, Courier Prime for figures (digits align),
-and Mrs Saint Delafield — a revival of 19th-century commercial ledger hand — for the
-logo. Only the logo's letters were subset, embedded directly as a 1.4KB woff2, so it
-renders offline and behind a strict CSP. Hovering the logo rotates a round seal into
-place at its lower right.
+Pretendard Variable is the single interface typeface. Figures use tabular spacing,
+and the teamLedger wordmark is a fixed vector outline based on Mrs Saint Delafield so
+its lettering renders identically without changing the interface typography.
 
 **There is no marketing copy.** The landing page has none. Labels, numbers and
 controls only. If a screen seems to need explaining, the screen is wrong.

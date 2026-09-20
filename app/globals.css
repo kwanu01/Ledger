@@ -121,53 +121,22 @@ hr{border:0;border-top:1px solid var(--rule);margin:0}
 .debit{color:var(--debit)}
 
 /* ── 로고 ────────────────────────────────────────────────────────── */
-/* 옛 장부와 지폐에 쓰이던 동판 인쇄 스크립트. 글자 하나뿐이고 선은 없다. */
-/* 필기체 글자 하나 위에, 이 프로그램이 만들어진 날을 고무도장으로 찍는다.
-   종이 장부의 첫 장에는 언제나 날짜가 있었다. 도장이 있어야 상표가 아니라
-   서류가 된다. */
+/* 옛 장부와 지폐에 쓰이던 동판 인쇄 스크립트. 작은 바코드만 덧붙인다. */
 .logo{
   position:relative;display:inline-block;text-decoration:none;color:var(--ink);
-  cursor:pointer;background:none;border:0;padding:2px 4px 8px}
+  cursor:pointer;background:none;border:0;padding:2px 4px 10px}
 .logo:visited{color:var(--ink)}
 .logo-word{
   display:block;width:176px;height:auto;overflow:visible}
-/* 인장 — 로고의 오른쪽 아래에 걸치듯 찍힌다. 종이 도장은 글자를 피해
-   찍히지 않는다. 조금 물려야 나중에 찍은 것으로 보인다. */
-.logo-stamp{
-  position:absolute;right:-26px;bottom:-14px;width:60px;height:60px;
-  color:var(--stamp);pointer-events:none;
-  /* 기본은 안 찍혀 있다. 도장은 누가 찍어야 찍히는 것이다. */
-  opacity:0;transform:rotate(-24deg) scale(1.45);
-  /* 고무도장은 고르게 묻지 않는다. 잉크가 덜 묻은 자리를 만든다. */
-  -webkit-mask-image:var(--ink-blot);mask-image:var(--ink-blot);
-  -webkit-mask-size:190px 190px;mask-size:190px 190px;mask-mode:alpha;
-  mix-blend-mode:multiply}
-.seal{display:block;width:100%;height:100%;overflow:visible}
-.seal-rim-text{
-  font-family:var(--sans);font-size:9.6px;font-weight:700;letter-spacing:.16em}
-/* 아래쪽 글자는 호의 안쪽에 붙는다. dy 로 테 쪽으로 밀어 놓는다(Stamp.tsx). */
-
-/* 마우스를 올리면 도장이 내려와 찍힌다. 비스듬히 들고 와서 한 번 누르고,
-   떼면서 아주 조금 튄다. 색은 언제나 도장 잉크색이다 — 파랑은 링크의 색이지
-   도장의 색이 아니다. */
-.logo:hover .logo-stamp,.logo:focus-visible .logo-stamp{
-  animation:stamp-press .38s cubic-bezier(.2,.86,.3,1) both}
-.logo:hover .logo-word,.logo:focus-visible .logo-word{opacity:.8}
-@keyframes stamp-press{
-  0%{opacity:0;transform:rotate(-24deg) scale(1.45)}
-  52%{opacity:1;transform:rotate(-9deg) scale(.94)}   /* 눌리는 순간 */
-  74%{opacity:.9;transform:rotate(-13deg) scale(1.05)} /* 떼면서 튐 */
-  100%{opacity:.94;transform:rotate(-11deg) scale(1)}
-}
+.logo-barcode{
+  position:absolute;right:4px;bottom:0;width:30px;height:10px;color:var(--ink);
+  opacity:.72;overflow:visible;transition:transform .18s ease,opacity .18s ease}
+.logo-barcode path{fill:none;stroke:currentColor;stroke-width:1;shape-rendering:crispEdges}
+.logo:hover .logo-word,.logo:focus-visible .logo-word{opacity:.82}
+.logo:hover .logo-barcode,.logo:focus-visible .logo-barcode{opacity:1;transform:translateY(1px)}
 @media (prefers-reduced-motion:reduce){
-  .logo:hover .logo-stamp,.logo:focus-visible .logo-stamp{
-    animation:none;opacity:.94;transform:rotate(-11deg) scale(1)}
+  .logo-barcode{transition:none}
 }
-/* 어두운 종이에서는 곱하기 합성이 잉크를 먹어 버린다. */
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .logo-stamp{mix-blend-mode:normal}
-}
-:root[data-theme="dark"] .logo-stamp{mix-blend-mode:normal}
 
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:34px 0 0}
 .prefs{display:inline-flex;gap:8px;margin-left:14px}

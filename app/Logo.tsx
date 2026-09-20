@@ -1,22 +1,7 @@
 import Link from 'next/link';
-import Stamp from './Stamp.tsx';
 import Wordmark from './Wordmark.tsx';
 
-/**
- * 로고 (§20)
- *
- * 필기체 글자만 놓으면 장부가 아니라 상표처럼 읽힌다. 그래서 도장을 하나 둔다.
- * 다만 **찍혀 있지 않다.** 마우스를 올려야 그때 내려와 찍힌다.
- *
- * 도장은 원래 누가 찍어야 찍히는 것이다. 처음부터 찍혀 있으면 그건 도장이
- * 아니라 인쇄다. 이 서비스가 정산을 끝낼 때 도장을 찍는 것처럼, 로고도
- * 손이 닿았을 때 찍힌다.
- *
- * 찍히는 말은 이 장부가 끝났다는 말이다. 정산 완료 도장과 같은 낱말을 쓴다.
- */
-
-/** 로고에 찍히는 말. 화면 안의 완료 도장과 같은 낱말이다. */
-export const STAMP_WORD = 'Completed';
+/** 원래의 필기체 워드마크와 흑백 바코드만 쓰는 간결한 로고. */
 
 /** 이 장부 프로그램이 만들어진 해. 화면 맨 아래 줄에 적힌다. */
 export const MADE_ON = '2026 · 09 · 01';
@@ -27,18 +12,18 @@ export default function Logo({ plain = false }: { plain?: boolean }) {
   const inner = (
     <>
       <Wordmark className="logo-word" />
-      <span className="logo-stamp" aria-hidden="true">
-        <Stamp />
-      </span>
+      <svg className="logo-barcode" viewBox="0 0 30 10" aria-hidden="true">
+        <path d="M1 0v10M3 0v10M6 0v10M8 0v10M12 0v10M13.5 0v10M17 0v10M20 0v10M22 0v10M26 0v10M29 0v10" />
+      </svg>
     </>
   );
 
   return plain ? (
-    <a href="/" className="logo" aria-label="teamLedger 첫 화면으로">
+    <a href="/" className="logo" aria-label="teamLedger">
       {inner}
     </a>
   ) : (
-    <Link href="/" className="logo" aria-label="teamLedger 첫 화면으로">
+    <Link href="/" className="logo" aria-label="teamLedger">
       {inner}
     </Link>
   );

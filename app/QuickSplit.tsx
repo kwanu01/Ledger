@@ -50,14 +50,14 @@ export default function QuickSplit({
   const oddCount = shares.filter((s) => s.roundingAdjusted).length;
 
   const detail = useMemo(() => {
-    const members: Member[] = payers.map((p, i) => ({ id: `q${i}`, name: p.name || `이름 ${i + 1}` }));
+    const members: Member[] = payers.map((p, i) => ({ id: `q${i}`, name: p.name || `${T('name')} ${i + 1}` }));
     const ids = members.map((m) => m.id);
     const expenses: Expense[] = payers
       .map((p, i) => ({
         id: `qe${i}`,
         ledgerId: 'quick',
         date: '2026-01-01',
-        title: `${p.name || `이름 ${i + 1}`} 결제`,
+        title: `${p.name || `${T('name')} ${i + 1}`} · ${T('paid')}`,
         amount: Math.round(p.amount),
         payerId: `q${i}`,
         teamMemberIds: ids,
@@ -68,7 +68,7 @@ export default function QuickSplit({
       .filter((e) => e.amount > 0);
     if (!expenses.length) return null;
     return { result: computeSettlement(expenses, members), members };
-  }, [payers]);
+  }, [payers, locale]);
 
   const who = (id: string) => detail?.members.find((m) => m.id === id)?.name ?? id;
 
@@ -87,17 +87,17 @@ export default function QuickSplit({
   function kakaoMessage() {
     if (detail && detail.result.transfers.length) {
       return (
-        '빠른 정산\n\n' +
+        `${T('split')}\n\n` +
         detail.result.transfers
           .map((t) => `${who(t.fromMemberId)} → ${who(t.toMemberId)}\n${cash(t.amount)}`)
           .join('\n\n') +
-        `\n\n대상 금액\n${cash(detail.result.totalAmount)}`
+        `\n\n${T('targetAmount')}\n${cash(detail.result.totalAmount)}`
       );
     }
     return (
-      `빠른 정산\n\n${n}명\n한 사람당 ${cash(amounts[0] ?? 0)}` +
-      (amounts.length > 1 ? ` 또는 ${cash(amounts[1])}` : '') +
-      `\n\n총 금액\n${cash(total)}`
+      `${T('split')}\n\n${T('people')}: ${n}\n${T('each')}: ${cash(amounts[0] ?? 0)}` +
+      (amounts.length > 1 ? ` / ${cash(amounts[1])}` : '') +
+      `\n\n${T('total')}: ${cash(total)}`
     );
   }
 
@@ -160,6 +160,7 @@ export default function QuickSplit({
                     <td>
                       <input
                         type="text"
+                        aria-label={`${T('name')} ${i + 1}`}
                         placeholder={T('name')}
                         value={p.name}
                         onChange={(e) => setPayer(i, { name: e.target.value })}
@@ -168,6 +169,7 @@ export default function QuickSplit({
                     <td>
                       <input
                         type="text"
+                        aria-label={`${T('paidAmount')} ${i + 1}`}
                         inputMode="decimal"
                         className="num"
                         style={{ textAlign: 'right' }}
@@ -180,6 +182,7 @@ export default function QuickSplit({
                       {payers.length > 2 && (
                         <button
                           className="plain"
+                          aria-label={`${T('removePerson')} ${i + 1}`}
                           onClick={() => {
                             setPayers((prev) => prev.filter((_, j) => j !== i));
                             setOpenProof(null);

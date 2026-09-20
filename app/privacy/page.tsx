@@ -1,8 +1,14 @@
 import Logo from '../Logo.tsx';
+import { getLang } from '../../lib/lang.ts';
+import PrivacyEnglish from './PrivacyEnglish.tsx';
 
-export const metadata = { title: '개인정보 처리방침 — teamLedger' };
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
+  const requested = (await searchParams).lang;
+  const lang = requested === 'en' ? 'en' : await getLang();
+  return { title: lang === 'en' ? 'Privacy Policy — teamLedger' : '개인정보 처리방침 — teamLedger' };
+}
 
-const MAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
+const MAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'rekuac01@gmail.com';
 const ADS = Boolean(process.env.NEXT_PUBLIC_ADSENSE_CLIENT);
 const rowHeading = {
   width: 96, padding: '12px 18px 12px 0', textAlign: 'left', verticalAlign: 'top',
@@ -11,11 +17,14 @@ const rowHeading = {
 
 // Publish with the matching account/Apple/content-cleanup implementation.
 // Open operator decisions are recorded in the App Store privacy preparation notes.
-export default function Privacy() {
+export default async function Privacy({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
+  const requested = (await searchParams).lang;
+  const lang = requested === 'en' ? 'en' : await getLang();
   return (
     <>
       <header><div className="topbar"><Logo /></div></header>
       <main className="doc">
+        {lang === 'en' ? <PrivacyEnglish /> : <>
         <h1>개인정보 처리방침</h1>
         <p className="faint">최종 수정 2026년 9월 16일</p>
         <p>
@@ -196,6 +205,7 @@ export default function Privacy() {
           방침을 바꾸면 수정일을 갱신합니다. 이용자의 권리에 영향을 주는 중요한 변경은
           적용 전에 서비스 화면에서 안내합니다.
         </p>
+        </>}
       </main>
     </>
   );
