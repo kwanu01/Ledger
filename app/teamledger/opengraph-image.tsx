@@ -9,17 +9,17 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default async function OpenGraphImage() {
-  const [script, mascot, sans] = await Promise.all([
-    readFile(join(process.cwd(), 'public/chagok/MrsSaintDelafield-Regular.ttf')),
+  const [wordmark, mascot, sans] = await Promise.all([
+    readFile(join(process.cwd(), 'public/brand/teamLedger.svg')),
     readFile(join(process.cwd(), 'public/helper/stand.png')),
     readFile(join(process.cwd(), 'node_modules/next/dist/compiled/@vercel/og/noto-sans-v27-latin-regular.ttf')),
   ]);
   return new ImageResponse(
     <div style={{ display: 'flex', width: '100%', height: '100%', background: '#fff', color: '#212121', fontFamily: 'LedgerSans', padding: '60px 76px', justifyContent: 'space-between', alignItems: 'center' }}>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontFamily: 'ChagokScript', fontSize: 182, lineHeight: 1 }}>teamLedger</div>
+        <img src={`data:image/svg+xml;base64,${wordmark.toString('base64')}`} alt="teamLedger" width="550" height="192" />
         <div style={{ fontSize: 25, color: '#666', marginTop: 18 }}>One shared ledger.</div>
-        <div style={{ fontSize: 20, color: '#777', marginTop: 120 }}>teamledger.net/chagok</div>
+        <div style={{ fontSize: 20, color: '#777', marginTop: 92 }}>teamledger.net/teamledger</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', padding: '34px 30px', border: '1px solid #ccc', width: 340, transform: 'rotate(4deg)', boxShadow: '10px 12px 0 #f3f3f3' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 20, paddingBottom: 25, borderBottom: '1px solid #212121' }}><span>3 PEOPLE</span><span>01</span></div>
@@ -28,6 +28,6 @@ export default async function OpenGraphImage() {
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 22 }}><img src={`data:image/png;base64,${mascot.toString('base64')}`} alt="" width="124" height="124" /></div>
       </div>
     </div>,
-    { ...size, fonts: [{ name: 'ChagokScript', data: script, style: 'normal', weight: 400 }, { name: 'LedgerSans', data: sans, style: 'normal', weight: 400 }] },
+    { ...size, fonts: [{ name: 'LedgerSans', data: sans, style: 'normal', weight: 400 }] },
   );
 }

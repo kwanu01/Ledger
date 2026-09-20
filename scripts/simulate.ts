@@ -22,7 +22,7 @@ import {
   unsettledExpenses,
   won,
 } from '../lib/domain/settlement.ts';
-import { buildLedger, members } from '../lib/domain/seed.ts';
+import { buildLedger, members } from './accounting-fixture.ts';
 import { recallFor, recallSeed, categoriesOf } from '../lib/domain/recall.ts';
 import { fundBook, duesBoard, unpaid, carryOut, fromFund, usesFund, guessDuesPerHead } from '../lib/domain/closing.ts';
 import { inSettlement } from '../lib/domain/settlement.ts';

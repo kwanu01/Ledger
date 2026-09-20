@@ -14,7 +14,7 @@ export default function SiteControls({ children, lang, theme }: {
   theme: Theme | null;
 }) {
   const path = usePathname();
-  const publicPreview = path === '/chagok' || path === '/demo' || path === '/guides/shared-expenses';
+  const publicPreview = path === '/teamledger' || path === '/chagok';
   return <>
     {publicPreview ? null : <ThemeToggle value={theme} />}
     {children}

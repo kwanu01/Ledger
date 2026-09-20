@@ -1,52 +1,10 @@
 import type { Metadata } from 'next';
-import localFont from 'next/font/local';
 import './globals.css';
-import './fonts.css';
 import { getLang } from '../lib/lang.ts';
 import { getTheme } from '../lib/theme.ts';
 import SiteControls from './SiteControls.tsx';
 import { HelperProvider } from './helper/HelperContext.tsx';
 import Footer from './Footer.tsx';
-
-/**
- * 글꼴을 직접 심는다. (§20)
- *
- * 시스템 글꼴 목록에 기대면 윈도우에서는 맑은 고딕, 맥에서는 애플 SD 산돌고딕이
- * 나와서 같은 장부가 컴퓨터마다 다르게 보인다. 장부는 어디서 열어도 같아야 한다.
- *
- * 두 벌을 잘라 함께 보낸다. 장부는 원래 손으로 쓰거나 타자로 친 서류였다.
- * 타자기는 글자 폭이 전부 같아서 금액 칸이 흔들리지 않는다.
- *
- *   Courier Prime      — 로마자와 숫자. 화면에서 읽으라고 다시 그린 쿠리어다.
- *                        숫자 폭이 전부 같아서 금액 칸이 흔들리지 않는다.
- *   나눔명조           — 한글. 우리 인쇄물과 서류의 본문 활자가 오래 명조였다.
- *                        고정폭 한글은 글자 사이가 너무 벌어져 투박해진다 —
- *                        숫자만 폭이 같으면 표는 이미 맞는다.
- *
- * 둘 다 SIL OFL 1.1 (app/fonts/LICENSE-*.txt) — 상업적 사용을 포함해 쓰는 데
- * 제한이 없다. 라이선스 전문을 저장소에 함께 둔다.
- *
- * 이름을 따로 두는 이유: 한 이름 아래 두 벌을 넣으면 같은 굵기끼리 부딪혀
- * 한쪽이 통째로 묻힌다. 이름을 나누고 CSS에서 로마자를 앞에 세우면 글자마다
- * 제 몸에 맞는 활자가 골라진다.
- */
-const courier = localFont({
-  src: [
-    { path: './fonts/CourierPrime-Regular.subset.woff2', weight: '400', style: 'normal' },
-    { path: './fonts/CourierPrime-Bold.subset.woff2', weight: '700', style: 'normal' },
-  ],
-  variable: '--font-latin',
-  display: 'swap',
-});
-
-/*
- * 한글은 next/font 로 심지 않는다.
- *
- * next/font 는 한 이름에 파일 하나(굵기별로 하나)를 매단다. 그런데 한글 한 벌은
- * 자른 뒤에도 455 kB 라서, 그 방식으로는 처음 들어온 사람이 **쓰지도 않을 2,400자를
- * 통째로** 받는다. 조각으로 나눠 unicode-range 로 골라 받게 하려면 @font-face 를
- * 직접 써야 한다 — app/fonts.css 에 있다. 거기서 이름을 "Han" 으로 붙인다.
- */
 
 export const metadata: Metadata = {
   title: 'teamLedger',
@@ -87,31 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang={lang}
       data-theme={theme ?? undefined}
-      className={courier.variable}
     >
-      <head>
-        {/*
-          미리 받아 두는 것은 **core 두 조각뿐이다.**
-          손으로 쓴 @font-face 는 Next 가 알아서 미리 받지 않는다. 그런데
-          이 두 조각은 어느 화면에서든 반드시 쓰이므로, CSS 를 다 읽은 뒤에야
-          받기 시작하면 글씨가 한 번 늦게 바뀐다. 나머지 24조각은 적지 않는다 —
-          쓰일지 안 쓰일지 모르는 것을 미리 받으면 나눈 뜻이 없어진다.
-        */}
-        <link
-          rel="preload"
-          as="font"
-          type="font/woff2"
-          href="/fonts/han-400-core.3759d0d0.woff2"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          as="font"
-          type="font/woff2"
-          href="/fonts/han-700-core.64715324.woff2"
-          crossOrigin="anonymous"
-        />
-      </head>
       <body>
         <HelperProvider>
           <SiteControls lang={lang} theme={theme}>

@@ -10,7 +10,7 @@ const rowHeading = {
 } as const;
 
 // Publish with the matching account/Apple/content-cleanup implementation.
-// Open operator decisions are recorded in outputs/chagok-app-store/privacy-policy-questions.md.
+// Open operator decisions are recorded in the App Store privacy preparation notes.
 export default function Privacy() {
   return (
     <>

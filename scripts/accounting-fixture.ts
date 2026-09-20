@@ -1,12 +1,10 @@
 /**
- * Ledger — 정산 엔진 검산용 시드 데이터 (Master Context §32-1)
+ * Ledger — 정산 엔진 회귀 검증 fixture (Master Context §32-1)
  *
- * **화면에서는 쓰지 않는다.** 예전에는 이 시드로 "샘플 장부"를 만들어 주었지만
- * 지어낸 장부를 보여 주는 일은 걷어냈다. 지금 이 파일이 있는 이유는 하나다 —
- * `npm run simulate` 이 여기 있는 한 장부로 불변식 21개를 돌린다. 정산 엔진이
- * 맞는지 확인할 수 있는 자리다.
+ * **제품에서는 불러오지 않는다.** `npm run simulate`가 회계 불변식과
+ * 경계 조건을 검증할 때만 사용하는 개발용 fixture다.
  *
- * 가상 팀 4인 / 22건 지출 / 중간 정산 1회 / 팀원 1명 중도 합류.
+ * 회계 경계 조건: 4인 / 22건 지출 / 중간 정산 1회 / 팀원 1명 중도 합류.
  * §29 Phase 2의 검증 케이스를 전부 한 장부 안에 담는다.
  *
  *   ✓ 전체 공동 부담
@@ -23,8 +21,8 @@
  *   ✓ 이미 정산된 지출의 보정 (원본 불변, 차액만 다음 정산으로)
  */
 
-import type { Expense, Ledger, Member, MemberId } from './types.ts';
-import { computeSettlement } from './settlement.ts';
+import type { Expense, Ledger, Member, MemberId } from '../lib/domain/types.ts';
+import { computeSettlement } from '../lib/domain/settlement.ts';
 
 export const members: Member[] = [
   { id: 'kw', name: '관우' },
@@ -220,7 +218,7 @@ export function buildLedger(): Ledger {
   };
 }
 
-export { currentRoster } from './settlement.ts';
+export { currentRoster } from '../lib/domain/settlement.ts';
 
 /* ------------------------------------------------------------------ */
 /* 두 번째 팀 — 수업이 둘이면 팀도 둘이다                              */

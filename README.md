@@ -296,7 +296,7 @@ lib/ai/           receipt(총액) · items(항목) · jot(한 줄) · income(수
 lib/i18n.ts       여섯 언어 문자열
 app/              화면과 서버 액션
 supabase/         마이그레이션 22개 + 스키마 가드 테스트 30개
-scripts/          정산 시뮬레이션, 아이콘·프로토타입 빌드
+scripts/          정산 검증과 유지보수 도구
 ```
 
 ### 정산 엔진이 프레임워크를 모르는 이유
@@ -305,7 +305,7 @@ scripts/          정산 시뮬레이션, 아이콘·프로토타입 빌드
 Node에서도, 테스트에서도 같은 결과를 냅니다. 그래서 **가입 없이 쓰는 빠른 나누기와
 팀 장부가 똑같은 엔진을 씁니다.** 검산 로직이 두 벌이 되는 순간 신뢰가 깨지니까요.
 
-`npm run simulate`은 의존성 없이 Node만으로 가상 장부 둘(팀플·동아리)을 돌리고
+`npm run simulate`은 의존성 없이 Node만으로 회계 경계 조건 fixture를 돌리고
 **불변식 143개**를 검사합니다.
 
 - 모든 지출에서 지분의 합 = 금액 (음수 금액 포함)
@@ -881,7 +881,7 @@ lib/ai/           receipt (total) · items (lines) · jot (one line) · income
 lib/i18n.ts       strings for six languages
 app/              screens and server actions
 supabase/         22 migrations + 30 schema-guard tests
-scripts/          settlement simulation, icon and prototype builds
+scripts/          settlement verification and maintenance tools
 ```
 
 ### Why the engine knows nothing about the framework
@@ -891,7 +891,7 @@ results in the browser, in Node, and in tests — which is why **the no-signup q
 split and the team ledger run the same engine.** Two copies of the settlement logic
 is where trust starts to break.
 
-`npm run simulate` runs two simulated ledgers (a project team and a club) on
+`npm run simulate` runs accounting edge-case fixtures on
 plain Node, with no dependencies, and checks **143 invariants**:
 
 - shares sum to the amount on every expense (negative amounts included)

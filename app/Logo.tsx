@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Stamp from './Stamp.tsx';
+import Wordmark from './Wordmark.tsx';
 
 /**
  * 로고 (§20)
@@ -25,7 +26,7 @@ export default function Logo({ plain = false }: { plain?: boolean }) {
   // 처음 상태로 되돌리려면 진짜로 다시 들어가야 해서 <a>를 쓴다.
   const inner = (
     <>
-      <span className="logo-word">teamLedger</span>
+      <Wordmark className="logo-word" />
       <span className="logo-stamp" aria-hidden="true">
         <Stamp />
       </span>

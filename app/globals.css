@@ -1,11 +1,3 @@
-/* 로고용 필기체. Mrs Saint Delafield를 로고 글자(Ledger)만 남기고 잘라 심었다.
-   19세기 상업 장부의 손글씨를 되살린 서체다. 외부에서 아무것도 내려받지 않는다.
-   Mrs Saint Delafield (c) Alejandro Paul — SIL Open Font License 1.1 */
-@font-face{
-  font-family:"Mrs Saint Delafield";
-  font-style:normal; font-weight:400; font-display:swap;
-  src:url(data:font/woff2;base64,d09GMgABAAAAAAREAA4AAAAAB5QAAAPwAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbIBwqBmAATBEICoVQhHoBNgIkAxgLDgAEIAWDegcgGzkGUVRP0hA/EjI3PTVLXMq2sNW0S7aei2hB8Ur8Ew9P46j3ZyEmMW0yT6rsV4pbgKIYitpdKPAM/572yiEzMtHBhKRC2gm5c3oGsuX4d19GJqyEz/819Y743ic/8RPpXDVFW1nV8xQY2GgN9HFgZa0Dtek2pHhCXLjc1TI7/AoEKgFJCEVCoFwnH7yl4koEmCuEnAGBcn1C8Smr2VzuMmqAGxF1PMmxSBHpUWJw1f0wPpjyl8TwYeuhI4UIyFWJKmD+LUe9SUmD8Dk9Ri8+EgrQSCBcSKFpQLlSSbKFJEXljC0E+GW+nTfk9XmpSAGLnNVccDGoRBl+EssAgEJAgSQJMSnR3AwKcjVLjwI0h+/lYrgG1pLh0Tuh65AJ5yATmGCRR89CJ9HdYY8hEzdUzkw9CH+CsVQx496GsyyYGGYQjuPReMKKTqkMPSRI0b60ZTyRk4TzwZa9zUFYRlUGVxOy0gR6Xl7AstJgEwImZhtwjGG9znJ0L6lEEBasq+S1JgJfy3kWuNKWj7DKJZPl0a5n6W3JsiEiZqVpOUBwDg+9jb56kV7jsqvS5aknj157luFMLLPwxPqJVETX9ueS4g5vbLMNQfWbEW3o3aTJSGuzcQiL23wu5dj10UQ3v9PaBRFZV81ULYL8tBMrfpb614ZDIgcynKiBa2bvKRQ26mYPJ/kzAXJ5RU+V/TomwCZRYNE0f5M2aBXqagNOLvgMF4TPHvcwM3cnkU+RD3dG2od+5PGp9mAPx/Bjm5PNBrveVi/wtXTf+ySnRrEvyhGyFhfEhsYQVmZAt905D1+KzkVToyLzps+JcvcqXtVq6VfUVxVVkL40w6Ww7ML/vFxPsIp7NZ01PTfpLGzhNduvto7xsQ2D7T1HyshDBx35/E3VURllSJEkvsbLqTzFXig2ukY4RK5b5quH93J00+YVu/tFAzuXtuaFzKeojPdIGxm3zvu3Jf/4UvV5wbyZF3G/dc5md7lKdi6wlZW/HcuKXSqh6uMncyOvAYHg8m7j+3M1md9KFXyFlz+SWwHg1Qjl8f/Tv+VFKwoYlEog+E2sojYCMjVFMJhizykYBKIxv4lkNMJypdeW8Ur4mpJgQ9ipEicJRGEZ3gNB6PMIJNW+gwJ7IewtpIEi7YFcS7Gp0IACWjqDKHJSMkawUD3CwOLFipUIlkeFpNBFg0DRgtXq0ku1RDSAHyMYyeloGeQO3le0HlpqYSJZu0LOSAZWj2RAovQhEWDFtDSMYNW6qJFg/qpQDGANusgp6UIklYYk5GAyBJXeOCTVOzGEOqAgy0gHB+1N/2QhDLlMkR+mAhYn2qQWF06QZjIoKj1HwIjybVMAAAAA) format("woff2");
-}
 /* ==========================================================================
    Ledger — 시각 시스템 v2
    Master Context §20 · 아날로그 회계 장부의 물성 × 웹의 가장 정직한 형태
@@ -49,16 +41,11 @@
      색을 칠하는 것이 아니라 종이의 밝기를 한 단 낮추는 것에 가깝다. */
   --settled:#f4f4f4;
   --field:#ffffff;
-  --script:"Mrs Saint Delafield","Snell Roundhand","Apple Chancery",cursive;
   --ink-blot:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' seed='7'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.3 0 0 0 -0.02'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23b)'/%3E%3C/svg%3E");
-  /* 직접 심은 활자가 먼저다. 못 받았을 때만 시스템 글꼴로 내려간다.
-     로마자·숫자는 Courier Prime(타자기), 한글은 고운바탕(명조) — app/layout.tsx.
-     일본어·중국어는 심지 않았으므로 그 나라의 명조 계열로 내려간다. */
-  --type:var(--font-latin),"Han","Courier Prime","Nanum Myeongjo",
-    "Yu Mincho","Hiragino Mincho ProN","Songti SC","SimSun",
-    "Noto Serif CJK KR",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  /* 금액 칸도 같은 활자다. 타자기는 글자 폭이 전부 같아서 열이 흔들리지 않는다. */
-  --figures:var(--type);
+  /* 웹과 iPhone이 같은 산세리프 체계를 쓴다. 금액만 고정폭 숫자로 맞춘다. */
+  --type:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",
+    "Malgun Gothic","Segoe UI",sans-serif;
+  --figures:ui-monospace,"SFMono-Regular",Menlo,Monaco,Consolas,monospace;
   /* 예전 이름을 쓰는 자리가 남아 있어도 같은 활자로 떨어지게 둔다. */
   --serif:var(--type);
   --sans:var(--type);
@@ -143,8 +130,7 @@ hr{border:0;border-top:1px solid var(--rule);margin:0}
   cursor:pointer;background:none;border:0;padding:2px 4px 8px}
 .logo:visited{color:var(--ink)}
 .logo-word{
-  display:block;font-family:var(--script);font-weight:400;font-size:52px;
-  line-height:.86;letter-spacing:0}
+  display:block;width:176px;height:auto;overflow:visible}
 /* 인장 — 로고의 오른쪽 아래에 걸치듯 찍힌다. 종이 도장은 글자를 피해
    찍히지 않는다. 조금 물려야 나중에 찍은 것으로 보인다. */
 .logo-stamp{

@@ -34,11 +34,7 @@ export default function Footer({ lang }: { lang: Locale }) {
       <span className="foot-sep" aria-hidden="true" />
       <Link href="/updates">{T('updates')}</Link>
       <span className="foot-sep" aria-hidden="true" />
-      <Link href="/chagok">teamLedger</Link>
-      {lang === 'ko' && <>
-        <span className="foot-sep" aria-hidden="true" />
-        <Link href="/guides/shared-expenses">정산 도움말</Link>
-      </>}
+      <Link href="/teamledger">teamLedger</Link>
       {MAIL && (
         <>
           <span className="foot-sep" aria-hidden="true" />
