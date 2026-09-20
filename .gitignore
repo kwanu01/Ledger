@@ -6,3 +6,4 @@ prototype/engine.js
 *.tsbuildinfo
 *.zip
 .vercel
+supabase/.temp/

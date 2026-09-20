@@ -46,18 +46,27 @@ export default function TeamLedgerIntroduction() {
           <p className={styles.availability}>하나의 계정으로 웹과 iPhone에서 이어서 사용</p>
         </div>
 
-        <figure className={styles.preview} aria-label="teamLedger의 기록과 정산 흐름">
-          <div className={styles.paper}>
-            <div className={styles.paperHead}><Wordmark className={styles.paperMark} /><span>공동 장부</span></div>
-            <div className={styles.flow}>
-              <div><span>01</span><strong>기록</strong><small>쓴 돈과 공금을 한곳에</small></div>
-              <div><span>02</span><strong>검산</strong><small>영수증과 나눈 기준을 확인</small></div>
-              <div><span>03</span><strong>정산</strong><small>주고받을 금액을 분명하게</small></div>
+        <figure className={styles.preview} aria-label="teamLedger 장부 화면 예시">
+          <div className={styles.appFrame}>
+            <div className={styles.appTop}>
+              <span>여행 장부</span>
+              <span>3명</span>
             </div>
-            <div className={styles.paperFoot}><span>기록부터 정산까지</span><span className={styles.barcode} aria-hidden="true" /></div>
+            <div className={styles.appTotal}>
+              <small>이번 정산</small>
+              <strong>148,500원</strong>
+            </div>
+            <div className={styles.appRows}>
+              <div><span>숙소</span><b>96,000</b></div>
+              <div><span>저녁</span><b>38,500</b></div>
+              <div><span>택시</span><b>14,000</b></div>
+            </div>
+            <div className={styles.appSettle}>
+              <span>민수</span><i aria-hidden="true">→</i><span>지우</span><strong>25,500원</strong>
+            </div>
+            <div className={styles.appFoot}><span>계산 과정 보기</span><span className={styles.barcode} aria-hidden="true" /></div>
           </div>
-          <Image className={styles.mascot} src="/helper/wave.png" width={132} height={132} alt="" sizes="132px" priority />
-          <figcaption>실제 장부는 로그인한 계정에서만 열립니다.</figcaption>
+          <figcaption>기록에서 정산까지 한 흐름으로 이어집니다.</figcaption>
         </figure>
       </section>
 

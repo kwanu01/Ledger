@@ -62,21 +62,23 @@
 .primary:active, .secondary:active { transform: translateY(1px) scale(.98); box-shadow: none; }
 .availability { font-size: 11px; color: #767676; margin-top: 15px !important; }
 
-.preview { position: relative; padding: 8px 20px 0 23px; max-width: 400px; width: 100%; justify-self: end; }
-.paper { position: relative; isolation: isolate; background: #fff; border: 1px solid #363636; padding: 21px 25px 18px; transform: rotate(1.4deg); animation: paper-settle 900ms 80ms both; box-shadow: 0 10px 24px #21212108; }
-.paper::before { content: ""; position: absolute; z-index: -1; inset: 5px -7px -7px 3px; border: 1px solid #d9d9d9; background: #fff; transform: rotate(-3deg); }
-.paperHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #7c7c7c; font-size: 10px; }
-.paperMark { display: block; width: 118px; height: auto; color: #212121; overflow: visible; }
-.flow { margin-top: 17px; border-top: 1px solid #373737; border-bottom: 3px double #767676; }
-.flow > div { display: grid; grid-template-columns: 28px 56px 1fr; align-items: baseline; gap: 8px; padding-block: 15px; border-bottom: 1px solid #e6e6e6; }
-.flow > div:last-child { border-bottom: 0; }
-.flow span { color: #858585; font-size: 9px; font-variant-numeric: tabular-nums; }
-.flow strong { font-size: 13px; font-weight: 600; }
-.flow small { color: #666; font-size: 10px; }
-.paperFoot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; font-size: 9px; color: #7c7c7c; }
+.preview { position: relative; padding: 4px 0 0 24px; max-width: 410px; width: 100%; justify-self: end; }
+.appFrame { position: relative; background: #fff; border: 1px solid #2e2e2e; border-radius: 12px; padding: 22px 23px 18px; animation: paper-settle 760ms 80ms both; box-shadow: 0 18px 50px #21212112; overflow: hidden; }
+.appFrame::after { content: ""; position: absolute; inset: auto 0 0; height: 4px; background: #202020; }
+.appTop { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid #d8d8d8; font-size: 11px; color: #707070; }
+.appTop span:first-child { color: #202020; font-size: 14px; font-weight: 600; }
+.appTotal { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; padding: 23px 0 19px; }
+.appTotal small { color: #777; font-size: 10px; }
+.appTotal strong { font-size: 25px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.appRows { border-block: 1px solid #333; }
+.appRows > div { display: flex; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid #e8e8e8; font-size: 12px; }
+.appRows > div:last-child { border-bottom: 0; }
+.appRows b { font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.appSettle { display: grid; grid-template-columns: auto 20px auto 1fr; align-items: center; gap: 8px; padding: 18px 0 14px; font-size: 11px; }
+.appSettle i { color: #888; font-style: normal; text-align: center; }
+.appSettle strong { justify-self: end; font-size: 13px; font-variant-numeric: tabular-nums; }
+.appFoot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 13px; border-top: 1px solid #e1e1e1; font-size: 9px; color: #777; }
 .barcode { width: 62px; height: 17px; background: repeating-linear-gradient(90deg, #363636 0 1px, transparent 1px 3px, #363636 3px 5px, transparent 5px 7px, #363636 7px 8px, transparent 8px 12px); }
-.mascot { position: absolute; width: 112px; height: auto; left: -37px; bottom: 26px; transform: rotate(-8deg); transform-origin: 50% 85%; animation: mascot-settle 800ms 220ms both; transition: transform 500ms cubic-bezier(.2, 1.5, .4, 1); pointer-events: none; }
-.preview:hover .mascot { transform: translateY(-5px) rotate(-13deg); }
 .preview figcaption { color: #777777; font-size: 10px; text-align: center; margin-top: 21px; }
 
 .features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid #d7d7d7; padding-block: 30px; }
@@ -112,8 +114,7 @@
 .last .primary { flex-shrink: 0; }
 
 @keyframes appear { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes paper-settle { 0% { opacity: 0; transform: translateY(24px) rotate(5deg); } 70% { opacity: 1; transform: translateY(-3px) rotate(.5deg); } 100% { opacity: 1; transform: translateY(0) rotate(1.4deg); } }
-@keyframes mascot-settle { 0% { opacity: 0; transform: translateY(9px) rotate(-16deg) scale(.96, 1.04); } 65% { opacity: 1; transform: translateY(-2px) rotate(-5deg) scale(1.02, .98); } 100% { opacity: 1; transform: rotate(-8deg); } }
+@keyframes paper-settle { 0% { opacity: 0; transform: translateY(20px) scale(.985); } 70% { opacity: 1; transform: translateY(-2px) scale(1.003); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 720px) {
   :global(body):has(.page) { padding-inline: 22px; }
@@ -123,9 +124,8 @@
   .intro h1 { font-size: 38px; margin-top: 14px; }
   .lead { margin-top: 15px !important; font-size: 15px; }
   .actions { margin-top: 23px; }
-  .preview { justify-self: center; max-width: 354px; padding-inline: 23px 13px; }
-  .paper { padding-inline: 24px; }
-  .mascot { left: -5px; bottom: 29px; width: 96px; }
+  .preview { justify-self: center; max-width: 354px; padding-inline: 0; }
+  .appFrame { padding-inline: 20px; }
   .features { grid-template-columns: 1fr; padding-block: 5px; }
   .feature, .feature:first-child, .feature:last-child { display: grid; grid-template-columns: 25px 1fr; column-gap: 12px; padding: 23px 0; }
   .feature + .feature { border-left: 0; border-top: 1px solid #e3e3e3; }
