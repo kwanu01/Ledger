@@ -1,5 +1,5 @@
 .page {
-  --marketing-type: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --marketing-type: var(--sans);
   font-family: var(--marketing-type);
   color: #212121;
   background: #fff;
@@ -20,7 +20,7 @@
   --link: #212121;
   --link-v: #212121;
   --link-on: #000;
-  --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --sans: var(--type);
   font-family: var(--sans);
   background: #fff;
   color: #212121;
