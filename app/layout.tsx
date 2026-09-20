@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './globals.css';
 import { getLang } from '../lib/lang.ts';
 import { getTheme } from '../lib/theme.ts';

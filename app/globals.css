@@ -42,9 +42,9 @@
   --settled:#f4f4f4;
   --field:#ffffff;
   --ink-blot:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' seed='7'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.3 0 0 0 -0.02'/%3E%3C/filter%3E%3Crect width='170' height='170' filter='url(%23b)'/%3E%3C/svg%3E");
-  /* 웹과 iPhone이 같은 산세리프 체계를 쓴다. 금액만 고정폭 숫자로 맞춘다. */
-  --type:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",
-    "Malgun Gothic","Segoe UI",sans-serif;
+  /* 기기마다 글꼴이 달라지지 않도록 산세리프를 직접 묶는다. 명조체는 쓰지 않는다. */
+  --type:"Pretendard Variable","Pretendard",-apple-system,BlinkMacSystemFont,
+    "Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic","Segoe UI",sans-serif;
   --figures:ui-monospace,"SFMono-Regular",Menlo,Monaco,Consolas,monospace;
   /* 예전 이름을 쓰는 자리가 남아 있어도 같은 활자로 떨어지게 둔다. */
   --serif:var(--type);

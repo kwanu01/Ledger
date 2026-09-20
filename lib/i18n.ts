@@ -1941,3 +1941,34 @@ export type T = (key: Key, vars?: Record<string, string | number>) => string;
 export function translator(locale: Locale): T {
   return (key, vars) => t(locale, key, vars);
 }
+
+/**
+ * Native clients sometimes compose a short label from React children instead of
+ * addressing it by key.  Keep those labels on the same dictionary by resolving
+ * the Korean source text (including simple {placeholders}) back to its key.
+ */
+const UI_PATTERNS = (Object.keys(ko) as Key[]).map((key) => {
+  const template = ko[key];
+  const names: string[] = [];
+  let source = "";
+  let cursor = 0;
+  for (const match of template.matchAll(/\{(\w+)\}/g)) {
+    source += template.slice(cursor, match.index).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    source += "(.+?)";
+    names.push(match[1]);
+    cursor = (match.index ?? 0) + match[0].length;
+  }
+  source += template.slice(cursor).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return { key, names, pattern: new RegExp(`^${source}$`, "s") };
+});
+
+export function translateUiText(locale: Locale, text: string): string {
+  if (locale === "ko" || !/[가-힣]/.test(text)) return text;
+  for (const { key, names, pattern } of UI_PATTERNS) {
+    const match = pattern.exec(text);
+    if (!match) continue;
+    const vars = Object.fromEntries(names.map((name, index) => [name, match[index + 1]]));
+    return t(locale, key, vars);
+  }
+  return text;
+}
