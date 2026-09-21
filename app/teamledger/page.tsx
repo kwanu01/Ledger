@@ -64,7 +64,7 @@ export default function TeamLedgerIntroduction() {
             <div className={styles.appSettle}>
               <span>민수</span><i aria-hidden="true">→</i><span>지우</span><strong>25,500원</strong>
             </div>
-            <div className={styles.appFoot}><span>계산 과정 보기</span><span className={styles.barcode} aria-hidden="true" /></div>
+            <div className={styles.appFoot}><span>계산 과정 보기</span></div>
           </div>
           <figcaption>기록에서 정산까지 한 흐름으로 이어집니다.</figcaption>
         </figure>
