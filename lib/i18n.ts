@@ -152,7 +152,7 @@ export type Key =
   | 'accountSince' | 'accountLast' | 'accountId';
 
 const ko: Record<Key, string> = {
-  split: '나누기', splitSub: '간단 계산', team: '팀 기록',
+  split: '바로 나누기', splitSub: '가입 없이', team: '팀 기록',
   teamNeedsLogin: '로그인 필요', teamCount: '{n}개',
   total: '총 금액', people: '인원', each: '한 사람당',
   othersPay: '{n}명은 {amount}', enterEach: '각자 낸 금액 입력', whoPaid: '각자 낸 금액',
@@ -432,7 +432,7 @@ const ko: Record<Key, string> = {
   askHint: 'Enter로 묻고, Esc로 닫아요.',
   askClear: '지운다', askOpener: '이 장부에 대해 물어보세요. 나눈 말은 창을 닫아도 남아요.',
   chat: '저는 수증이예요. 영수증이라 바람에는 좀 약해요.\n저 위의 점을 누르시면 제가 할 수 있는 일이 나와요.\n구겨져도 적힌 건 안 없어져요.\n계산은 제가 하는 게 아니라 장부가 해요. 저는 읽어 드릴 뿐이에요.\n저를 끌어서 아무 데나 놓으셔도 돼요.\n돈 얘기는 미루면 더 어려워지더라고요.\n영수증은 버리면 끝이지만, 장부는 남아요.\n가끔은 접혀서 자고 싶어요.\n천천히 보셔도 돼요. 저는 여기 있을게요.\n잉크가 마르면 글씨가 흐려져요. 저희는 원래 그래요.\n누가 얼마 냈는지는 제가 안 잊어요.\n숫자가 안 맞으면 제가 먼저 놀랄 거예요.\n…나는 영수증 유령이다.\n오셨네요. 장부는 그대로 있어요.\n주머니에 오래 있으면 이렇게 말려요.\n오늘은 좀 눌린 것 같아요.\n똑바로 서 있는 게 생각보다 어려워요.\n여기 접어 두면 나중에 그 자리부터 펴져요.\n비에 젖었다 마르면 이렇게 돼요. 글씨는 남았어요.\n잠깐만 기대 있을게요. 금방 일어날게요.\n오래 말려 있으면 펴도 자꾸 돌아가요.\n조용하면 저는 잠깐 자요. 부르시면 일어나요.\n눌려도 괜찮아요. 숫자는 안 눌려요.\n영수증은 원래 남으라고 만든 게 아닌데, 저는 남았네요.',
-  tipLanding: '함께 쓴 돈을 한 장부에 모아 두는 곳이에요.\n로그인하면 참여 중인 장부를 바로 열 수 있어요.\n처음이라면 소개 화면에서 기록과 정산 흐름을 먼저 살펴보세요.',
+  tipLanding: '안녕하세요, 저는 수증이예요. 여기는 팀이 함께 쓴 돈을 적어 두는 곳이에요.\n팀플 하다 보면 누가 뭘 샀는지 흩어지잖아요. 그걸 한 장부에 모아 둬요.\n정산할 때가 되면 누가 누구에게 얼마를 보낼지 제가 계산해 드려요.\n카카오톡으로 보내면 팀원들이 각자 확인하고요.\n가입 없이 한 번만 나눠 볼 수도 있어요. ‘바로 나누기’를 눌러 보세요.\n학기가 끝나도 장부는 남아요. 그게 이 서비스가 하는 일이에요.',
   tipHome: '전체 지출이랑 당신의 몫이 맨 위에 있어요.\n보내셨으면 ‘보냈어요’를 눌러 주세요.\n궁금한 건 AI인 저에게 물어보셔도 돼요.',
   tipBook: '줄을 눌러 보시면 어떻게 갈라졌는지 펼쳐져요.\n왼쪽 칸을 고르면 그것만 정산할 수 있어요.\n사진을 누르면 영수증이 크게 열려요.',
   tipGoods: '산 물건만이 아니라 구독이나 서비스도 여기 모여요.\n날짜·금액·카테고리로 순서를 바꿀 수 있어요.\n사진에 마우스를 올리면 원본이 나와요.',
@@ -727,7 +727,7 @@ const en: Record<Key, string> = {
   askHint: 'Enter to ask, Esc to close.',
   askClear: 'Clear', askOpener: 'Ask about this ledger. What you say here stays when the window closes.',
   chat: 'I am a receipt. Paper, so not great with wind.\nTap the dot above me to see what I can do.\nCrumple me and the writing still stays.\nThe ledger does the arithmetic, not me. I just read it out.\nYou can drag me anywhere you like.\nMoney talk only gets harder the longer you leave it.\nA receipt ends when you throw it away. A ledger stays.\nSometimes I would like to fold up and nap.\nTake your time. I will be here.\nWhen the ink dries we go faint. That is just how receipts are.\nI do not forget who paid what.\nIf the numbers stop adding up, I will be startled first.\n…I am the ghost of a receipt.\nOh, you are back. The ledger stayed put.\nLeave me in a pocket too long and I curl like this.\nI feel a little pressed today.\nStanding up straight is harder than it looks.\nFold a corner here and it opens from that corner later.\nThis is what rain and then drying does. The writing held.\nLet me lean here a moment. I will get up.\nRolled up long enough, I keep rolling back.\nWhen it is quiet I nap. Call and I am up.\nBeing flattened is fine. The numbers do not flatten.\nReceipts were not made to last. Somehow I did.',
-  tipLanding: 'Keep everything your team spends in one ledger.\nSign in to open the ledgers you already share.\nNew here? Start with the short guide to recording and settling up.',
+  tipLanding: 'Hello, I am a receipt. This is where a team writes down what it spent together.\nOn group projects it scatters — who bought what, who owes whom.\nWhen it is time to settle, I work out who sends what to whom.\nSend it over KakaoTalk and everyone confirms their part.\nYou can also split once without signing up. Try “Quick split”.\nThe ledger stays after the term ends. That is the point of this.',
   tipHome: 'Your total and your share are up top.\nSent money? Tap “I sent it”.\nAsk me anything — I am the AI here.',
   tipBook: 'Tap a row to see how it was split.\nTick the boxes to settle only those.\nTap a photo for the receipt.',
   tipGoods: 'Not only things you bought — subscriptions and services land here too.\nReorder by date, amount or category.\nHover a photo to see the original.',

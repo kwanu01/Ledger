@@ -121,22 +121,39 @@ hr{border:0;border-top:1px solid var(--rule);margin:0}
 .debit{color:var(--debit)}
 
 /* ── 로고 ────────────────────────────────────────────────────────── */
-/* 옛 장부와 지폐에 쓰이던 동판 인쇄 스크립트. 작은 바코드만 덧붙인다. */
+/* 필기체 로고 위에 손이 닿을 때만 고무도장이 찍힌다. */
 .logo{
   position:relative;display:inline-block;text-decoration:none;color:var(--ink);
-  cursor:pointer;background:none;border:0;padding:2px 4px 10px}
+  cursor:pointer;background:none;border:0;padding:2px 4px 8px}
 .logo:visited{color:var(--ink)}
 .logo-word{
   display:block;width:176px;height:auto;overflow:visible}
-.logo-barcode{
-  position:absolute;right:4px;bottom:0;width:30px;height:10px;color:var(--ink);
-  opacity:.72;overflow:visible;transition:transform .18s ease,opacity .18s ease}
-.logo-barcode path{fill:none;stroke:currentColor;stroke-width:1;shape-rendering:crispEdges}
+.logo-stamp{
+  position:absolute;right:-26px;bottom:-14px;width:60px;height:60px;
+  color:var(--stamp);pointer-events:none;opacity:0;
+  transform:rotate(-24deg) scale(1.45);
+  -webkit-mask-image:var(--ink-blot);mask-image:var(--ink-blot);
+  -webkit-mask-size:190px 190px;mask-size:190px 190px;mask-mode:alpha;
+  mix-blend-mode:multiply}
+.seal{display:block;width:100%;height:100%;overflow:visible}
+.seal-rim-text{font-family:var(--sans);font-size:9.6px;font-weight:700;letter-spacing:.16em}
+.logo:hover .logo-stamp,.logo:focus-visible .logo-stamp{
+  animation:stamp-press .38s cubic-bezier(.2,.86,.3,1) both}
 .logo:hover .logo-word,.logo:focus-visible .logo-word{opacity:.82}
-.logo:hover .logo-barcode,.logo:focus-visible .logo-barcode{opacity:1;transform:translateY(1px)}
-@media (prefers-reduced-motion:reduce){
-  .logo-barcode{transition:none}
+@keyframes stamp-press{
+  0%{opacity:0;transform:rotate(-24deg) scale(1.45)}
+  52%{opacity:1;transform:rotate(-9deg) scale(.94)}
+  74%{opacity:.9;transform:rotate(-13deg) scale(1.05)}
+  100%{opacity:.94;transform:rotate(-11deg) scale(1)}
 }
+@media (prefers-reduced-motion:reduce){
+  .logo:hover .logo-stamp,.logo:focus-visible .logo-stamp{
+    animation:none;opacity:.94;transform:rotate(-11deg) scale(1)}
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .logo-stamp{mix-blend-mode:normal}
+}
+:root[data-theme="dark"] .logo-stamp{mix-blend-mode:normal}
 
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:34px 0 0}
 .prefs{display:inline-flex;gap:8px;margin-left:14px}
@@ -234,6 +251,18 @@ a.choice:hover{color:var(--paper)}
    것이 간격으로 보여야 한다. 붙여 두면 그 선이 첫 장부의 윗선처럼 읽힌다. */
 .choice-head + .choices{margin-top:18px}
 .back{margin-top:34px}
+.calc-in{display:flex;flex-wrap:wrap;gap:18px 24px;align-items:flex-end}
+.calc-in label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--ink-2);font-weight:600}
+.calc-in input{width:180px;font-size:19px;text-align:right}
+.calc-in input.short{width:76px}
+.landing .calc-in{justify-content:center}
+.result{margin-top:40px}
+.result .label{font-size:13px;color:var(--ink-2)}
+.result .each{
+  font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-size:clamp(32px,7vw,46px);font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-top:6px}
+.result .note{font-size:13.5px;color:var(--ink-2);margin-top:8px}
+.result.centered{text-align:center}
 /* ── 머리말 ──────────────────────────────────────────────────────── */
 header{padding:30px 0 0}
 /*

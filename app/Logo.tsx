@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import Stamp from './Stamp.tsx';
 import Wordmark from './Wordmark.tsx';
 
-/** 원래의 필기체 워드마크와 흑백 바코드만 쓰는 간결한 로고. */
+/** 로고에 찍히는 말. 화면 안의 완료 도장과 같은 낱말이다. */
+export const STAMP_WORD = 'Completed';
 
 /** 이 장부 프로그램이 만들어진 해. 화면 맨 아래 줄에 적힌다. */
 export const MADE_ON = '2026 · 09 · 01';
@@ -12,9 +14,9 @@ export default function Logo({ plain = false }: { plain?: boolean }) {
   const inner = (
     <>
       <Wordmark className="logo-word" />
-      <svg className="logo-barcode" viewBox="0 0 30 10" aria-hidden="true">
-        <path d="M1 0v10M3 0v10M6 0v10M8 0v10M12 0v10M13.5 0v10M17 0v10M20 0v10M22 0v10M26 0v10M29 0v10" />
-      </svg>
+      <span className="logo-stamp" aria-hidden="true">
+        <Stamp />
+      </span>
     </>
   );
 
