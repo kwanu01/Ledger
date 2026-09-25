@@ -35,6 +35,8 @@ export default function Footer({ lang }: { lang: Locale }) {
       <Link href="/updates">{T('updates')}</Link>
       <span className="foot-sep" aria-hidden="true" />
       <Link href="/teamledger">teamLedger</Link>
+      <span className="foot-sep" aria-hidden="true" />
+      <Link href="/guides">이용 가이드</Link>
       {MAIL && (
         <>
           <span className="foot-sep" aria-hidden="true" />
