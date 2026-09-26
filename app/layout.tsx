@@ -9,7 +9,7 @@ import Footer from './Footer.tsx';
 
 export const metadata: Metadata = {
   title: 'teamLedger',
-  description: '돈이 드는 일마다 장부를 만들고, 이미 쓴 돈과 앞으로 쓸 돈을 함께 보세요. 함께 쓴 돈은 팀 장부에서 정산할 수 있습니다.',
+  description: '함께 쓴 돈을 장부에 기록하고 정산하세요. 가입 없이 바로 나눠 볼 수도 있습니다.',
   /*
    * 아이콘 (§20)
    *

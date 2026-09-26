@@ -12,7 +12,7 @@ export default function PrivacyEnglish() {
     <p>teamLedger is a web service and iPhone app for recording and settling shared expenses. This policy explains what information we handle, where it is stored, and how you can request deletion.</p>
 
     <h2>On-device and connected ledgers</h2>
-    <p>Personal book names, budgets, items, and amounts entered on the web home page are saved only in that browser. They are not linked to your account or team ledgers and do not sync to other devices. Use “Delete book” to remove a book and its entries. Data from the earlier personal calculator may remain in your browser; you can review and remove it on the <a href="/personal/previous">previous personal records page</a>.</p>
+    <p>Personal book names, budgets, items, and amounts entered in the <a href="/personal/preview">personal book preview</a> are saved only in that browser. They are not linked to your account or team ledgers and do not sync to other devices. Use “Delete book” there to remove a book and its entries. Data from the earlier personal calculator may remain in your browser; you can review and remove it on the <a href="/personal/previous">previous personal records page</a>.</p>
     <p>Ledgers used without signing in, drafts, and appearance, sound, and reminder settings stay on your device. Connecting an account does not automatically upload or merge an existing on-device ledger.</p>
     <p>Entries saved to a connected ledger are stored on our servers and shared with members who can access that ledger. Exported PDF and CSV reports go to the app or location you choose. Reminders are scheduled on your device only after you enable them. We do not currently send remote push notifications for team activity.</p>
 
