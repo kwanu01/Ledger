@@ -6,6 +6,7 @@
 .form{margin-top:18px}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
 .fields label,.spendForm label{display:flex;flex-direction:column;gap:5px;color:var(--ink-2);font-size:12px;font-weight:600}
+.fields .purposeField{grid-column:1/-1}
 .fields input,.spendForm input{width:100%;height:42px;background:var(--field);color:var(--ink);font:inherit;font-size:16px;border:1px solid var(--rule);border-radius:3px;padding:8px 10px;min-width:0}
 .fields input:focus,.spendForm input:focus{border-color:var(--ink)}
 .actions{display:flex;align-items:center;justify-content:flex-end;gap:15px;margin-top:18px}
@@ -17,25 +18,32 @@
 .textButton:hover{color:var(--ink)}
 .error{font-size:12px;color:var(--debit);margin-top:10px}
 .disclosure,.bottom{font-size:11px;color:var(--ink-3);margin-top:18px}
-.answer{padding:31px 0 24px;animation:answerIn .35s cubic-bezier(.18,.8,.2,1) both}
-.figure{font-size:clamp(37px,9vw,57px);line-height:1.18;font-weight:700;letter-spacing:-.055em;font-variant-numeric:tabular-nums}
 .meta{font-size:12px;color:var(--ink-2);margin-top:8px}
-.options{padding:23px 0 18px;animation:answerIn .35s cubic-bezier(.18,.8,.2,1) both}
-.options h2{font-size:15px;letter-spacing:-.025em}
-.optionList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:18px 0 14px}
-.option{min-width:0;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:12px 10px;min-height:108px;background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:3px;font:inherit;cursor:pointer;transition:border-color .18s ease,transform .18s ease}
-.option:hover{border-color:var(--ink);transform:translateY(-2px)}
-.option:active{transform:none}
-.option[data-selected="true"]{border:2px solid var(--ink);padding:11px 9px}
-.optionName{font-size:11px;color:var(--ink-2);line-height:1.3}
-.optionName small{font-size:10px;color:var(--ink);font-weight:700}
-.option strong{font-size:clamp(18px,3.8vw,23px);letter-spacing:-.04em;font-variant-numeric:tabular-nums;white-space:nowrap}
-.optionRemainder{font-size:10px;color:var(--ink-3);line-height:1.35}
-.choiceHint,.customRemainder{font-size:11px;color:var(--ink-3);line-height:1.5;margin-top:10px}
-.customForm{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-top:12px}
-.customForm label{display:flex;flex-direction:column;gap:5px;flex:1;font-size:12px;color:var(--ink-2)}
-.customForm input{width:100%;height:40px;background:var(--field);color:var(--ink);font:inherit;font-size:16px;border:1px solid var(--rule);border-radius:3px;padding:8px 10px}
-.customForm .error{flex-basis:100%}
+.decision{padding:24px 0 17px;animation:answerIn .35s cubic-bezier(.18,.8,.2,1) both}
+.decision h2{font-size:15px;letter-spacing:-.025em}
+.decisionFields{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;margin-top:20px}
+.decisionFields label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.decisionFields input{width:100%;height:42px;background:var(--field);color:var(--ink);font:inherit;font-size:16px;border:1px solid var(--rule);border-radius:3px;padding:8px 10px;min-width:0}
+.decisionFields input:focus{border-color:var(--ink)}
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;border-top:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2);margin-top:19px;padding:15px 0}
+.comparison>div{display:flex;flex-direction:column;gap:5px}
+.comparison>div+div{border-left:1px solid var(--rule-2);padding-left:16px}
+.comparison span{font-size:11px;color:var(--ink-2)}
+.comparison strong{font-size:clamp(20px,5vw,27px);font-variant-numeric:tabular-nums;letter-spacing:-.04em;white-space:nowrap}
+.comparison p{grid-column:1/-1;margin-top:11px;font-size:11px;color:var(--ink-2)}
+.comparison p.error{color:var(--debit)}
+.decisionActions{display:flex;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+.secondary{background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:3px;padding:9px 15px;font:inherit;font-size:13px;cursor:pointer;min-height:40px}
+.secondary:hover{border-color:var(--ink)}
+.pending{border-top:1px solid var(--rule-2);padding-top:16px;margin-top:4px}
+.pending h2{font-size:12px;color:var(--ink-2);font-weight:600;margin-bottom:6px}
+.pendingRow{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--rule-2);padding:10px 0}
+.pendingRow>div:first-child{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pendingRow strong{font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.pendingRow span{font-size:11px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.pendingActions{display:flex;gap:8px;flex-shrink:0}
+.pendingActions button{font:inherit;font-size:11px;color:var(--ink-2);border:0;background:none;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:5px 0}
+.pendingActions button:hover{color:var(--ink)}
 .expired{font-size:14px;color:var(--ink-2);padding:29px 0 20px}
 .toolbar{display:flex;align-items:center;gap:18px}
 .spendForm{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:12px;border-top:1px solid var(--rule-2);padding:18px 0 0;margin-top:19px}
@@ -62,5 +70,5 @@
   .bottom{align-items:flex-start}
 }
 @media(max-width:390px){.fields{grid-template-columns:1fr}.spendForm{grid-template-columns:1fr}.spendForm .primary{grid-column:auto}}
-@media(max-width:450px){.optionList{grid-template-columns:1fr}.option{min-height:0;display:grid;grid-template-columns:1fr auto;align-items:center}.optionRemainder{grid-column:1/-1}.option strong{font-size:21px}}
+@media(max-width:390px){.decisionFields{grid-template-columns:1fr}.comparison strong{font-size:20px}.pendingRow{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.answer{animation:none}.primary{transition:none}}

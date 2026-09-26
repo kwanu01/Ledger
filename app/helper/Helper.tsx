@@ -326,6 +326,12 @@ function freeSpot(
   const roomX = Math.max(6, window.innerWidth - 6 - m.dx - m.vw);
   const roomY = Math.max(topRoom, window.innerHeight - 6 - m.dy - m.vh);
 
+  // 작은 홈 화면의 입력칸 옆에는 설 자리가 없다. 로고 오른쪽 빈칸을 먼저 쓴다.
+  if (window.innerWidth <= 600 && document.querySelector('.landing-personal')) {
+    const nearLogo = { x: roomX, y: Math.min(roomY, Math.max(topRoom, 100)) };
+    if (overlapAt(boxes, m, nearLogo.x, nearLogo.y) === 0) return nearLogo;
+  }
+
   let best = { x: roomX - 20, y: roomY };
   let bestScore = Infinity;
 

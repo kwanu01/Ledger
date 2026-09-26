@@ -1,7 +1,7 @@
 import type { CurrencyCode } from '../domain/money.ts';
 
 export type BudgetEntry = { id: string; amount: number; title: string; at: string };
-export type WeeklyChoice = 'less' | 'even' | 'more' | 'custom';
+export type PendingDecision = { id: string; amount: number; title: string; status: 'planned' | 'later'; createdAt: string };
 export type WeeklyPlan = {
   version: 1;
   currency: CurrencyCode;
@@ -9,9 +9,9 @@ export type WeeklyPlan = {
   payday: string;
   fixedBeforePayday: number;
   keepAside: number;
+  keepAsideFor: string;
   entries: BudgetEntry[];
-  choice?: WeeklyChoice;
-  customWeekAmount?: number;
+  pending: PendingDecision[];
 };
 
 const dayNumber = (date: string) => {
@@ -30,7 +30,8 @@ export function dateKey(date: Date): string {
 export function calculateWeek(plan: WeeklyPlan, today: string) {
   const days = dayNumber(plan.payday) - dayNumber(today);
   const balance = plan.startingBalance - plan.entries.reduce((sum, entry) => sum + entry.amount, 0);
-  const uncommitted = balance - plan.fixedBeforePayday - plan.keepAside;
+  const committed = (plan.pending ?? []).reduce((sum, item) => sum + (item.status === 'planned' ? item.amount : 0), 0);
+  const uncommitted = balance - plan.fixedBeforePayday - plan.keepAside - committed;
   const ready = Number.isFinite(days) && days > 0;
   const coveredDays = ready ? Math.min(7, days) : 0;
   return {
@@ -38,18 +39,22 @@ export function calculateWeek(plan: WeeklyPlan, today: string) {
     days: ready ? days : 0,
     coveredDays,
     balance,
+    committed,
     uncommitted,
     shortfall: Math.max(0, -uncommitted),
     thisWeek: ready ? Math.floor(Math.max(0, uncommitted) * coveredDays / days) : 0,
   };
 }
 
-export function weekSuggestions(result: ReturnType<typeof calculateWeek>) {
+export function assessDecision(result: ReturnType<typeof calculateWeek>, amount: number) {
   const available = Math.max(0, result.uncommitted);
+  const after = available - amount;
   return {
-    less: Math.floor(result.thisWeek * 0.8),
-    even: result.thisWeek,
-    more: Math.min(available, Math.floor(result.thisWeek * 1.2)),
+    available,
+    after,
+    gap: Math.max(0, -after),
+    perDayBefore: result.ready ? Math.floor(available / result.days) : 0,
+    perDayAfter: result.ready ? Math.floor(Math.max(0, after) / result.days) : 0,
   };
 }
 
@@ -67,10 +72,14 @@ export function readWeeklyPlan(value: string | null): WeeklyPlan | null {
     const entries = raw.entries.filter((entry): entry is BudgetEntry =>
       !!entry && typeof entry.id === 'string' && typeof entry.title === 'string'
       && typeof entry.at === 'string' && Number.isSafeInteger(entry.amount) && entry.amount > 0);
-    const choice = ['less', 'even', 'more', 'custom'].includes(raw.choice ?? '') ? raw.choice : undefined;
-    const customWeekAmount = Number.isSafeInteger(raw.customWeekAmount) && (raw.customWeekAmount ?? -1) >= 0
-      ? raw.customWeekAmount : undefined;
-    return { ...raw, entries, choice, customWeekAmount } as WeeklyPlan;
+    const pending = (Array.isArray(raw.pending) ? raw.pending : []).filter((item): item is PendingDecision =>
+      !!item && typeof item.id === 'string' && typeof item.title === 'string'
+      && typeof item.createdAt === 'string' && (item.status === 'planned' || item.status === 'later')
+      && Number.isSafeInteger(item.amount) && item.amount > 0);
+    return { version: 1, currency: raw.currency, startingBalance: raw.startingBalance,
+      payday: raw.payday, fixedBeforePayday: raw.fixedBeforePayday,
+      keepAside: raw.keepAside, keepAsideFor: typeof raw.keepAsideFor === 'string' ? raw.keepAsideFor.slice(0, 60) : '',
+      entries, pending } as WeeklyPlan;
   } catch {
     return null;
   }
