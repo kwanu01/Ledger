@@ -20,6 +20,22 @@
 .answer{padding:31px 0 24px;animation:answerIn .35s cubic-bezier(.18,.8,.2,1) both}
 .figure{font-size:clamp(37px,9vw,57px);line-height:1.18;font-weight:700;letter-spacing:-.055em;font-variant-numeric:tabular-nums}
 .meta{font-size:12px;color:var(--ink-2);margin-top:8px}
+.options{padding:23px 0 18px;animation:answerIn .35s cubic-bezier(.18,.8,.2,1) both}
+.options h2{font-size:15px;letter-spacing:-.025em}
+.optionList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:18px 0 14px}
+.option{min-width:0;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:12px 10px;min-height:108px;background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:3px;font:inherit;cursor:pointer;transition:border-color .18s ease,transform .18s ease}
+.option:hover{border-color:var(--ink);transform:translateY(-2px)}
+.option:active{transform:none}
+.option[data-selected="true"]{border:2px solid var(--ink);padding:11px 9px}
+.optionName{font-size:11px;color:var(--ink-2);line-height:1.3}
+.optionName small{font-size:10px;color:var(--ink);font-weight:700}
+.option strong{font-size:clamp(18px,3.8vw,23px);letter-spacing:-.04em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.optionRemainder{font-size:10px;color:var(--ink-3);line-height:1.35}
+.choiceHint,.customRemainder{font-size:11px;color:var(--ink-3);line-height:1.5;margin-top:10px}
+.customForm{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-top:12px}
+.customForm label{display:flex;flex-direction:column;gap:5px;flex:1;font-size:12px;color:var(--ink-2)}
+.customForm input{width:100%;height:40px;background:var(--field);color:var(--ink);font:inherit;font-size:16px;border:1px solid var(--rule);border-radius:3px;padding:8px 10px}
+.customForm .error{flex-basis:100%}
 .expired{font-size:14px;color:var(--ink-2);padding:29px 0 20px}
 .toolbar{display:flex;align-items:center;gap:18px}
 .spendForm{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:12px;border-top:1px solid var(--rule-2);padding:18px 0 0;margin-top:19px}
@@ -46,4 +62,5 @@
   .bottom{align-items:flex-start}
 }
 @media(max-width:390px){.fields{grid-template-columns:1fr}.spendForm{grid-template-columns:1fr}.spendForm .primary{grid-column:auto}}
+@media(max-width:450px){.optionList{grid-template-columns:1fr}.option{min-height:0;display:grid;grid-template-columns:1fr auto;align-items:center}.optionRemainder{grid-column:1/-1}.option strong{font-size:21px}}
 @media(prefers-reduced-motion:reduce){.answer{animation:none}.primary{transition:none}}

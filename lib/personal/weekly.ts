@@ -1,6 +1,7 @@
 import type { CurrencyCode } from '../domain/money.ts';
 
 export type BudgetEntry = { id: string; amount: number; title: string; at: string };
+export type WeeklyChoice = 'less' | 'even' | 'more' | 'custom';
 export type WeeklyPlan = {
   version: 1;
   currency: CurrencyCode;
@@ -9,6 +10,8 @@ export type WeeklyPlan = {
   fixedBeforePayday: number;
   keepAside: number;
   entries: BudgetEntry[];
+  choice?: WeeklyChoice;
+  customWeekAmount?: number;
 };
 
 const dayNumber = (date: string) => {
@@ -41,6 +44,15 @@ export function calculateWeek(plan: WeeklyPlan, today: string) {
   };
 }
 
+export function weekSuggestions(result: ReturnType<typeof calculateWeek>) {
+  const available = Math.max(0, result.uncommitted);
+  return {
+    less: Math.floor(result.thisWeek * 0.8),
+    even: result.thisWeek,
+    more: Math.min(available, Math.floor(result.thisWeek * 1.2)),
+  };
+}
+
 export function readWeeklyPlan(value: string | null): WeeklyPlan | null {
   if (!value) return null;
   try {
@@ -55,7 +67,10 @@ export function readWeeklyPlan(value: string | null): WeeklyPlan | null {
     const entries = raw.entries.filter((entry): entry is BudgetEntry =>
       !!entry && typeof entry.id === 'string' && typeof entry.title === 'string'
       && typeof entry.at === 'string' && Number.isSafeInteger(entry.amount) && entry.amount > 0);
-    return { ...raw, entries } as WeeklyPlan;
+    const choice = ['less', 'even', 'more', 'custom'].includes(raw.choice ?? '') ? raw.choice : undefined;
+    const customWeekAmount = Number.isSafeInteger(raw.customWeekAmount) && (raw.customWeekAmount ?? -1) >= 0
+      ? raw.customWeekAmount : undefined;
+    return { ...raw, entries, choice, customWeekAmount } as WeeklyPlan;
   } catch {
     return null;
   }
