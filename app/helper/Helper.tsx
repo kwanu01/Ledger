@@ -326,10 +326,10 @@ function freeSpot(
   const roomX = Math.max(6, window.innerWidth - 6 - m.dx - m.vw);
   const roomY = Math.max(topRoom, window.innerHeight - 6 - m.dy - m.vh);
 
-  // 작은 홈 화면의 입력칸 옆에는 설 자리가 없다. 로고 오른쪽 빈칸을 먼저 쓴다.
+  // 작은 홈 화면에서는 로고 오른쪽 위의 여백을 먼저 쓴다.
   if (window.innerWidth <= 600 && document.querySelector('.landing-personal')) {
-    const nearLogo = { x: roomX, y: Math.min(roomY, Math.max(topRoom, 100)) };
-    if (overlapAt(boxes, m, nearLogo.x, nearLogo.y) === 0) return nearLogo;
+    const nearLogo = { x: roomX, y: topRoom };
+    return nearLogo;
   }
 
   let best = { x: roomX - 20, y: roomY };
@@ -471,7 +471,7 @@ export default function Helper({ lang }: { lang: Locale }) {
     let y = first.y;
     try {
       const s = localStorage.getItem(SPOT_KEY);
-      if (s) {
+      if (s && !(window.innerWidth <= 600 && document.querySelector('.landing-personal'))) {
         const v = JSON.parse(s) as { right: number; bottom: number };
         // 창 크기가 달라진 뒤에 열면 지난번 자리가 화면 밖을 가리킬 수 있다.
         // 그럴 땐 기억을 버리고 기본 자리로 선다. 구석에 박혀 못 나오는 것보다 낫다.

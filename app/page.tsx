@@ -3,13 +3,13 @@ import { currentUser } from '../lib/auth-client.ts';
 import { myLedgers } from './actions/teams.ts';
 import { getLang } from '../lib/lang.ts';
 import Logo from './Logo.tsx';
-import WeeklyMoney from './WeeklyMoney.tsx';
+import PersonalBooks from './PersonalBooks.tsx';
 
 /**
  * 첫 화면 (§21.1)
  *
- * 마케팅 히어로도 소개 문구도 없다. 접속하자마자 계산이 되고,
- * 남기고 싶으면 그때 로그인한다. 그 두 가지만 있으면 된다.
+ * 개인 장부는 로그인 없이 시작한다. 팀 장부는 기존 계정과 권한을 쓴다.
+ * 두 종류의 기록이 자동으로 섞이지 않도록 둔다.
  */
 export default async function Landing() {
   // 로그인 전에도 첫 화면은 떠야 한다. 환경변수가 비어 있어도 여기서 멈추지 않는다.
@@ -31,7 +31,7 @@ export default async function Landing() {
       */}
       <Logo plain />
 
-      <WeeklyMoney locale={lang} />
+      <PersonalBooks locale={lang} />
       <QuickSplit signedIn={signedIn} ledgerCount={ledgerCount} locale={lang} />
     </main>
   );
