@@ -26,7 +26,7 @@ export default async function Privacy({ searchParams }: { searchParams: Promise<
       <main className="doc">
         {lang === 'en' ? <PrivacyEnglish /> : <>
         <h1>개인정보 처리방침</h1>
-        <p className="faint">최종 수정 2026년 9월 16일</p>
+        <p className="faint">최종 수정 2026년 9월 26일</p>
         <p>
           teamLedger는 함께 쓴 돈을 기록하고 정산하는 웹서비스와 iPhone 앱입니다.
           이 방침은 어떤 정보를 다루고, 어디에 보관하며, 어떻게 삭제를 요청할 수 있는지
@@ -34,6 +34,11 @@ export default async function Privacy({ searchParams }: { searchParams: Promise<
         </p>
 
         <h2>기기 장부와 연결한 장부</h2>
+        <p>
+          웹 첫 화면의 개인 계산에 입력한 잔액, 급여일, 남겨둘 돈과 지출 기록은
+          해당 브라우저에만 저장합니다. 계정이나 팀 장부에 연결되지 않으며,
+          다른 기기와 동기화되지 않습니다. 첫 화면의 ‘기록 지우기’로 지울 수 있습니다.
+        </p>
         <p>
           앱에서 로그인 없이 사용하는 기기 장부와 작성 중인 내용, 화면·소리·알림 설정은
           기기에 저장됩니다. 계정을 연결해도 기존 기기 장부를 서버에 자동으로 올리거나

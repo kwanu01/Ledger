@@ -3,6 +3,7 @@ import { currentUser } from '../lib/auth-client.ts';
 import { myLedgers } from './actions/teams.ts';
 import { getLang } from '../lib/lang.ts';
 import Logo from './Logo.tsx';
+import WeeklyMoney from './WeeklyMoney.tsx';
 
 /**
  * 첫 화면 (§21.1)
@@ -23,13 +24,14 @@ export default async function Landing() {
   }
 
   return (
-    <main className="landing">
+    <main className="landing landing-personal">
       {/*
         첫 화면에서는 로고가 "처음으로 되돌리기"다. Link로는 이미 / 에 있어서
         계산 중이던 상태가 그대로 남는다. 그래서 여기서만 진짜로 다시 연다.
       */}
       <Logo plain />
 
+      <WeeklyMoney locale={lang} />
       <QuickSplit signedIn={signedIn} ledgerCount={ledgerCount} locale={lang} />
     </main>
   );

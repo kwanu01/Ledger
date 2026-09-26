@@ -586,6 +586,21 @@ export default function Helper({ lang }: { lang: Locale }) {
     return () => window.removeEventListener('resize', fit);
   }, []);
 
+  /* 개인 계산 화면처럼 내용이 열린 뒤에도, 글이나 입력칸 위에 서지 않는다. */
+  useEffect(() => {
+    const moveAside = () => {
+      const el = root.current;
+      if (!el || hidden || dragging.current || pos.current.x < 0) return;
+      const m = measure(el);
+      const boxes = contentBoxes();
+      if (overlapAt(boxes, m, pos.current.x, pos.current.y) > 0) {
+        aim.current = freeSpot(boxes, m, TOP_ROOM);
+      }
+    };
+    window.addEventListener('ledger:layout-changed', moveAside);
+    return () => window.removeEventListener('ledger:layout-changed', moveAside);
+  }, [hidden]);
+
   /* 사람이 화면을 내리면 같이 기운다. 옆에 서 있는 것이 아니라 함께 보고 있다. */
   useEffect(() => {
     if (hidden) return;
@@ -666,6 +681,7 @@ export default function Helper({ lang }: { lang: Locale }) {
    */
   useEffect(() => {
     if (menu || asking || line) return;
+    if (path === '/') return;
     const say = sayAt(tipAt);
     if (!say) return;
 
@@ -693,7 +709,7 @@ export default function Helper({ lang }: { lang: Locale }) {
       timers.current.forEach(clearTimeout);
       timers.current = [];
     };
-  }, [tipAt, menu, asking, line, sayAt, play]);
+  }, [tipAt, menu, asking, line, path, sayAt, play]);
 
   /*
    * 할 말이 생기면 손을 흔든다. 말풍선은 스스로 열지 않는다.
