@@ -166,11 +166,6 @@ hr{border:0;border-top:1px solid var(--rule);margin:0}
   flex:1;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:8px;padding:48px 0}
 .landing > .logo{margin-bottom:8px}
-.landing-personal{justify-content:flex-start;padding-top:58px;gap:0}
-.landing-personal > .logo{margin-bottom:25px}
-.landing-personal .choices{margin-top:18px}
-.landing-personal .choice{font-size:16px;padding-top:23px;padding-bottom:16px}
-.landing-personal .gate-foot{margin-top:22px}
 .landing-intro{max-width:520px;text-align:center;margin-top:22px}
 .landing-intro h1{font-size:clamp(27px,6vw,40px);line-height:1.25;letter-spacing:-.045em}
 .landing-intro p{margin-top:13px;color:var(--ink-2);font-size:15px}
@@ -2460,7 +2455,6 @@ button.act.waiting::after{
      남은 자리에 맞춘다. 42vw는 320픽셀 화면에서 134픽셀이라 글자가
      세로로 한 줄씩 떨어진다. */
   .helper{transform:scale(.72);transform-origin:100% 100%}
-  body:has(.landing-personal) .helper{transform:scale(.54);transform-origin:100% 0}
   .helper-say{max-width:calc(100vw - 150px);font-size:12.5px}
   .helper-bubble{max-width:calc(100vw - 60px)}
   /*

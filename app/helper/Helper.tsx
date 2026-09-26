@@ -326,12 +326,6 @@ function freeSpot(
   const roomX = Math.max(6, window.innerWidth - 6 - m.dx - m.vw);
   const roomY = Math.max(topRoom, window.innerHeight - 6 - m.dy - m.vh);
 
-  // 작은 홈 화면에서는 로고 오른쪽 위의 여백을 먼저 쓴다.
-  if (window.innerWidth <= 600 && document.querySelector('.landing-personal')) {
-    const nearLogo = { x: roomX, y: topRoom };
-    return nearLogo;
-  }
-
   let best = { x: roomX - 20, y: roomY };
   let bestScore = Infinity;
 
@@ -471,7 +465,7 @@ export default function Helper({ lang }: { lang: Locale }) {
     let y = first.y;
     try {
       const s = localStorage.getItem(SPOT_KEY);
-      if (s && !(window.innerWidth <= 600 && document.querySelector('.landing-personal'))) {
+      if (s) {
         const v = JSON.parse(s) as { right: number; bottom: number };
         // 창 크기가 달라진 뒤에 열면 지난번 자리가 화면 밖을 가리킬 수 있다.
         // 그럴 땐 기억을 버리고 기본 자리로 선다. 구석에 박혀 못 나오는 것보다 낫다.
@@ -592,21 +586,6 @@ export default function Helper({ lang }: { lang: Locale }) {
     return () => window.removeEventListener('resize', fit);
   }, []);
 
-  /* 개인 계산 화면처럼 내용이 열린 뒤에도, 글이나 입력칸 위에 서지 않는다. */
-  useEffect(() => {
-    const moveAside = () => {
-      const el = root.current;
-      if (!el || hidden || dragging.current || pos.current.x < 0) return;
-      const m = measure(el);
-      const boxes = contentBoxes();
-      if (overlapAt(boxes, m, pos.current.x, pos.current.y) > 0) {
-        aim.current = freeSpot(boxes, m, TOP_ROOM);
-      }
-    };
-    window.addEventListener('ledger:layout-changed', moveAside);
-    return () => window.removeEventListener('ledger:layout-changed', moveAside);
-  }, [hidden]);
-
   /* 사람이 화면을 내리면 같이 기운다. 옆에 서 있는 것이 아니라 함께 보고 있다. */
   useEffect(() => {
     if (hidden) return;
@@ -687,7 +666,6 @@ export default function Helper({ lang }: { lang: Locale }) {
    */
   useEffect(() => {
     if (menu || asking || line) return;
-    if (path === '/') return;
     const say = sayAt(tipAt);
     if (!say) return;
 
@@ -715,7 +693,7 @@ export default function Helper({ lang }: { lang: Locale }) {
       timers.current.forEach(clearTimeout);
       timers.current = [];
     };
-  }, [tipAt, menu, asking, line, path, sayAt, play]);
+  }, [tipAt, menu, asking, line, sayAt, play]);
 
   /*
    * 할 말이 생기면 손을 흔든다. 말풍선은 스스로 열지 않는다.
